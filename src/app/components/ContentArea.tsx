@@ -1,0 +1,2871 @@
+import { useState, useEffect, useRef } from 'react';
+import { useHabilidades } from '../context/HabilidadesContext';
+import { useCarreiras } from '../context/CarreirasContext';
+import { useNavigate, useLocation } from 'react-router';
+import { niveisDefaultData, getCorFromPeso } from '../data/mockData';
+import { ListingPage } from './templates/ListingPage';
+import { FormDrawer, FormField } from './templates/FormDrawer';
+import { ConfirmationModal } from './templates/ConfirmationModal';
+import { Column, InlineAction, Table } from './ui/Table';
+import { ToggleSwitch } from './ui/ToggleSwitch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { EmptyState } from './ui/EmptyState';
+import { NiveisProficiencia } from './NiveisProficiencia';
+import { ColaboradorView } from './ColaboradorView';
+import { MinhasAvaliacoes } from './MinhasAvaliacoes';
+import { MinhaCarreira } from './MinhaCarreira';
+import { Perfis } from './Perfis';
+import { ComponentShowcase } from './ComponentShowcase';
+import { NovaAvaliacaoDrawer, NovaAvaliacaoFormData } from './avaliacoes/NovaAvaliacaoDrawer';
+import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
+import { Users, Edit, Trash2, Award, Layers, Search, RefreshCw, AlertCircle, Plus, Briefcase, ClipboardCheck, Eye, ArrowLeft, Settings, AlertTriangle, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface ContentAreaProps {
+  selectedItem: string;
+  viewMode: 'admin' | 'colaborador';
+  isSidebarCollapsed: boolean;
+}
+
+export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: ContentAreaProps) {
+  // ========== ALL HOOKS MUST BE DECLARED FIRST (before any early returns) ==========
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Estado para controlar qual tab está ativa no módulo Habilidades
+  const [activeTab, setActiveTab] = useState<string>((location.state as any)?.tab ?? 'competencias');
+  
+  // Ref para o container das tabs (para auto-scroll)
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Estado de paginação para Competências
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Estado de paginação para Habilidades
+  const [currentPageHabilidades, setCurrentPageHabilidades] = useState(1);
+  const [itemsPerPageHabilidades, setItemsPerPageHabilidades] = useState(10);
+  
+  // Estados de filtros para Habilidades
+  const [filtroCompetencia, setFiltroCompetencia] = useState('todas');
+  const [filtroTipo, setFiltroTipo] = useState('todas');
+  const [filtroStatus, setFiltroStatus] = useState('ativa');
+  const [buscaHabilidade, setBuscaHabilidade] = useState('');
+  const [habilidadesSortConfig, setHabilidadesSortConfig] = useState<{
+    column: 'nome' | 'competencia' | 'status' | 'id';
+    direction: 'asc' | 'desc';
+  }>({ column: 'id', direction: 'desc' });
+  const [competenciasSortConfig, setCompetenciasSortConfig] = useState<{
+    column: 'nome' | 'habilidades' | 'status' | 'id';
+    direction: 'asc' | 'desc';
+  }>({ column: 'id', direction: 'desc' });
+  const [carreirasSortConfig, setCarreirasSortConfig] = useState<{
+    column: 'nome' | 'jornadas' | 'status' | 'id';
+    direction: 'asc' | 'desc';
+  }>({ column: 'id', direction: 'desc' });
+  const [jornadasContentSortConfig, setJornadasContentSortConfig] = useState<{
+    column: 'nome' | 'tipo' | 'quantidadeCargos' | 'status' | 'id';
+    direction: 'asc' | 'desc';
+  }>({ column: 'id', direction: 'desc' });
+  const [avaliacoesSortConfig, setAvaliacoesSortConfig] = useState<{
+    column: 'nome' | 'tipo' | 'periodo' | 'status' | 'id';
+    direction: 'asc' | 'desc';
+  }>({ column: 'id', direction: 'desc' });
+  
+  // Estados de filtro de status e busca para Competências e Níveis
+  const [statusFilterCompetencias, setStatusFilterCompetencias] = useState('ativa');
+  const [buscaCompetencia, setBuscaCompetencia] = useState('');
+  
+  // Estados para Carreiras
+  const [statusFilterCarreiras, setStatusFilterCarreiras] = useState('ativa');
+  const [buscaCarreira, setBuscaCarreira] = useState('');
+  const [currentPageCarreiras, setCurrentPageCarreiras] = useState(1);
+  const [itemsPerPageCarreiras, setItemsPerPageCarreiras] = useState(10);
+  const [carreiraFormData, setCarreiraFormData] = useState({
+    nome: '',
+    status: 'Ativa',
+  });
+  
+  // Estados para Detalhamento de Jornada
+  const [selectedCarreiraId, setSelectedCarreiraId] = useState<string | null>(null);
+  const [selectedJornadaId, setSelectedJornadaId] = useState<string | null>(null);
+  
+  // Estado para controlar se está vendo detalhamento de carreira (lista de jornadas)
+  const [selectedCarreiraDetalhe, setSelectedCarreiraDetalhe] = useState<string | null>(null);
+  
+  // Estados para Avaliações
+  const [statusFilterAvaliacoes, setStatusFilterAvaliacoes] = useState('ativa');
+  const [buscaAvaliacao, setBuscaAvaliacao] = useState('');
+  const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
+  const [itemsPerPageAvaliacoes, setItemsPerPageAvaliacoes] = useState(10);
+  const [avaliacaoFormData, setAvaliacaoFormData] = useState({
+    nome: '',
+    descricao: '',
+    competencias: [] as string[],
+    gerencias: [] as string[],
+    dataInicio: '',
+    dataFim: '',
+  });
+  
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isNovaAvaliacaoOpen, setIsNovaAvaliacaoOpen] = useState(false);
+
+  // Reset da paginação quando filtros de Competências mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [buscaCompetencia, statusFilterCompetencias]);
+
+  // Reset da paginação quando filtros de Habilidades mudarem
+  useEffect(() => {
+    setCurrentPageHabilidades(1);
+  }, [buscaHabilidade, filtroCompetencia, filtroTipo, filtroStatus]);
+
+  // Reset da paginação quando filtros de Carreiras mudarem
+  useEffect(() => {
+    setCurrentPageCarreiras(1);
+  }, [buscaCarreira, statusFilterCarreiras]);
+
+  // Reset da paginação quando filtros de Avaliações mudarem
+  useEffect(() => {
+    setCurrentPageAvaliacoes(1);
+  }, [buscaAvaliacao, statusFilterAvaliacoes]);
+
+  // Auto-scroll para a tab ativa quando mudar (apenas mobile/tablet)
+  useEffect(() => {
+    if (tabsContainerRef.current && selectedItem === 'habilidades') {
+      const container = tabsContainerRef.current;
+      const activeButton = container.querySelector(`button[data-tab-id="${activeTab}"]`) as HTMLElement;
+      
+      if (activeButton) {
+        const containerRect = container.getBoundingClientRect();
+        const buttonRect = activeButton.getBoundingClientRect();
+        
+        // Calcular se o botão está fora da área visível
+        const isOutOfView = 
+          buttonRect.left < containerRect.left || 
+          buttonRect.right > containerRect.right;
+        
+        // Fazer scroll suave para centralizar a tab ativa
+        if (isOutOfView) {
+          const scrollPosition = activeButton.offsetLeft - (container.offsetWidth / 2) + (activeButton.offsetWidth / 2);
+          container.scrollTo({
+            left: scrollPosition,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }
+  }, [activeTab, selectedItem]);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [competenciaFormData, setCompetenciaFormData] = useState({
+    nome: '',
+    descricao: '',
+    status: 'Ativa',
+  });
+
+  // Estado e dados para Níveis de Habilidades
+  const [niveisData, setNiveisData] = useState(niveisDefaultData);
+
+  // Estado e dados para Habilidades (gerenciados via contexto compartilhado)
+  const { habilidades: habilidadesData, addHabilidade, updateHabilidade } = useHabilidades();
+  const { jornadas: jornadasDoContexto } = useCarreiras();
+  const [habilidadeFormData, setHabilidadeFormData] = useState({
+    nome: '',
+    descricao: '',
+    competencia: '',
+    tipo: 'Técnica',
+    status: 'Ativa',
+    niveis: [] as Array<{ nivelId: string; criterio: string }>,
+  });
+
+  // Dados de exemplo para Perfis (somente leitura - vindos do RM)
+  const [profilesData, setProfilesData] = useState([
+    {
+      id: '1',
+      nome: 'Ana Silva',
+      cargo: 'Desenvolvedora Senior',
+      gerencia: 'Tecnologia',
+      ultimoAcesso: '02 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: true,
+    },
+    {
+      id: '2',
+      nome: 'Carlos Santos',
+      cargo: 'Analista de RH',
+      gerencia: 'Recursos Humanos',
+      ultimoAcesso: '01 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '3',
+      nome: 'Mariana Costa',
+      cargo: 'Gerente de Projetos',
+      gerencia: 'Operações',
+      ultimoAcesso: '03 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '4',
+      nome: 'João Pereira',
+      cargo: 'Desenvolvedor Pleno',
+      gerencia: 'Tecnologia',
+      ultimoAcesso: '31 de janeiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: true,
+    },
+    {
+      id: '5',
+      nome: 'Fernanda Lima',
+      cargo: 'Analista de Dados',
+      gerencia: 'Tecnologia',
+      ultimoAcesso: '02 de fevereiro de 2026',
+      status: 'Desativado' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '6',
+      nome: 'Rafael Souza',
+      cargo: 'Coordenador de Vendas',
+      gerencia: 'Vendas',
+      ultimoAcesso: '01 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '7',
+      nome: 'Juliana Rocha',
+      cargo: 'Gerente de RH',
+      gerencia: 'Recursos Humanos',
+      ultimoAcesso: '03 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: true,
+    },
+    {
+      id: '8',
+      nome: 'Bruno Oliveira',
+      cargo: 'Analista Financeiro',
+      gerencia: 'Financeiro',
+      ultimoAcesso: '30 de janeiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '9',
+      nome: 'Camila Mendes',
+      cargo: 'Desenvolvedora Junior',
+      gerencia: 'Tecnologia',
+      ultimoAcesso: '02 de fevereiro de 2026',
+      status: 'Ativo' as const,
+      atualizacaoDisponivel: false,
+    },
+    {
+      id: '10',
+      nome: 'Lucas Almeida',
+      cargo: 'Analista de Operações',
+      gerencia: 'Operações',
+      ultimoAcesso: '01 de fevereiro de 2026',
+      status: 'Desativado' as const,
+      atualizacaoDisponivel: false,
+    },
+  ]);
+
+  // Dados de exemplo para Competências
+  const [competenciasData, setCompetenciasData] = useState([
+    { id: '1', nome: 'Design de Produto', descricao: 'Competências relacionadas ao design e experiência do usuário', habilidades: 12, status: 'Ativa' },
+    { id: '2', nome: 'Segurança da Informação', descricao: 'Práticas e conhecimentos em segurança cibernética', habilidades: 8, status: 'Ativa' },
+    { id: '3', nome: 'Comunicação Corporativa', descricao: 'Habilidades de comunicação verbal e escrita no ambiente profissional', habilidades: 15, status: 'Ativa' },
+    { id: '4', nome: 'Gestão de Projetos', descricao: 'Metodologias e ferramentas para gestão eficaz de projetos', habilidades: 10, status: 'Ativa' },
+    { id: '5', nome: 'Análise de Dados', descricao: 'Análise, visualização e interpretação de dados', habilidades: 7, status: 'Ativa' },
+    { id: '6', nome: 'Desenvolvimento Backend', descricao: 'Tecnologias e práticas de desenvolvimento do lado servidor', habilidades: 18, status: 'Desativada' },
+    { id: '7', nome: 'Desenvolvimento Frontend', descricao: 'Tecnologias e práticas de interface e experiência do usuário', habilidades: 16, status: 'Ativa' },
+    { id: '8', nome: 'DevOps e Infraestrutura', descricao: 'Automação, CI/CD e gestão de infraestrutura', habilidades: 11, status: 'Ativa' },
+    { id: '9', nome: 'Arquitetura de Software', descricao: 'Design e padrões de arquitetura de sistemas', habilidades: 9, status: 'Ativa' },
+    { id: '10', nome: 'Testes e Qualidade', descricao: 'Estratégias e práticas de testes de software', habilidades: 13, status: 'Ativa' },
+    { id: '11', nome: 'Metodologias Ágeis', descricao: 'Scrum, Kanban e frameworks ágeis', habilidades: 6, status: 'Ativa' },
+    { id: '12', nome: 'Liderança', descricao: 'Habilidades de liderança e gestão de equipes', habilidades: 14, status: 'Ativa' },
+    { id: '13', nome: 'Resolução de Problemas', descricao: 'Pensamento analítico e resolução criativa de problemas', habilidades: 5, status: 'Ativa' },
+    { id: '14', nome: 'Inteligência Emocional', descricao: 'Autoconhecimento e gestão de relacionamentos interpessoais', habilidades: 8, status: 'Ativa' },
+    { id: '15', nome: 'Gestão de Pessoas', descricao: 'Recrutamento, desenvolvimento e retenção de talentos', habilidades: 12, status: 'Ativa' },
+    { id: '16', nome: 'Marketing Digital', descricao: 'Estratégias e ferramentas de marketing online', habilidades: 10, status: 'Ativa' },
+    { id: '17', nome: 'Vendas e Negociação', descricao: 'Técnicas de vendas e negociação comercial', habilidades: 9, status: 'Ativa' },
+    { id: '18', nome: 'Atendimento ao Cliente', descricao: 'Excelência no relacionamento com clientes', habilidades: 7, status: 'Ativa' },
+    { id: '19', nome: 'Gestão Financeira', descricao: 'Planejamento e controle financeiro', habilidades: 11, status: 'Ativa' },
+    { id: '20', nome: 'Compliance e Governança', descricao: 'Conformidade legal e governança corporativa', habilidades: 6, status: 'Ativa' },
+    { id: '21', nome: 'Business Intelligence', descricao: 'Análise de negócios e inteligência empresarial', habilidades: 8, status: 'Ativa' },
+    { id: '22', nome: 'Machine Learning', descricao: 'Algoritmos e modelos de aprendizado de máquina', habilidades: 15, status: 'Ativa' },
+    { id: '23', nome: 'Cloud Computing', descricao: 'Serviços e arquitetura em nuvem', habilidades: 13, status: 'Ativa' },
+    { id: '24', nome: 'Mobile Development', descricao: 'Desenvolvimento de aplicativos móveis', habilidades: 12, status: 'Desativada' },
+    { id: '25', nome: 'Blockchain', descricao: 'Tecnologias de blockchain e criptomoedas', habilidades: 4, status: 'Ativa' },
+    { id: '26', nome: 'IoT', descricao: 'Internet das Coisas e dispositivos conectados', habilidades: 5, status: 'Ativa' },
+    { id: '27', nome: 'Inteligência Artificial', descricao: 'IA, processamento de linguagem natural e visão computacional', habilidades: 14, status: 'Ativa' },
+    { id: '28', nome: 'Gestão de Mudanças', descricao: 'Condução e facilitação de processos de mudança organizacional', habilidades: 7, status: 'Ativa' },
+    { id: '29', nome: 'Planejamento Estratégico', descricao: 'Definição e execução de estratégias empresariais', habilidades: 9, status: 'Ativa' },
+    { id: '30', nome: 'Gestão de Riscos', descricao: 'Identificação, análise e mitigaço de riscos', habilidades: 8, status: 'Ativa' },
+    { id: '31', nome: 'Inovação', descricao: 'Fomento e gestão da inovação organizacional', habilidades: 6, status: 'Ativa' },
+    { id: '32', nome: 'Sustentabilidade', descricao: 'Práticas sustentáveis e responsabilidade socioambiental', habilidades: 5, status: 'Ativa' },
+    { id: '33', nome: 'E-commerce', descricao: 'Gestão e operação de comércio eletrônico', habilidades: 10, status: 'Ativa' },
+    { id: '34', nome: 'Supply Chain', descricao: 'Gestão da cadeia de suprimentos e logística', habilidades: 11, status: 'Ativa' },
+    { id: '35', nome: 'Product Management', descricao: 'Gestão de produtos digitais e roadmap', habilidades: 13, status: 'Ativa' },
+    { id: '36', nome: 'Pesquisa de Mercado', descricao: 'Metodologias de pesquisa e análise de mercado', habilidades: 7, status: 'Desativada' },
+    { id: '37', nome: 'Redação Técnica', descricao: 'Documentação técnica e especificações', habilidades: 4, status: 'Ativa' },
+    { id: '38', nome: 'Apresentações Executivas', descricao: 'Criação e entrega de apresentações de alto impacto', habilidades: 6, status: 'Ativa' },
+    { id: '39', nome: 'Mentoring e Coaching', descricao: 'Desenvolvimento de pessoas através de mentoria', habilidades: 8, status: 'Ativa' },
+    { id: '40', nome: 'Design Thinking', descricao: 'Metodologia centrada no usuário para solução de problemas', habilidades: 9, status: 'Ativa' },
+    { id: '41', nome: 'Acessibilidade Digital', descricao: 'Desenvolvimento de soluções acessíveis e inclusivas', habilidades: 5, status: 'Ativa' },
+    { id: '42', nome: 'SEO e SEM', descricao: 'Otimização para mecanismos de busca e marketing', habilidades: 7, status: 'Ativa' },
+    { id: '43', nome: 'Content Marketing', descricao: 'Estratégia e produção de conteúdo', habilidades: 8, status: 'Ativa' },
+    { id: '44', nome: 'Analytics', descricao: 'Análise de métricas e indicadores de desempenho', habilidades: 12, status: 'Ativa' },
+    { id: '45', nome: 'Automação de Processos', descricao: 'RPA e automação de workflows', habilidades: 10, status: 'Ativa' },
+    { id: '46', nome: 'Gestão de Contratos', descricao: 'Elaboração e gestão de contratos empresariais', habilidades: 6, status: 'Desativada' },
+    { id: '47', nome: 'Propriedade Intelectual', descricao: 'Proteção e gestão de ativos intelectuais', habilidades: 4, status: 'Ativa' },
+    { id: '48', nome: 'Relações Públicas', descricao: 'Gestão de imagem e relacionamento com stakeholders', habilidades: 7, status: 'Ativa' },
+  ]);
+
+  // Dados de exemplo para Carreiras
+  const [carreirasData, setCarreirasData] = useState([
+    { id: '1', nome: 'Tecnologia da Informação', jornadas: 8, jornadasConfiguradas: 6, status: 'Ativa' },
+    { id: '2', nome: 'Recursos Humanos', jornadas: 5, jornadasConfiguradas: 5, status: 'Ativa' },
+    { id: '3', nome: 'Financeiro', jornadas: 6, jornadasConfiguradas: 4, status: 'Ativa' },
+    { id: '4', nome: 'Marketing', jornadas: 7, jornadasConfiguradas: 5, status: 'Ativa' },
+    { id: '5', nome: 'Vendas', jornadas: 9, jornadasConfiguradas: 7, status: 'Ativa' },
+    { id: '6', nome: 'Operações', jornadas: 4, jornadasConfiguradas: 4, status: 'Ativa' },
+    { id: '7', nome: 'Jurídico', jornadas: 3, jornadasConfiguradas: 2, status: 'Ativa' },
+    { id: '8', nome: 'Atendimento ao Cliente', jornadas: 5, jornadasConfiguradas: 3, status: 'Ativa' },
+    { id: '9', nome: 'Produto', jornadas: 6, jornadasConfiguradas: 6, status: 'Ativa' },
+    { id: '10', nome: 'Design', jornadas: 4, jornadasConfiguradas: 3, status: 'Ativa' },
+    { id: '11', nome: 'Engenharia', jornadas: 7, jornadasConfiguradas: 5, status: 'Ativa' },
+    { id: '12', nome: 'Qualidade', jornadas: 3, jornadasConfiguradas: 3, status: 'Ativa' },
+    { id: '13', nome: 'Projetos', jornadas: 0, jornadasConfiguradas: 0, status: 'Desativada' },
+    { id: '14', nome: 'Inovação', jornadas: 5, jornadasConfiguradas: 4, status: 'Ativa' },
+    { id: '15', nome: 'Suprimentos', jornadas: 4, jornadasConfiguradas: 2, status: 'Ativa' },
+    { id: '16', nome: 'Logística', jornadas: 0, jornadasConfiguradas: 0, status: 'Desativada' },
+    { id: '17', nome: 'Compliance', jornadas: 2, jornadasConfiguradas: 2, status: 'Ativa' },
+    { id: '18', nome: 'Comunicação', jornadas: 3, jornadasConfiguradas: 1, status: 'Ativa' },
+  ]);
+
+  // Dados de exemplo para Jornadas
+  const jornadasData = [
+    { id: 'j1', carreiraId: '1', nome: 'Desenvolvedor', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 4, cargosConfigurados: 3, status: 'Ativa' },
+    { id: 'j2', carreiraId: '1', nome: 'Analista de Infraestrutura', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 2, status: 'Ativa' },
+    { id: 'j3', carreiraId: '1', nome: 'Analista de Dados', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 3, status: 'Ativa' },
+    { id: 'j4', carreiraId: '1', nome: 'Engenheiro de Software', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 5, cargosConfigurados: 4, status: 'Ativa' },
+    { id: 'j5', carreiraId: '1', nome: 'Gerente de Tecnologia', carreira: 'Tecnologia da Informação', tipo: 'Gestão', quantidadeCargos: 4, cargosConfigurados: 2, status: 'Ativa' },
+    { id: 'j6', carreiraId: '1', nome: 'Product Manager', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 1, status: 'Ativa' },
+    { id: 'j7', carreiraId: '1', nome: 'Arquiteto de Software', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 0, status: 'Ativa' },
+    { id: 'j8', carreiraId: '1', nome: 'DevOps', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 0, cargosConfigurados: 0, status: 'Desativada' },
+    { id: 'j9', carreiraId: '2', nome: 'Analista de RH', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 2, status: 'Ativa' },
+    { id: 'j10', carreiraId: '2', nome: 'Recrutador', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 2, status: 'Ativa' },
+    { id: 'j11', carreiraId: '2', nome: 'Business Partner', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 4, cargosConfigurados: 3, status: 'Ativa' },
+    { id: 'j12', carreiraId: '2', nome: 'Gerente de RH', carreira: 'Recursos Humanos', tipo: 'Gestão', quantidadeCargos: 3, cargosConfigurados: 1, status: 'Ativa' },
+    { id: 'j13', carreiraId: '2', nome: 'Analista de Remuneração', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 0, cargosConfigurados: 0, status: 'Desativada' },
+  ];
+
+  // Dados de exemplo para Cargos (vindos do RM)
+  const [cargosData, setCargosData] = useState([
+    { id: 'c1', jornadaId: 'j1', cargoRM: 'Desenvolvedor Junior', ordem: 'Júnior', habilidadesConfiguradas: 8, status: 'Configurado' },
+    { id: 'c2', jornadaId: 'j1', cargoRM: 'Desenvolvedor Pleno', ordem: 'Pleno', habilidadesConfiguradas: 12, status: 'Configurado' },
+    { id: 'c3', jornadaId: 'j1', cargoRM: 'Desenvolvedor Sênior', ordem: 'Sênior', habilidadesConfiguradas: 15, status: 'Configurado' },
+    { id: 'c4', jornadaId: 'j1', cargoRM: 'Tech Lead', ordem: 'Especialista', habilidadesConfiguradas: 0, status: 'Não Configurado' },
+    { id: 'c5', jornadaId: 'j2', cargoRM: 'Analista de Infraestrutura Junior', ordem: 'Júnior', habilidadesConfiguradas: 5, status: 'Configurado' },
+    { id: 'c6', jornadaId: 'j2', cargoRM: 'Analista de Infraestrutura Pleno', ordem: 'Pleno', habilidadesConfiguradas: 9, status: 'Configurado' },
+  ]);
+
+  // Dados de exemplo para Habilidades do Cargo (relacionamento cargo x habilidade)
+  const [habilidadesCargoData, setHabilidadesCargoData] = useState([
+    { cargoId: 'c1', habilidadeId: '1', nivelEsperado: 'Básico', obrigatoria: true },
+    { cargoId: 'c1', habilidadeId: '2', nivelEsperado: 'Básico', obrigatoria: true },
+    { cargoId: 'c1', habilidadeId: '18', nivelEsperado: 'Básico', obrigatoria: true },
+    { cargoId: 'c2', habilidadeId: '1', nivelEsperado: 'Intermediário', obrigatoria: true },
+    { cargoId: 'c2', habilidadeId: '2', nivelEsperado: 'Intermediário', obrigatoria: true },
+    { cargoId: 'c2', habilidadeId: '3', nivelEsperado: 'Intermediário', obrigatoria: false },
+  ]);
+
+  // Dados de exemplo para Avaliações
+  const [avaliacoesData, setAvaliacoesData] = useState([
+    { id: '1', nome: 'Avaliação de Competências Técnicas Q1 2026', tipo: 'Autoavaliação', periodo: '01/03 - 31/03/2026', dataInicio: '2026-03-01', dataFim: '2026-03-31', participantes: 42, concluidas: 38, status: 'Ativa', competencias: ['Desenvolvimento Frontend', 'Desenvolvimento Backend', 'DevOps e Infraestrutura'], publico: 'gerencias', gerencias: ['Tecnologia'] },
+    { id: '2', nome: 'Avaliação de Liderança 2026', tipo: 'Autoavaliação', periodo: '15/02 - 28/02/2026', dataInicio: '2026-02-15', dataFim: '2026-02-28', participantes: 18, concluidas: 18, status: 'Encerrada', competencias: ['Liderança', 'Comunicação Corporativa'], publico: 'gerencias', gerencias: ['Recursos Humanos', 'Operações'] },
+    { id: '3', nome: 'Soft Skills - Semestral', tipo: 'Autoavaliação', periodo: '10/04 - 30/04/2026', dataInicio: '2026-04-10', dataFim: '2026-04-30', participantes: 0, concluidas: 0, status: 'Rascunho', competencias: ['Comunicação Corporativa', 'Inteligência Emocional', 'Trabalho em Equipe'], publico: 'todos', gerencias: [] },
+    { id: '4', nome: 'Avaliação de Vendas Q1', tipo: 'Autoavaliação', periodo: '05/03 - 25/03/2026', dataInicio: '2026-03-05', dataFim: '2026-03-25', participantes: 25, concluidas: 12, status: 'Ativa', competencias: ['Vendas e Negociação', 'Comunicação Corporativa'], publico: 'gerencias', gerencias: ['Vendas'] },
+    { id: '5', nome: 'Competências Analíticas', tipo: 'Autoavaliação', periodo: '01/01 - 31/01/2026', dataInicio: '2026-01-01', dataFim: '2026-01-31', participantes: 35, concluidas: 35, status: 'Encerrada', competencias: ['Análise de Dados', 'Business Intelligence', 'Analytics'], publico: 'gerencias', gerencias: ['Tecnologia', 'Financeiro'] },
+    { id: '6', nome: 'Metodologias Ágeis', tipo: 'Autoavaliação', periodo: '20/03 - 10/04/2026', dataInicio: '2026-03-20', dataFim: '2026-04-10', participantes: 0, concluidas: 0, status: 'Rascunho', competencias: ['Metodologias Ágeis', 'Gestão de Projetos'], publico: 'gerencias', gerencias: ['Tecnologia', 'Produto'] },
+    { id: '7', nome: 'Avaliação Design Q1 2026', tipo: 'Autoavaliação', periodo: '01/03 - 20/03/2026', dataInicio: '2026-03-01', dataFim: '2026-03-20', participantes: 12, concluidas: 10, status: 'Ativa', competencias: ['Design de Produto', 'UX Research'], publico: 'gerencias', gerencias: ['Design', 'Produto'] },
+    { id: '8', nome: 'Competências em Cloud Computing', tipo: 'Autoavaliação', periodo: '15/01 - 15/02/2026', dataInicio: '2026-01-15', dataFim: '2026-02-15', participantes: 28, concluidas: 28, status: 'Encerrada', competencias: ['Cloud Computing', 'DevOps e Infraestrutura'], publico: 'gerencias', gerencias: ['Tecnologia'] },
+  ]);
+
+  // Configuração dos campos do formulário
+  const formFields: FormField[] = [
+    {
+      name: 'nome',
+      label: 'Nome Completo',
+      type: 'text',
+      placeholder: 'Digite o nome completo',
+      required: true,
+    },
+    {
+      name: 'email',
+      label: 'E-mail',
+      type: 'email',
+      placeholder: 'email@exemplo.com',
+      required: true,
+    },
+    {
+      name: 'cargo',
+      label: 'Cargo',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'dev-jr', label: 'Desenvolvedor Junior' },
+        { value: 'dev-pl', label: 'Desenvolvedor Pleno' },
+        { value: 'dev-sr', label: 'Desenvolvedor Senior' },
+        { value: 'analista', label: 'Analista' },
+        { value: 'gerente', label: 'Gerente' },
+      ],
+    },
+    {
+      name: 'gerencia',
+      label: 'Gerência',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'ti', label: 'Tecnologia' },
+        { value: 'rh', label: 'Recursos Humanos' },
+        { value: 'op', label: 'Operações' },
+        { value: 'vendas', label: 'Vendas' },
+      ],
+    },
+    {
+      name: 'descricao',
+      label: 'Descrição',
+      type: 'textarea',
+      placeholder: 'Digite uma breve descrição...',
+      rows: 4,
+    },
+    {
+      name: 'ativo',
+      label: 'Ativo',
+      type: 'checkbox',
+      placeholder: 'Este perfil está ativo',
+    },
+  ];
+
+  // Configuração das colunas da tabela
+  const columns: Column[] = [
+    { 
+      key: 'nome', 
+      label: 'Nome', 
+      width: '20%',
+    },
+    { key: 'cargo', label: 'Cargo', width: '20%' },
+    { key: 'gerencia', label: 'Gerência', width: '18%' },
+    { key: 'ultimoAcesso', label: 'Último Acesso', width: '15%' },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '12%',
+      render: (value) => (
+        <span
+          className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+            value === 'Ativo'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-700'
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+  ];
+
+  // Configuração das ações da tabela (Perfis são somente leitura - vindos do RM)
+  const actions: InlineAction[] = [
+    {
+      label: 'Sincronizar',
+      icon: (row) => (
+        <div className="flex items-center gap-1">
+          <RefreshCw className="w-4 h-4" />
+          {row.atualizacaoDisponivel && (
+            <div className="relative group">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10">
+                Atualização disponível no RM
+              </div>
+            </div>
+          )}
+        </div>
+      ),
+      onClick: (row) => {
+        toast.success(`Perfil de ${row.nome} sincronizado com sucesso!`);
+        // Aqui seria feita a sincronização com o RM
+        setProfilesData(profilesData.map(p => 
+          p.id === row.id ? { ...p, atualizacaoDisponivel: false } : p
+        ));
+      },
+    },
+  ];
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Lógica de salvamento
+    console.log('Formulário enviado');
+    setIsDrawerOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (selectedRow) {
+      setProfilesData(profilesData.filter((item) => item.id !== selectedRow.id));
+      setIsModalOpen(false);
+      setSelectedRow(null);
+    }
+  };
+
+  const handleDeleteCompetencia = () => {
+    if (selectedRow) {
+      setCompetenciasData(
+        competenciasData.map((item) =>
+          item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
+        )
+      );
+      toast.success(`Competência "${selectedRow.nome}" desativada com sucesso!`);
+      setIsModalOpen(false);
+      setSelectedRow(null);
+    }
+  };
+
+  // ========== EARLY RETURN FOR COLABORADOR VIEW ==========
+  // Renderizar visão do colaborador (AFTER all hooks are declared)
+  if (viewMode === 'colaborador') {
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <div className="p-4 md:p-8">
+          {selectedItem === 'meu-perfil' && <ColaboradorView />}
+          {selectedItem === 'minhas-avaliacoes' && <MinhasAvaliacoes />}
+          {selectedItem === 'minha-carreira' && <MinhaCarreira />}
+          
+          {/* Fallback - mostra Meu Perfil por padrão */}
+          {selectedItem !== 'meu-perfil' && 
+           selectedItem !== 'minhas-avaliacoes' && 
+           selectedItem !== 'minha-carreira' && (
+            <ColaboradorView />
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // Renderizar página de Componentes
+  if (selectedItem === 'components') {
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <ComponentShowcase />
+      </main>
+    );
+  }
+
+  // Renderizar template de listagem para algumas páginas
+  if (selectedItem === 'perfis') {
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <div className="p-4 md:p-8">
+          <Perfis profilesData={profilesData} onUpdateProfiles={setProfilesData} />
+        </div>
+      </main>
+    );
+  }
+
+  // Módulo Habilidades com Tabs
+  if (selectedItem === 'habilidades') {
+    // Contar totais para as badges
+    const totalCompetencias = competenciasData.length;
+    const totalHabilidades = habilidadesData.length;
+
+    const tabs = [
+      { id: 'competencias', label: 'Competências', badge: totalCompetencias },
+      { id: 'niveis', label: 'Níveis de Habilidades' },
+      { id: 'habilidades-list', label: 'Habilidades', badge: totalHabilidades },
+    ];
+
+    const handleCompetenciasSort = (column: 'nome' | 'habilidades' | 'status') => {
+      setCompetenciasSortConfig(prev =>
+        prev.column === column
+          ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+          : { column, direction: 'asc' }
+      );
+      setCurrentPage(1);
+    };
+
+    // Configurações para o módulo de Competências (reutilizando lógica anterior)
+    const competenciasColumns: Column[] = [
+      {
+        key: 'nome',
+        label: 'Nome',
+        width: '25%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCompetenciasSort('nome')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Nome
+            {competenciasSortConfig.column === 'nome' ? (
+              competenciasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+      },
+      { key: 'descricao', label: 'Descrição', width: '40%' },
+      {
+        key: 'habilidades',
+        label: 'Habilidades Vinculadas',
+        width: '15%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCompetenciasSort('habilidades')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hover:text-gray-700 transition-colors"
+          >
+            Habilidades Vinculadas
+            {competenciasSortConfig.column === 'habilidades' ? (
+              competenciasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span className="inline-flex items-center gap-1 text-sm text-gray-900">
+            <span className="font-medium">{value}</span>
+            <span className="text-gray-500">
+              {value === 1 ? 'habilidade' : 'habilidades'}
+            </span>
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        width: '15%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCompetenciasSort('status')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Status
+            {competenciasSortConfig.column === 'status' ? (
+              competenciasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span
+            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+              value === 'Ativa'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {value}
+          </span>
+        ),
+      },
+    ];
+
+    const competenciasActions: InlineAction[] = [
+      {
+        label: 'Editar',
+        icon: <Edit className="w-4 h-4" />,
+        onClick: (row) => {
+          setSelectedRow(row);
+          setCompetenciaFormData({
+            nome: row.nome,
+            descricao: row.descricao,
+            status: row.status,
+          });
+          setIsDrawerOpen(true);
+        },
+      },
+      {
+        label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
+        icon: (row) => (
+          <ToggleSwitch
+            checked={row.status === 'Ativa'}
+            onChange={() => {}}
+          />
+        ),
+        variant: 'toggle',
+        onClick: (row) => {
+          if (row.status === 'Ativa') {
+            setSelectedRow(row);
+            setIsModalOpen(true);
+          } else {
+            setCompetenciasData(
+              competenciasData.map((item) =>
+                item.id === row.id ? { ...item, status: 'Ativa' } : item
+              )
+            );
+            toast.success(`Competência "${row.nome}" reativada com sucesso!`);
+          }
+        },
+      },
+    ];
+
+    const handleOpenCreateDrawer = () => {
+      setSelectedRow(null);
+      setCompetenciaFormData({ nome: '', descricao: '', status: 'Ativa' });
+      setIsDrawerOpen(true);
+    };
+
+    const competenciasFormFields: FormField[] = [
+      {
+        name: 'nome',
+        label: 'Nome da Competência',
+        type: 'text',
+        placeholder: 'Ex: Design de Produto',
+        required: true,
+        value: competenciaFormData.nome,
+        onChange: (value) =>
+          setCompetenciaFormData({ ...competenciaFormData, nome: value }),
+      },
+      {
+        name: 'descricao',
+        label: 'Descrição',
+        type: 'textarea',
+        placeholder: 'Descreva brevemente esta competência...',
+        rows: 4,
+        value: competenciaFormData.descricao,
+        onChange: (value) =>
+          setCompetenciaFormData({ ...competenciaFormData, descricao: value }),
+      },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        required: true,
+        value: competenciaFormData.status,
+        onChange: (value) =>
+          setCompetenciaFormData({ ...competenciaFormData, status: value }),
+        options: [
+          { value: 'Ativa', label: 'Ativa' },
+          { value: 'Desativada', label: 'Desativada' },
+        ],
+      },
+    ];
+
+    const handleCompetenciaFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (selectedRow) {
+        // Editar competência existente
+        setCompetenciasData(
+          competenciasData.map((item) =>
+            item.id === selectedRow.id
+              ? {
+                  ...item,
+                  nome: competenciaFormData.nome,
+                  descricao: competenciaFormData.descricao,
+                  status: competenciaFormData.status,
+                }
+              : item
+          )
+        );
+        toast.success('Competência atualizada com sucesso!');
+      } else {
+        // Criar nova competência
+        const newCompetencia = {
+          id: String(competenciasData.length + 1),
+          nome: competenciaFormData.nome,
+          descricao: competenciaFormData.descricao,
+          habilidades: 0,
+          status: competenciaFormData.status,
+        };
+        setCompetenciasSortConfig({ column: 'id', direction: 'desc' });
+        setCurrentPage(1);
+        setCompetenciasData([newCompetencia, ...competenciasData]);
+        toast.success('Competência criada com sucesso!');
+      }
+
+      setIsDrawerOpen(false);
+      setSelectedRow(null);
+      setCompetenciaFormData({ nome: '', descricao: '' });
+    };
+
+    const handleDesativar = () => {
+      if (selectedRow) {
+        setCompetenciasData(
+          competenciasData.map((item) =>
+            item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
+          )
+        );
+        toast.success(`Competência "${selectedRow.nome}" desativada com sucesso!`);
+        setIsModalOpen(false);
+        setSelectedRow(null);
+      }
+    };
+
+    // Renderizar conteúdo baseado na tab ativa
+    const renderTabContent = () => {
+      if (activeTab === 'competencias') {
+        // Aplicar filtros aos dados
+        const dadosFiltrados = competenciasData.filter(item => {
+          // Filtro de busca (nome e descrição)
+          const matchBusca = buscaCompetencia === '' || 
+            item.nome.toLowerCase().includes(buscaCompetencia.toLowerCase()) ||
+            item.descricao.toLowerCase().includes(buscaCompetencia.toLowerCase());
+          
+          // Filtro de status
+          const matchStatus = statusFilterCompetencias === 'todas' || 
+            item.status.toLowerCase() === statusFilterCompetencias.toLowerCase();
+          
+          return matchBusca && matchStatus;
+        });
+
+        const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+          if (competenciasSortConfig.column === 'id') {
+            return Number(b.id) - Number(a.id);
+          }
+          const dir = competenciasSortConfig.direction === 'asc' ? 1 : -1;
+          if (competenciasSortConfig.column === 'habilidades') {
+            return (a.habilidades - b.habilidades) * dir;
+          }
+          return (a[competenciasSortConfig.column] as string).localeCompare(b[competenciasSortConfig.column] as string) * dir;
+        });
+
+        // Cálculo de paginação com dados ordenados
+        const totalItems = dadosOrdenados.length;
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedData = dadosOrdenados.slice(startIndex, endIndex);
+
+        const handlePageChange = (page: number) => {
+          setCurrentPage(page);
+        };
+
+        const handleItemsPerPageChange = (items: number) => {
+          setItemsPerPage(items);
+          setCurrentPage(1);
+        };
+
+        return (
+          <>
+            <ListingPage
+              primaryAction={{
+                label: '+ Criar competência',
+                onClick: handleOpenCreateDrawer,
+              }}
+              columns={competenciasColumns}
+              data={paginatedData}
+              actions={competenciasActions}
+              searchPlaceholder="Buscar competência"
+              onSearch={setBuscaCompetencia}
+              statusFilter={{
+                value: statusFilterCompetencias,
+                onChange: setStatusFilterCompetencias,
+                options: [
+                  { value: 'todas', label: 'Todas' },
+                  { value: 'ativa', label: 'Ativas' },
+                  { value: 'desativada', label: 'Desativadas' },
+                ],
+              }}
+              emptyState={{
+                icon: <Layers className="w-8 h-8" />,
+                title: 'Nenhuma competência cadastrada',
+                description:
+                  'Comece criando a primeira competência para organizar as habilidades da sua organização.',
+              }}
+              pagination={{
+                currentPage,
+                itemsPerPage,
+                totalItems,
+                onPageChange: handlePageChange,
+                onItemsPerPageChange: handleItemsPerPageChange,
+              }}
+            />
+
+            <FormDrawer
+              isOpen={isDrawerOpen}
+              onClose={() => {
+                setIsDrawerOpen(false);
+                setSelectedRow(null);
+                setCompetenciaFormData({ nome: '', descricao: '', status: 'Ativa' });
+              }}
+              title={selectedRow ? 'Editar Competência' : 'Nova Competência'}
+              fields={competenciasFormFields}
+              onSubmit={handleCompetenciaFormSubmit}
+              submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
+              alertBanner={
+                selectedRow && selectedRow.habilidades > 0
+                  ? {
+                      title: 'Competência vinculada',
+                      description: `Esta competência está vinculada a ${selectedRow.habilidades} ${
+                        selectedRow.habilidades === 1 ? 'habilidade' : 'habilidades'
+                      }. Alterações no nome ou descrição serão refletidas automaticamente ${
+                        selectedRow.habilidades === 1 ? 'nessa habilidade' : 'nessas habilidades'
+                      } e no mapa de habilidades.`,
+                      variant: 'info',
+                    }
+                  : undefined
+              }
+            />
+
+            <ConfirmationModal
+              isOpen={isModalOpen}
+              onClose={() => {
+                setIsModalOpen(false);
+                setSelectedRow(null);
+              }}
+              onConfirm={handleDesativar}
+              title="Desativar Competência"
+              message={`Ao desativar a competência "${selectedRow?.nome}", ela não será mais exibida nas listas ativas, mas o histórico será mantido. Você poderá reativá-la posteriormente se necessário.`}
+              confirmLabel="Desativar"
+              cancelLabel="Cancelar"
+              variant="warning"
+            />
+          </>
+        );
+      }
+
+      if (activeTab === 'niveis') {
+        return (
+          <NiveisProficiencia
+            niveisData={niveisData}
+            onUpdateNiveis={setNiveisData}
+          />
+        );
+      }
+
+      if (activeTab === 'habilidades-list') {
+        // Gerar lista de competências únicas para o filtro
+        const competenciasUnicas = Array.from(new Set(competenciasData.map(c => c.nome))).sort();
+
+        // Aplicar filtros aos dados
+        const dadosFiltrados = habilidadesData.filter(item => {
+          // Filtro de busca (nome e descrição)
+          const matchBusca = buscaHabilidade === '' || 
+            item.nome.toLowerCase().includes(buscaHabilidade.toLowerCase()) ||
+            item.descricao.toLowerCase().includes(buscaHabilidade.toLowerCase());
+          
+          // Filtro de competência
+          const matchCompetencia = filtroCompetencia === 'todas' || 
+            item.competencia === filtroCompetencia;
+          
+          // Filtro de tipo
+          const matchTipo = filtroTipo === 'todas' || 
+            item.tipo.toLowerCase() === filtroTipo.toLowerCase();
+          
+          // Filtro de status
+          const matchStatus = filtroStatus === 'todas' || 
+            item.status.toLowerCase() === filtroStatus.toLowerCase();
+          
+          return matchBusca && matchCompetencia && matchTipo && matchStatus;
+        });
+
+        const handleHabilidadesSort = (column: 'nome' | 'competencia' | 'status') => {
+          setHabilidadesSortConfig(prev =>
+            prev.column === column
+              ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+              : { column, direction: 'asc' }
+          );
+          setCurrentPageHabilidades(1);
+        };
+
+        const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+          if (habilidadesSortConfig.column === 'id') {
+            return Number(b.id) - Number(a.id);
+          }
+          const dir = habilidadesSortConfig.direction === 'asc' ? 1 : -1;
+          return a[habilidadesSortConfig.column].localeCompare(b[habilidadesSortConfig.column]) * dir;
+        });
+
+        const totalItemsHabilidades = dadosOrdenados.length;
+        const startIndexHabilidades = (currentPageHabilidades - 1) * itemsPerPageHabilidades;
+        const endIndexHabilidades = startIndexHabilidades + itemsPerPageHabilidades;
+        const paginatedDataHabilidades = dadosOrdenados.slice(startIndexHabilidades, endIndexHabilidades);
+
+        const habilidadesColumns: Column[] = [
+          {
+            key: 'nome',
+            label: 'Nome da Habilidade',
+            width: '20%',
+            render: (value) => (
+              <span className="text-sm text-gray-900">{value}</span>
+            ),
+            renderHeader: () => (
+              <button
+                onClick={() => handleHabilidadesSort('nome')}
+                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+              >
+                Nome da Habilidade
+                {habilidadesSortConfig.column === 'nome' ? (
+                  habilidadesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                  <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+                )}
+              </button>
+            ),
+          },
+          {
+            key: 'competencia',
+            label: 'Competência',
+            width: '18%',
+            renderHeader: () => (
+              <button
+                onClick={() => handleHabilidadesSort('competencia')}
+                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+              >
+                Competência
+                {habilidadesSortConfig.column === 'competencia' ? (
+                  habilidadesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                  <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+                )}
+              </button>
+            ),
+          },
+          {
+            key: 'niveis',
+            label: 'Níveis',
+            width: '25%',
+            render: (value) => {
+              const niveis = value as Array<{ nivelId: string; criterio: string }> | undefined;
+              if (!niveis || niveis.length === 0) return <span className="text-gray-400 text-sm">—</span>;
+              const niveisMap = Object.fromEntries(niveisData.map((n) => [n.id, n]));
+              const nomes = niveis.map(({ nivelId }) => niveisMap[nivelId]?.nome).filter(Boolean).join(', ');
+              return <span className="text-sm text-gray-700">{nomes || <span className="text-gray-400">—</span>}</span>;
+            },
+          },
+          {
+            key: 'tipo',
+            label: 'Tipo',
+            width: '12%',
+            render: (value) => (
+              <span
+                className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                  value === 'Técnica'
+                    ? 'bg-[var(--brand-100)] text-[var(--brand-800)]'
+                    : 'bg-purple-100 text-purple-800'
+                }`}
+              >
+                {value}
+              </span>
+            ),
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            width: '12%',
+            renderHeader: () => (
+              <button
+                onClick={() => handleHabilidadesSort('status')}
+                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+              >
+                Status
+                {habilidadesSortConfig.column === 'status' ? (
+                  habilidadesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                  <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+                )}
+              </button>
+            ),
+            render: (value) => (
+              <span
+                className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                  value === 'Ativa'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {value}
+              </span>
+            ),
+          },
+        ];
+
+        const habilidadesActions: InlineAction[] = [
+          {
+            label: 'Visualizar',
+            icon: <Eye className="w-4 h-4" />,
+            onClick: (row) => navigate(`/habilidades/${row.id}`),
+          },
+          {
+            label: 'Editar',
+            icon: <Edit className="w-4 h-4" />,
+            onClick: (row) => {
+              setSelectedRow(row);
+              setHabilidadeFormData({
+                nome: row.nome,
+                descricao: row.descricao,
+                competencia: row.competencia,
+                tipo: row.tipo,
+                status: row.status,
+                niveis: row.niveis || [],
+              });
+              setIsDrawerOpen(true);
+            },
+          },
+          {
+            label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
+            icon: (row) => (
+              <ToggleSwitch
+                checked={row.status === 'Ativa'}
+                onChange={() => {}}
+              />
+            ),
+            variant: 'toggle',
+            onClick: (row) => {
+              if (row.status === 'Ativa') {
+                setSelectedRow(row);
+                setIsModalOpen(true);
+              } else {
+                updateHabilidade(row.id, { status: 'Ativa' });
+                toast.success(`Habilidade "${row.nome}" reativada com sucesso!`);
+              }
+            },
+          },
+        ];
+
+        const handleOpenCreateHabilidadeDrawer = () => {
+          setSelectedRow(null);
+          setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+          setIsDrawerOpen(true);
+        };
+
+        const habilidadesFormFields: FormField[] = [
+          {
+            name: 'nome',
+            label: 'Nome da Habilidade',
+            type: 'text',
+            placeholder: 'Ex: React',
+            required: true,
+            value: habilidadeFormData.nome,
+            onChange: (value) =>
+              setHabilidadeFormData({ ...habilidadeFormData, nome: value }),
+          },
+          {
+            name: 'descricao',
+            label: 'Descrição',
+            type: 'textarea',
+            placeholder: 'Descreva esta habilidade...',
+            rows: 3,
+            value: habilidadeFormData.descricao,
+            onChange: (value) =>
+              setHabilidadeFormData({ ...habilidadeFormData, descricao: value }),
+          },
+          {
+            name: 'competencia',
+            label: 'Competência',
+            type: 'select',
+            required: true,
+            value: habilidadeFormData.competencia,
+            onChange: (value) =>
+              setHabilidadeFormData({ ...habilidadeFormData, competencia: value }),
+            options: competenciasUnicas.map(comp => ({ value: comp, label: comp })),
+          },
+          {
+            name: 'tipo',
+            label: 'Tipo',
+            type: 'select',
+            required: true,
+            value: habilidadeFormData.tipo,
+            onChange: (value) =>
+              setHabilidadeFormData({ ...habilidadeFormData, tipo: value }),
+            options: [
+              { value: 'Técnica', label: 'Técnica' },
+              { value: 'Comportamental', label: 'Comportamental' },
+            ],
+          },
+          {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            required: true,
+            value: habilidadeFormData.status,
+            onChange: (value) =>
+              setHabilidadeFormData({ ...habilidadeFormData, status: value }),
+            options: [
+              { value: 'Ativa', label: 'Ativa' },
+              { value: 'Desativada', label: 'Desativada' },
+            ],
+          },
+        ];
+
+        const handleHabilidadeFormSubmit = (e: React.FormEvent) => {
+          e.preventDefault();
+
+          if (habilidadeFormData.niveis.length === 0) {
+            toast.error('Selecione ao menos um nível aplicável para esta habilidade.');
+            return;
+          }
+
+          if (selectedRow) {
+            updateHabilidade(selectedRow.id, {
+              nome: habilidadeFormData.nome,
+              descricao: habilidadeFormData.descricao,
+              competencia: habilidadeFormData.competencia,
+              tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
+              status: habilidadeFormData.status as 'Ativa' | 'Desativada',
+              niveis: habilidadeFormData.niveis,
+            });
+            toast.success('Habilidade atualizada com sucesso!');
+            setIsDrawerOpen(false);
+            setSelectedRow(null);
+            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+          } else {
+            addHabilidade({
+              nome: habilidadeFormData.nome,
+              descricao: habilidadeFormData.descricao,
+              competencia: habilidadeFormData.competencia,
+              tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
+              status: habilidadeFormData.status as 'Ativa' | 'Desativada',
+              niveis: habilidadeFormData.niveis,
+            });
+            toast.success('Habilidade criada com sucesso!');
+            setIsDrawerOpen(false);
+            setSelectedRow(null);
+            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+            setHabilidadesSortConfig({ column: 'id', direction: 'desc' });
+            setCurrentPageHabilidades(1);
+          }
+        };
+
+        const handleDesativarHabilidade = () => {
+          if (selectedRow) {
+            updateHabilidade(selectedRow.id, { status: 'Desativada' });
+            toast.success(`Habilidade "${selectedRow.nome}" desativada com sucesso!`);
+            setIsModalOpen(false);
+            setSelectedRow(null);
+          }
+        };
+
+        const handlePageChangeHabilidades = (page: number) => {
+          setCurrentPageHabilidades(page);
+        };
+
+        const handleItemsPerPageChangeHabilidades = (items: number) => {
+          setItemsPerPageHabilidades(items);
+          setCurrentPageHabilidades(1);
+        };
+
+        return (
+          <>
+            <div className="space-y-6 relative">
+              {/* Toolbar unificada */}
+              <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4">
+                {/* Mobile: Layout vertical */}
+                <div className="flex flex-col gap-3 md:hidden">
+                  {/* Campo de busca - largura total */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar habilidade"
+                      value={buscaHabilidade}
+                      onChange={(e) => setBuscaHabilidade(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Dropdown de Competência - largura total */}
+                  <Select value={filtroCompetencia} onValueChange={setFiltroCompetencia}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Todas as competências" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as competências</SelectItem>
+                      {competenciasUnicas.map(comp => (
+                        <SelectItem key={comp} value={comp}>{comp}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Filtros de Tipo - scroll horizontal */}
+                  <div className="overflow-x-auto -mx-3 px-3">
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
+                      <button
+                        onClick={() => setFiltroTipo('todas')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroTipo === 'todas'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Todas
+                      </button>
+                      <button
+                        onClick={() => setFiltroTipo('técnica')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroTipo === 'técnica'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Técnica
+                      </button>
+                      <button
+                        onClick={() => setFiltroTipo('comportamental')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroTipo === 'comportamental'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Comportamental
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filtros de Status - scroll horizontal */}
+                  <div className="overflow-x-auto -mx-3 px-3">
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
+                      <button
+                        onClick={() => setFiltroStatus('todas')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroStatus === 'todas'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Todas
+                      </button>
+                      <button
+                        onClick={() => setFiltroStatus('ativa')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroStatus === 'ativa'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Ativas
+                      </button>
+                      <button
+                        onClick={() => setFiltroStatus('desativada')}
+                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                          filtroStatus === 'desativada'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Desativadas
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop: Layout horizontal original */}
+                <div className="hidden md:flex items-center gap-3">
+                  {/* Campo de busca */}
+                  <div className="w-80 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar habilidade"
+                      value={buscaHabilidade}
+                      onChange={(e) => setBuscaHabilidade(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Dropdown de Competência */}
+                  <Select value={filtroCompetencia} onValueChange={setFiltroCompetencia}>
+                    <SelectTrigger className="w-auto">
+                      <SelectValue placeholder="Todas as competências" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as competências</SelectItem>
+                      {competenciasUnicas.map(comp => (
+                        <SelectItem key={comp} value={comp}>{comp}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Pills de Tipo */}
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setFiltroTipo('todas')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroTipo === 'todas'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      onClick={() => setFiltroTipo('técnica')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroTipo === 'técnica'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Técnica
+                    </button>
+                    <button
+                      onClick={() => setFiltroTipo('comportamental')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroTipo === 'comportamental'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Comportamental
+                    </button>
+                  </div>
+
+                  {/* Pills de Status */}
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setFiltroStatus('todas')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroStatus === 'todas'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      onClick={() => setFiltroStatus('ativa')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroStatus === 'ativa'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Ativas
+                    </button>
+                    <button
+                      onClick={() => setFiltroStatus('desativada')}
+                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
+                        filtroStatus === 'desativada'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Desativadas
+                    </button>
+                  </div>
+
+                  {/* Espaçador flexível */}
+                  <div className="flex-1"></div>
+
+                  {/* Botão de ação primária - apenas desktop */}
+                  <button
+                    onClick={handleOpenCreateHabilidadeDrawer}
+                    className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+                  >
+                    + Criar habilidade
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabela */}
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {totalItemsHabilidades === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <Award className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <h3 className="text-base font-medium text-gray-900 mb-2">
+                      {habilidadesData.length === 0 
+                        ? 'Nenhuma habilidade cadastrada'
+                        : 'Nenhum resultado encontrado'
+                      }
+                    </h3>
+                    <p className="text-sm text-gray-500 max-w-md">
+                      {habilidadesData.length === 0 
+                        ? 'Comece criando a primeira habilidade para estruturar o sistema de gestão de competências.'
+                        : 'Não encontramos habilidades que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <Table
+                    columns={habilidadesColumns}
+                    data={paginatedDataHabilidades}
+                    actions={habilidadesActions}
+                    pagination={{
+                      currentPage: currentPageHabilidades,
+                      itemsPerPage: itemsPerPageHabilidades,
+                      totalItems: totalItemsHabilidades,
+                      onPageChange: handlePageChangeHabilidades,
+                      onItemsPerPageChange: handleItemsPerPageChangeHabilidades,
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            <FormDrawer
+              isOpen={isDrawerOpen}
+              onClose={() => {
+                setIsDrawerOpen(false);
+                setSelectedRow(null);
+                setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+              }}
+              title={selectedRow ? 'Editar Habilidade' : 'Nova Habilidade'}
+              fields={habilidadesFormFields}
+              onSubmit={handleHabilidadeFormSubmit}
+              submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
+              customContent={(() => {
+                const niveisAtivos = niveisData
+                  .filter((n) => n.status === 'Ativo' && !('arquivado' in n && n.arquivado))
+                  .sort((a, b) => a.peso - b.peso);
+
+                const selectedIds = new Set(habilidadeFormData.niveis.map((n) => n.nivelId));
+
+                const toggleNivel = (nivelId: string) => {
+                  if (selectedIds.has(nivelId)) {
+                    setHabilidadeFormData((prev) => ({
+                      ...prev,
+                      niveis: prev.niveis.filter((n) => n.nivelId !== nivelId),
+                    }));
+                  } else {
+                    setHabilidadeFormData((prev) => ({
+                      ...prev,
+                      niveis: [...prev.niveis, { nivelId, criterio: '' }],
+                    }));
+                  }
+                };
+
+                return (
+                  <div className="border-t border-gray-200 pt-4 mt-1 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">
+                        Níveis Aplicáveis <span className="text-red-500">*</span>
+                      </label>
+                      {habilidadeFormData.niveis.length > 0 && (
+                        <span className="text-xs text-gray-500">{habilidadeFormData.niveis.length} selecionado{habilidadeFormData.niveis.length > 1 ? 's' : ''}</span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {niveisAtivos.map((nivel) => {
+                        const isSelected = selectedIds.has(nivel.id);
+                        return (
+                          <button
+                            key={nivel.id}
+                            type="button"
+                            onClick={() => toggleNivel(nivel.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                              isSelected
+                                ? 'border-transparent text-white'
+                                : 'border-gray-300 text-gray-600 bg-white hover:border-gray-400'
+                            }`}
+                            style={isSelected ? { backgroundColor: getCorFromPeso(nivel.peso) } : {}}
+                          >
+                            {nivel.nome}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {habilidadeFormData.niveis.length > 0 && (
+                      <div className="border-t border-gray-100 pt-4 space-y-4">
+                        <label className="text-sm font-medium text-gray-700">Critérios por nível</label>
+                        {niveisAtivos
+                          .filter((nivel) => selectedIds.has(nivel.id))
+                          .map((nivel) => {
+                            const nivelEntry = habilidadeFormData.niveis.find((n) => n.nivelId === nivel.id);
+                            return (
+                              <div key={nivel.id} className="space-y-2">
+                                <span
+                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                                  style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
+                                >
+                                  {nivel.nome}
+                                </span>
+                                <textarea
+                                  value={nivelEntry?.criterio ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setHabilidadeFormData((prev) => ({
+                                      ...prev,
+                                      niveis: prev.niveis.map((n) =>
+                                        n.nivelId === nivel.id ? { ...n, criterio: val } : n
+                                      ),
+                                    }));
+                                  }}
+                                  placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] resize-none text-gray-700 placeholder-gray-400"
+                                />
+                                {nivel.descricao && (
+                                  <p className="text-xs text-gray-400 leading-relaxed">
+                                    <span className="font-medium">Referência do nível:</span> {nivel.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            />
+
+            <ConfirmationModal
+              isOpen={isModalOpen}
+              onClose={() => {
+                setIsModalOpen(false);
+                setSelectedRow(null);
+              }}
+              onConfirm={handleDesativarHabilidade}
+              title="Desativar Habilidade"
+              message={`Ao desativar a habilidade "${selectedRow?.nome}", ela não será mais exibida nas listas ativas, mas o histórico de avaliações será mantido. Você poderá reativá-la posteriormente se necessário.`}
+              confirmLabel="Desativar"
+              cancelLabel="Cancelar"
+              variant="warning"
+            />
+
+            {/* FAB - Floating Action Button (apenas mobile) */}
+            <button
+              onClick={handleOpenCreateHabilidadeDrawer}
+              className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-[var(--brand-600)] text-white rounded-full shadow-lg hover:bg-[var(--brand-700)] active:scale-95 transition-all flex items-center justify-center z-40"
+              aria-label="Criar habilidade"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          </>
+        );
+      }
+
+      return null;
+    };
+
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <div className="p-4 md:p-8">
+          {/* Título da Página */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Habilidades</h1>
+            <p className="text-sm text-gray-500 mt-1">Gerencie competências, níveis e habilidades da organização</p>
+          </div>
+
+          {/* Tabs de Navegação */}
+          <div className="border-b border-gray-200 mb-6 md:mb-8 -mx-4 md:mx-0">
+            <div ref={tabsContainerRef} className="flex gap-3 md:gap-8 overflow-x-auto lg:overflow-x-visible scrollbar-hide px-4 md:px-0">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    data-tab-id={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap flex-shrink-0 inline-flex items-center gap-2 ${
+                      isActive
+                        ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.badge !== undefined && (
+                      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[10px] font-medium rounded-full ${
+                        isActive
+                          ? 'bg-[var(--brand-100)] text-[var(--brand-700)]'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Conteúdo da tab ativa */}
+          {renderTabContent()}
+        </div>
+      </main>
+    );
+  }
+
+  // Módulo Carreiras
+  if (selectedItem === 'carreiras') {
+    // Filtrar dados baseado no filtro de status
+    const getFilteredCarreiras = () => {
+      return carreirasData.filter(item => {
+        // Filtro de busca (nome)
+        const matchBusca = buscaCarreira === '' || 
+          item.nome.toLowerCase().includes(buscaCarreira.toLowerCase());
+        
+        // Filtro de status
+        const matchStatus = statusFilterCarreiras === 'todas' || 
+          item.status.toLowerCase() === statusFilterCarreiras.toLowerCase();
+        
+        return matchBusca && matchStatus;
+      });
+    };
+
+    const dadosFiltrados = getFilteredCarreiras();
+
+    const handleCarreirasSort = (column: 'nome' | 'jornadas' | 'status') => {
+      setCarreirasSortConfig(prev =>
+        prev.column === column
+          ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+          : { column, direction: 'asc' }
+      );
+      setCurrentPageCarreiras(1);
+    };
+
+    const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+      if (carreirasSortConfig.column === 'id') {
+        return Number(b.id) - Number(a.id);
+      }
+      const dir = carreirasSortConfig.direction === 'asc' ? 1 : -1;
+      if (carreirasSortConfig.column === 'jornadas') {
+        const countA = jornadasDoContexto.filter(j => j.carreiraId === a.id).length;
+        const countB = jornadasDoContexto.filter(j => j.carreiraId === b.id).length;
+        return (countA - countB) * dir;
+      }
+      return (a[carreirasSortConfig.column] as string).localeCompare(b[carreirasSortConfig.column] as string) * dir;
+    });
+
+    // Paginação
+    const totalItems = dadosOrdenados.length;
+    const startIndex = (currentPageCarreiras - 1) * itemsPerPageCarreiras;
+    const endIndex = startIndex + itemsPerPageCarreiras;
+    const paginatedData = dadosOrdenados.slice(startIndex, endIndex);
+
+    const handlePageChange = (page: number) => {
+      setCurrentPageCarreiras(page);
+    };
+
+    const handleItemsPerPageChange = (items: number) => {
+      setItemsPerPageCarreiras(items);
+      setCurrentPageCarreiras(1);
+    };
+
+    // Colunas da tabela
+    const carreirasColumns: Column[] = [
+      {
+        key: 'nome',
+        label: 'Nome da Carreira',
+        width: '45%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCarreirasSort('nome')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Nome da Carreira
+            {carreirasSortConfig.column === 'nome' ? (
+              carreirasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span className="text-sm text-gray-900">{value}</span>
+        ),
+      },
+      {
+        key: 'jornadas',
+        label: 'Jornadas',
+        width: '25%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCarreirasSort('jornadas')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Jornadas
+            {carreirasSortConfig.column === 'jornadas' ? (
+              carreirasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (_value, row) => {
+          const total = jornadasDoContexto.filter(j => j.carreiraId === row.id).length;
+          if (total === 0) return <span className="text-sm text-gray-500">Nenhuma jornada</span>;
+          return (
+            <span className="text-sm text-gray-900">
+              {total} {total === 1 ? 'jornada' : 'jornadas'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        width: '20%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleCarreirasSort('status')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Status
+            {carreirasSortConfig.column === 'status' ? (
+              carreirasSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span
+            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+              value === 'Ativa'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {value}
+          </span>
+        ),
+      },
+    ];
+
+    // Handler para navegar para detalhamento da carreira
+    // Ações da tabela
+    const carreirasActions: InlineAction[] = [
+      {
+        label: 'Editar',
+        icon: <Edit className="w-4 h-4" />,
+        onClick: (row) => {
+          setSelectedRow(row);
+          setCarreiraFormData({
+            nome: row.nome,
+            status: row.status,
+          });
+          setIsDrawerOpen(true);
+        },
+      },
+      {
+        label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
+        icon: (row) => (
+          <ToggleSwitch
+            checked={row.status === 'Ativa'}
+            onChange={() => {}}
+          />
+        ),
+        variant: 'toggle',
+        onClick: (row) => {
+          if (row.status === 'Ativa') {
+            setSelectedRow(row);
+            setIsModalOpen(true);
+          } else {
+            setCarreirasData(
+              carreirasData.map((item) =>
+                item.id === row.id ? { ...item, status: 'Ativa' } : item
+              )
+            );
+            toast.success(`Carreira "${row.nome}" reativada com sucesso!`);
+          }
+        },
+      },
+    ];
+
+    // Abrir drawer de criação
+    const handleOpenCreateDrawer = () => {
+      setSelectedRow(null);
+      setCarreiraFormData({ nome: '', status: 'Ativa' });
+      setIsDrawerOpen(true);
+    };
+
+    // Campos do formulário
+    const carreirasFormFields: FormField[] = [
+      {
+        name: 'nome',
+        label: 'Nome da Carreira',
+        type: 'text',
+        placeholder: 'Ex: Tecnologia da Informação',
+        required: true,
+        value: carreiraFormData.nome,
+        onChange: (value) =>
+          setCarreiraFormData({ ...carreiraFormData, nome: value }),
+      },
+    ];
+
+    // Submeter formulário
+    const handleCarreiraFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (selectedRow) {
+        // Editar carreira existente
+        setCarreirasData(
+          carreirasData.map((item) =>
+            item.id === selectedRow.id
+              ? {
+                  ...item,
+                  nome: carreiraFormData.nome,
+                  status: carreiraFormData.status,
+                }
+              : item
+          )
+        );
+        toast.success('Carreira atualizada com sucesso!');
+      } else {
+        // Criar nova carreira
+        const newCarreira = {
+          id: String(carreirasData.length + 1),
+          nome: carreiraFormData.nome,
+          jornadas: 0,
+          jornadasConfiguradas: 0,
+          status: carreiraFormData.status,
+        };
+        setCarreirasSortConfig({ column: 'id', direction: 'desc' });
+        setCurrentPageCarreiras(1);
+        setCarreirasData([newCarreira, ...carreirasData]);
+        toast.success('Carreira criada com sucesso!');
+      }
+
+      setIsDrawerOpen(false);
+      setSelectedRow(null);
+      setCarreiraFormData({ nome: '', status: 'Ativa' });
+    };
+
+    // Desativar carreira
+    const handleDesativarCarreira = () => {
+      if (selectedRow) {
+        setCarreirasData(
+          carreirasData.map((item) =>
+            item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
+          )
+        );
+        toast.success(`Carreira "${selectedRow.nome}" desativada com sucesso!`);
+        setIsModalOpen(false);
+        setSelectedRow(null);
+      }
+    };
+
+    // Se uma carreira foi selecionada para visualizar jornadas, renderizar página de detalhamento de carreira
+    if (selectedCarreiraDetalhe) {
+      const carreira = carreirasData.find(c => c.id === selectedCarreiraDetalhe);
+      const jornadasDaCarreira = jornadasData.filter(j => j.carreiraId === selectedCarreiraDetalhe);
+
+      const handleJornadasContentSort = (column: 'nome' | 'tipo' | 'quantidadeCargos' | 'status') => {
+        setJornadasContentSortConfig(prev =>
+          prev.column === column
+            ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+            : { column, direction: 'asc' }
+        );
+      };
+
+      const jornadasOrdenadas = [...jornadasDaCarreira].sort((a, b) => {
+        if (jornadasContentSortConfig.column === 'id') {
+          return Number(b.id.replace(/\D/g, '')) - Number(a.id.replace(/\D/g, ''));
+        }
+        const dir = jornadasContentSortConfig.direction === 'asc' ? 1 : -1;
+        if (jornadasContentSortConfig.column === 'quantidadeCargos') {
+          return (a.quantidadeCargos - b.quantidadeCargos) * dir;
+        }
+        return (a[jornadasContentSortConfig.column] as string).localeCompare(b[jornadasContentSortConfig.column] as string) * dir;
+      });
+
+      // Handler para voltar à listagem de carreiras
+      const handleVoltarCarreiras = () => {
+        setSelectedCarreiraDetalhe(null);
+      };
+
+      // Handler para navegar para detalhamento de jornada (cargos)
+      const handleVerCargos = (jornadaId: string) => {
+        navigate(`/carreiras/${selectedCarreiraDetalhe}/jornadas/${jornadaId}`);
+      };
+
+      // Colunas da tabela de jornadas
+      const jornadasColumns: Column[] = [
+        {
+          key: 'nome',
+          label: 'Nome da Jornada',
+          width: '35%',
+          renderHeader: () => (
+            <button
+              onClick={() => handleJornadasContentSort('nome')}
+              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            >
+              Nome da Jornada
+              {jornadasContentSortConfig.column === 'nome' ? (
+                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+              ) : (
+                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+              )}
+            </button>
+          ),
+          render: (value) => (
+            <span className="text-sm text-gray-900">{value}</span>
+          ),
+        },
+        {
+          key: 'tipo',
+          label: 'Tipo',
+          width: '25%',
+          renderHeader: () => (
+            <button
+              onClick={() => handleJornadasContentSort('tipo')}
+              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            >
+              Tipo
+              {jornadasContentSortConfig.column === 'tipo' ? (
+                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+              ) : (
+                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+              )}
+            </button>
+          ),
+          render: (value) => (
+            <span
+              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                value === 'Contribuidor Individual'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-purple-100 text-purple-800'
+              }`}
+            >
+              {value}
+            </span>
+          ),
+        },
+        {
+          key: 'quantidadeCargos',
+          label: 'Cargos',
+          width: '20%',
+          renderHeader: () => (
+            <button
+              onClick={() => handleJornadasContentSort('quantidadeCargos')}
+              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            >
+              Cargos
+              {jornadasContentSortConfig.column === 'quantidadeCargos' ? (
+                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+              ) : (
+                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+              )}
+            </button>
+          ),
+          render: (value, row) => (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm text-gray-900 font-medium">
+                {value} {value === 1 ? 'cargo' : 'cargos'}
+              </span>
+              {value > 0 && row.cargosConfigurados === value ? (
+                <span className="text-xs text-green-600">
+                  todos configurados
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  {row.cargosConfigurados} {row.cargosConfigurados === 1 ? 'configurado' : 'configurados'}
+                </span>
+              )}
+            </div>
+          ),
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          width: '15%',
+          renderHeader: () => (
+            <button
+              onClick={() => handleJornadasContentSort('status')}
+              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            >
+              Status
+              {jornadasContentSortConfig.column === 'status' ? (
+                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+              ) : (
+                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+              )}
+            </button>
+          ),
+          render: (value) => (
+            <span
+              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                value === 'Ativa'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-700'
+              }`}
+            >
+              {value}
+            </span>
+          ),
+        },
+      ];
+
+      // Ações da tabela de jornadas
+      const jornadasActions: InlineAction[] = [
+        {
+          label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
+          icon: (row) => (
+            <ToggleSwitch
+              checked={row.status === 'Ativa'}
+              onChange={() => {}}
+            />
+          ),
+          variant: 'toggle',
+          onClick: (row) => {
+            // Lógica de toggle - implementação simplificada
+            toast.info('Funcionalidade em desenvolvimento');
+          },
+        },
+        {
+          label: 'Editar',
+          icon: <Edit className="w-4 h-4" />,
+          onClick: (row) => {
+            toast.info('Funcionalidade em desenvolvimento');
+          },
+        },
+        {
+          label: 'Excluir',
+          icon: <Trash2 className="w-4 h-4" />,
+          variant: 'danger',
+          onClick: (row) => {
+            toast.info('Funcionalidade em desenvolvimento');
+          },
+        },
+      ];
+
+      return (
+        <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+          <div className="p-4 md:p-8">
+            {/* Botão Voltar */}
+            <button
+              onClick={handleVoltarCarreiras}
+              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para Carreiras
+            </button>
+
+            {/* Cabeçalho */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-gray-900">{carreira?.nome}</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Gerencie as jornadas e trilhas de progressão desta carreira
+              </p>
+            </div>
+
+            {/* Tabela de Jornadas */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="p-4 md:p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">Jornadas da Carreira</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Cargos e trilhas de desenvolvimento desta carreira
+                  </p>
+                </div>
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+                  onClick={() => {
+                    toast.info('Funcionalidade em desenvolvimento');
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Criar jornada
+                </button>
+              </div>
+              
+              {jornadasDaCarreira.length > 0 ? (
+                <Table
+                  columns={jornadasColumns}
+                  data={jornadasOrdenadas}
+                  actions={jornadasActions}
+                  onRowClick={(row) => handleVerCargos(row.id)}
+                />
+              ) : (
+                <div className="p-8 md:p-12">
+                  <EmptyState
+                    icon={<Briefcase className="w-8 h-8" />}
+                    title="Nenhuma jornada cadastrada nesta carreira"
+                    description="Comece criando a primeira jornada para estruturar os cargos e competências."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+      );
+    }
+
+    // Se uma jornada foi selecionada, renderizar página de detalhamento
+    if (selectedJornadaId && selectedCarreiraId) {
+      const jornada = jornadasData.find(j => j.id === selectedJornadaId);
+      const carreira = carreirasData.find(c => c.id === selectedCarreiraId);
+      const cargosDaJornada = cargosData.filter(c => c.jornadaId === selectedJornadaId);
+
+      // Handler para voltar à listagem de jornadas da carreira
+      const handleVoltarJornadas = () => {
+        setSelectedJornadaId(null);
+        setSelectedCarreiraDetalhe(selectedCarreiraId);
+        setSelectedCarreiraId(null);
+      };
+
+      // Handler para navegar para configuração de cargo
+      const handleConfigurarCargo = (cargo: any) => {
+        navigate(`/carreiras/${selectedCarreiraId}/jornadas/${selectedJornadaId}/cargos/${cargo.id}`);
+      };
+
+      // Colunas da tabela de cargos
+      const cargosColumns: Column[] = [
+        { 
+          key: 'ordem', 
+          label: '#', 
+          width: '8%',
+          render: (value, row, index) => (
+            <span className="text-sm text-gray-500 font-medium">
+              {(index || 0) + 1}
+            </span>
+          ),
+        },
+        { 
+          key: 'cargoRM', 
+          label: 'Nome do Cargo', 
+          width: '35%',
+          render: (value) => (
+            <span className="text-sm text-gray-900 font-medium">{value}</span>
+          ),
+        },
+        {
+          key: 'habilidadesConfiguradas',
+          label: 'Habilidades',
+          width: '25%',
+          render: (value, row) => {
+            if (value === 0) {
+              return (
+                <span className="text-sm text-gray-500">
+                  Não configurado
+                </span>
+              );
+            }
+            return (
+              <span className="text-sm text-gray-900">
+                {value} {value === 1 ? 'habilidade' : 'habilidades'}
+              </span>
+            );
+          },
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          width: '20%',
+          render: (value) => (
+            <span
+              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                value === 'Configurado'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}
+            >
+              {value}
+            </span>
+          ),
+        },
+      ];
+
+      // Ações da tabela de cargos
+      const cargosActions: InlineAction[] = [
+        {
+          label: 'Configurar habilidades',
+          variant: 'text',
+          onClick: handleConfigurarCargo,
+        },
+      ];
+
+
+
+      return (
+        <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+          <div className="p-4 md:p-8">
+            {/* Botão Voltar */}
+            <button
+              onClick={handleVoltarJornadas}
+              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para {carreira?.nome}
+            </button>
+
+            {/* Cabeçalho */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-gray-900">{jornada?.nome}</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Carreira: {carreira?.nome}
+              </p>
+            </div>
+
+            {/* Tabela de Cargos */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="p-4 md:p-6 border-b border-gray-200">
+                <h2 className="text-base font-semibold text-gray-900">Estrutura de Evolução</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Configure as habilidades esperadas para cada cargo desta jornada. A ordem representa a progressão de carreira.
+                </p>
+              </div>
+              
+              <Table
+                columns={cargosColumns}
+                data={cargosDaJornada}
+                actions={cargosActions}
+                onRowClick={handleConfigurarCargo}
+              />
+            </div>
+
+
+          </div>
+        </main>
+      );
+    }
+
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <div className="p-4 md:p-8">
+          {/* Título da Página */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Carreiras</h1>
+            <p className="text-sm text-gray-500 mt-1">Cada carreira agrupa jornadas de progressão de uma área funcional</p>
+          </div>
+
+          {/* Conteúdo */}
+          <ListingPage
+            primaryAction={{
+              label: '+ Criar carreira',
+              onClick: handleOpenCreateDrawer,
+            }}
+            columns={carreirasColumns}
+            data={paginatedData}
+            actions={carreirasActions}
+            searchPlaceholder="Buscar carreira"
+            onSearch={setBuscaCarreira}
+            statusFilter={{
+              value: statusFilterCarreiras,
+              onChange: setStatusFilterCarreiras,
+              options: [
+                { value: 'todas', label: 'Todas' },
+                { value: 'ativa', label: 'Ativas' },
+                { value: 'desativada', label: 'Desativadas' },
+              ],
+            }}
+            emptyState={{
+              icon: <Briefcase className="w-8 h-8" />,
+              title: carreirasData.length === 0 ? 'Nenhuma carreira cadastrada' : 'Nenhum resultado encontrado',
+              description: carreirasData.length === 0 
+                ? 'Comece criando a primeira carreira para estruturar as jornadas da organização.'
+                : 'Não encontramos carreiras que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.',
+            }}
+            pagination={{
+              currentPage: currentPageCarreiras,
+              itemsPerPage: itemsPerPageCarreiras,
+              totalItems,
+              onPageChange: handlePageChange,
+              onItemsPerPageChange: handleItemsPerPageChange,
+            }}
+            onRowClick={(row) => navigate(`/carreiras/${row.id}`)}
+          />
+
+          <FormDrawer
+            isOpen={isDrawerOpen}
+            onClose={() => {
+              setIsDrawerOpen(false);
+              setSelectedRow(null);
+              setCarreiraFormData({ nome: '', status: 'Ativa' });
+            }}
+            title={selectedRow ? 'Editar Carreira' : 'Nova Carreira'}
+            fields={carreirasFormFields}
+            onSubmit={handleCarreiraFormSubmit}
+            submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
+            alertBanner={
+              selectedRow && selectedRow.jornadas > 0
+                ? {
+                    title: 'Carreira vinculada',
+                    description: `Esta carreira está vinculada a ${selectedRow.jornadas} ${
+                      selectedRow.jornadas === 1 ? 'jornada' : 'jornadas'
+                    }. Alterações no nome serão refletidas automaticamente ${
+                      selectedRow.jornadas === 1 ? 'nessa jornada' : 'nessas jornadas'
+                    }.`,
+                    variant: 'info',
+                  }
+                : undefined
+            }
+          />
+
+          <ConfirmationModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedRow(null);
+            }}
+            onConfirm={handleDesativarCarreira}
+            title="Desativar Carreira"
+            message={
+              selectedRow && selectedRow.jornadas > 0
+                ? `Esta carreira está vinculada a ${selectedRow.jornadas} ${
+                    selectedRow.jornadas === 1 ? 'jornada' : 'jornadas'
+                  }. Ao desativá-la, ela não poderá ser utilizada em novas estruturas de carreira.`
+                : `Ao desativar a carreira "${selectedRow?.nome}", ela não será mais exibida nas listas ativas. Você poderá reativá-la posteriormente se necessário.`
+            }
+            confirmLabel="Desativar"
+            cancelLabel="Cancelar"
+            variant="warning"
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // Módulo Avaliações
+  if (selectedItem === 'avaliacoes') {
+    // Filtrar dados baseado no filtro de status
+    const getFilteredAvaliacoes = () => {
+      return avaliacoesData.filter(item => {
+        // Filtro de busca (nome, tipo)
+        const matchBusca = buscaAvaliacao === '' || 
+          item.nome.toLowerCase().includes(buscaAvaliacao.toLowerCase()) ||
+          item.tipo.toLowerCase().includes(buscaAvaliacao.toLowerCase());
+        
+        // Filtro de status
+        const matchStatus = statusFilterAvaliacoes === 'todas' || 
+          item.status.toLowerCase() === statusFilterAvaliacoes.toLowerCase();
+        
+        return matchBusca && matchStatus;
+      });
+    };
+
+    const dadosFiltrados = getFilteredAvaliacoes();
+
+    const handleAvaliacoesSort = (column: 'nome' | 'tipo' | 'periodo' | 'status') => {
+      setAvaliacoesSortConfig(prev =>
+        prev.column === column
+          ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+          : { column, direction: 'asc' }
+      );
+      setCurrentPageAvaliacoes(1);
+    };
+
+    const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+      if (avaliacoesSortConfig.column === 'id') {
+        return Number(b.id) - Number(a.id);
+      }
+      const dir = avaliacoesSortConfig.direction === 'asc' ? 1 : -1;
+      if (avaliacoesSortConfig.column === 'periodo') {
+        return a.dataInicio.localeCompare(b.dataInicio) * dir;
+      }
+      return (a[avaliacoesSortConfig.column] as string).localeCompare(b[avaliacoesSortConfig.column] as string) * dir;
+    });
+
+    // Paginação
+    const totalItems = dadosOrdenados.length;
+    const startIndex = (currentPageAvaliacoes - 1) * itemsPerPageAvaliacoes;
+    const endIndex = startIndex + itemsPerPageAvaliacoes;
+    const paginatedData = dadosOrdenados.slice(startIndex, endIndex);
+
+    const handlePageChange = (page: number) => {
+      setCurrentPageAvaliacoes(page);
+    };
+
+    const handleItemsPerPageChange = (items: number) => {
+      setItemsPerPageAvaliacoes(items);
+      setCurrentPageAvaliacoes(1);
+    };
+
+    // Colunas da tabela
+    const avaliacoesColumns: Column[] = [
+      {
+        key: 'nome',
+        label: 'Nome da Avaliação',
+        width: '35%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleAvaliacoesSort('nome')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Nome da Avaliação
+            {avaliacoesSortConfig.column === 'nome' ? (
+              avaliacoesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+      },
+      {
+        key: 'periodo',
+        label: 'Período',
+        width: '15%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleAvaliacoesSort('periodo')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Período
+            {avaliacoesSortConfig.column === 'periodo' ? (
+              avaliacoesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span className="text-sm text-gray-700">{value}</span>
+        ),
+      },
+      {
+        key: 'participantes',
+        label: 'Participantes',
+        width: '15%',
+        render: (value, row) => {
+          if (row.status === 'Rascunho') {
+            return <span className="text-sm text-gray-500">-</span>;
+          }
+          const progresso = row.participantes > 0 ? Math.round((row.concluidas / row.participantes) * 100) : 0;
+          return (
+            <div className="space-y-1">
+              <div className="text-sm text-gray-700">{row.concluidas}/{row.participantes}</div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-[var(--brand-600)] h-1.5 rounded-full transition-all"
+                  style={{ width: `${progresso}%` }}
+                />
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        width: '12%',
+        renderHeader: () => (
+          <button
+            onClick={() => handleAvaliacoesSort('status')}
+            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          >
+            Status
+            {avaliacoesSortConfig.column === 'status' ? (
+              avaliacoesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+            ) : (
+              <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+            )}
+          </button>
+        ),
+        render: (value) => (
+          <span
+            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+              value === 'Ativa'
+                ? 'bg-green-100 text-green-800'
+                : value === 'Encerrada'
+                ? 'bg-gray-100 text-gray-700'
+                : 'bg-yellow-100 text-yellow-800'
+            }`}
+          >
+            {value}
+          </span>
+        ),
+      },
+    ];
+
+    // Ações da tabela
+    const avaliacoesActions: InlineAction[] = [
+      {
+        label: 'Visualizar',
+        icon: <Eye className="w-4 h-4" />,
+        onClick: (row) => navigate(`/avaliacoes/${row.id}`),
+      },
+      {
+        label: 'Editar',
+        icon: <Edit className="w-4 h-4" />,
+        onClick: (row) => {
+          setSelectedRow(row);
+          setAvaliacaoFormData({
+            nome: row.nome,
+            descricao: row.descricao || '',
+            competencias: row.competencias || [],
+            gerencias: row.gerencias || [],
+            dataInicio: row.dataInicio || '',
+            dataFim: row.dataFim || '',
+          });
+          setIsDrawerOpen(true);
+        },
+      },
+      {
+        label: 'Encerrar',
+        icon: <StopCircle className="w-4 h-4" />,
+        show: (row) => row.status === 'Ativa',
+        onClick: (row) => {
+          setSelectedRow(row);
+          setIsModalOpen(true);
+        },
+      },
+    ];
+
+    // Abrir drawer de criação (novo fluxo multi-etapas)
+    const handleOpenCreateDrawer = () => {
+      setIsNovaAvaliacaoOpen(true);
+    };
+
+    // Callbacks do NovaAvaliacaoDrawer
+    const formatDataCurta = (d: string) =>
+      d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+    const formatDataLonga = (d: string) =>
+      d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+
+    const handleNovaAvaliacaoRascunho = (data: NovaAvaliacaoFormData) => {
+      const periodo = data.dataInicio && data.dataFim
+        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
+        : '';
+      const newAvaliacao = {
+        id: String(avaliacoesData.length + 1),
+        nome: data.nome,
+        tipo: 'Autoavaliação',
+        periodo,
+        dataInicio: data.dataInicio,
+        dataFim: data.dataFim,
+        participantes: 0,
+        concluidas: 0,
+        status: 'Rascunho',
+        competencias: data.competencias,
+        publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
+        gerencias: data.gerencias,
+      };
+      setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
+      setCurrentPageAvaliacoes(1);
+      setAvaliacoesData([newAvaliacao, ...avaliacoesData]);
+      toast.success('Avaliação criada como rascunho!');
+    };
+
+    const handleNovaAvaliacaoAtivar = (data: NovaAvaliacaoFormData) => {
+      const periodo = data.dataInicio && data.dataFim
+        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
+        : '';
+      const newAvaliacao = {
+        id: String(avaliacoesData.length + 1),
+        nome: data.nome,
+        tipo: 'Autoavaliação',
+        periodo,
+        dataInicio: data.dataInicio,
+        dataFim: data.dataFim,
+        participantes: 25,
+        concluidas: 0,
+        status: 'Ativa',
+        competencias: data.competencias,
+        publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
+        gerencias: data.gerencias,
+      };
+      setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
+      setCurrentPageAvaliacoes(1);
+      setAvaliacoesData([newAvaliacao, ...avaliacoesData]);
+      toast.success('Avaliação criada e ativada com sucesso!');
+    };
+
+    // Callbacks do modal de edição
+    const handleEditRascunho = (data: typeof avaliacaoFormData) => {
+      if (!selectedRow) return;
+      const periodo = data.dataInicio && data.dataFim
+        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
+        : '';
+      setAvaliacoesData(
+        avaliacoesData.map((item) =>
+          item.id === selectedRow.id
+            ? {
+                ...item,
+                nome: data.nome,
+                periodo,
+                dataInicio: data.dataInicio,
+                dataFim: data.dataFim,
+                competencias: data.competencias,
+                publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
+                gerencias: data.gerencias,
+                status: 'Rascunho',
+              }
+            : item
+        )
+      );
+      toast.success('Avaliação salva como rascunho!');
+      setIsDrawerOpen(false);
+      setSelectedRow(null);
+    };
+
+    const handleEditAtivar = (data: typeof avaliacaoFormData) => {
+      if (!selectedRow) return;
+      const periodo = data.dataInicio && data.dataFim
+        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
+        : '';
+      setAvaliacoesData(
+        avaliacoesData.map((item) =>
+          item.id === selectedRow.id
+            ? {
+                ...item,
+                nome: data.nome,
+                periodo,
+                dataInicio: data.dataInicio,
+                dataFim: data.dataFim,
+                competencias: data.competencias,
+                publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
+                gerencias: data.gerencias,
+                status: 'Ativa',
+                participantes: item.participantes || 25,
+                concluidas: item.concluidas || 0,
+              }
+            : item
+        )
+      );
+      toast.success('Avaliação ativada com sucesso!');
+      setIsDrawerOpen(false);
+      setSelectedRow(null);
+    };
+
+    // Encerrar avaliação
+    const handleEncerrarAvaliacao = () => {
+      if (selectedRow) {
+        setAvaliacoesData(
+          avaliacoesData.map((item) =>
+            item.id === selectedRow.id ? { ...item, status: 'Encerrada' } : item
+          )
+        );
+        toast.success(`Avaliação "${selectedRow.nome}" encerrada com sucesso!`);
+        setIsModalOpen(false);
+        setSelectedRow(null);
+      }
+    };
+
+    return (
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+        <div className="p-4 md:p-8">
+          {/* Título da Página */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Avaliações</h1>
+            <p className="text-sm text-gray-500 mt-1">Gerencie ciclos de avaliação de competências e desempenho</p>
+          </div>
+
+          {/* Conteúdo */}
+          <ListingPage
+            primaryAction={{
+              label: '+ Criar avaliação',
+              onClick: handleOpenCreateDrawer,
+            }}
+            columns={avaliacoesColumns}
+            data={paginatedData}
+            actions={avaliacoesActions}
+            searchPlaceholder="Buscar avaliação"
+            onSearch={setBuscaAvaliacao}
+            statusFilter={{
+              value: statusFilterAvaliacoes,
+              onChange: setStatusFilterAvaliacoes,
+              options: [
+                { value: 'todas', label: 'Todas' },
+                { value: 'rascunho', label: 'Rascunho' },
+                { value: 'ativa', label: 'Ativas' },
+                { value: 'encerrada', label: 'Encerradas' },
+              ],
+            }}
+            emptyState={{
+              icon: <ClipboardCheck className="w-8 h-8" />,
+              title: avaliacoesData.length === 0 ? 'Nenhuma avaliação cadastrada' : 'Nenhum resultado encontrado',
+              description: avaliacoesData.length === 0 
+                ? 'Comece criando a primeira avaliação para iniciar o ciclo de desenvolvimento.'
+                : 'Não encontramos avaliações que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.',
+            }}
+            pagination={{
+              currentPage: currentPageAvaliacoes,
+              itemsPerPage: itemsPerPageAvaliacoes,
+              totalItems,
+              onPageChange: handlePageChange,
+              onItemsPerPageChange: handleItemsPerPageChange,
+            }}
+          />
+
+          <EditarAvaliacaoModal
+            isOpen={isDrawerOpen}
+            onClose={() => {
+              setIsDrawerOpen(false);
+              setSelectedRow(null);
+            }}
+            onSalvarRascunho={handleEditRascunho}
+            onAtivar={handleEditAtivar}
+            initialData={avaliacaoFormData}
+            competencias={competenciasData}
+          />
+
+          <NovaAvaliacaoDrawer
+            isOpen={isNovaAvaliacaoOpen}
+            onClose={() => setIsNovaAvaliacaoOpen(false)}
+            onSalvarRascunho={handleNovaAvaliacaoRascunho}
+            onAtivar={handleNovaAvaliacaoAtivar}
+            competencias={competenciasData}
+            habilidades={habilidadesData}
+          />
+
+          <ConfirmationModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedRow(null);
+            }}
+            onConfirm={handleEncerrarAvaliacao}
+            title="Encerrar Avaliação"
+            message={
+              selectedRow && selectedRow.status === 'Ativa'
+                ? `Ao encerrar a avaliação "${selectedRow.nome}", os colaboradores não poderão mais responder. Os dados já coletados serão preservados.`
+                : `Ao encerrar a avaliação "${selectedRow?.nome}", ela não estará disponível para os colaboradores.`
+            }
+            confirmLabel="Encerrar"
+            cancelLabel="Cancelar"
+            variant="warning"
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // Renderizar página padrão para outras seções
+  const getTitle = () => {
+    const titles: Record<string, string> = {
+      dashboard: 'Dashboard',
+      habilidades: 'Habilidades',
+      competencias: 'Competências',
+      niveis: 'Níveis de Habilidades',
+      'habilidades-list': 'Habilidades',
+      carreiras: 'Carreiras',
+      avaliacoes: 'Avaliações',
+      relatorios: 'Relatórios',
+      configuracoes: 'Configurações',
+    };
+    return titles[selectedItem] || 'Dashboard';
+  };
+
+  const getDescription = () => {
+    const descriptions: Record<string, string> = {
+      dashboard: 'Visão geral do sistema e métricas principais',
+      habilidades: 'Gestão de habilidades e competências',
+      competencias: 'Defina e gerencie competências organizacionais',
+      niveis: 'Configure os níveis de proficiência para avaliação',
+      'habilidades-list': 'Catálogo de habilidades técnicas e comportamentais',
+      carreiras: 'Planos de carreira e trilhas de desenvolvimento',
+      avaliacoes: 'Gestão de avaliações de desempenho e competências',
+      relatorios: 'Relatórios analíticos e indicadores',
+      configuracoes: 'Configurações gerais do sistema',
+    };
+    return descriptions[selectedItem] || '';
+  };
+
+  return (
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <div className="p-4 md:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {getTitle()}
+          </h1>
+          <p className="text-sm text-gray-600 mt-2 text-[16px]">{getDescription()}</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-center h-64 text-gray-400">
+            <div className="text-center">
+              <Award className="w-12 h-12 mx-auto mb-4" />
+              <div className="text-base md:text-lg lg:text-xl mb-2">Área de Conteúdo</div>
+              <div className="text-xs md:text-sm lg:text-base">
+                O conteúdo de <span className="font-medium">{getTitle()}</span>{' '}
+                será exibido aqui
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

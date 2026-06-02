@@ -1,0 +1,53 @@
+/* Dark Mode Utility Classes */
+
+/* Backgrounds */
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.bg-surface-hover {
+  background-color: var(--surface-hover);
+}
+
+.hover\:bg-surface-hover:hover {
+  background-color: var(--surface-hover);
+}
+
+/* Text */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.text-disabled {
+  color: var(--text-disabled);
+}
+
+/* Borders */
+.border-primary {
+  border-color: var(--border-primary);
+}
+
+.border-secondary {
+  border-color: var(--border-secondary);
+}
+
+/* Icons */
+.icon-primary {
+  color: var(--icon-primary);
+}
+
+.icon-secondary {
+  color: var(--icon-secondary);
+}
+
+.icon-active {
+  color: var(--icon-active);
+}

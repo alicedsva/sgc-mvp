@@ -1,0 +1,352 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  
+  /* ========== LIGHT MODE COLORS ========== */
+  
+  /* Background & Surfaces */
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #f9fafb;
+  
+  /* Text Colors */
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-disabled: #d1d5db;
+  
+  /* Borders */
+  --border-primary: #e5e7eb;
+  --border-secondary: #f3f4f6;
+  
+  /* Interactive Elements */
+  --input-background: #ffffff;
+  --input-border: #d1d5db;
+  --input-border-hover: #9ca3af;
+  --input-border-focus: var(--brand-500);
+  
+  /* Pills/Segmented Controls */
+  --pill-background: #f3f4f6;
+  --pill-item-active: #ffffff;
+  --pill-item-inactive: transparent;
+  --pill-text-active: #111827;
+  --pill-text-inactive: #6b7280;
+  
+  /* Tables */
+  --table-header-bg: #f9fafb;
+  --table-header-text: #6b7280;
+  --table-row-hover: #f9fafb;
+  --table-border: #e5e7eb;
+  
+  /* Cards */
+  --card-background: #ffffff;
+  --card-border: #e5e7eb;
+  
+  /* Sidebar */
+  --sidebar-background: #ffffff;
+  --sidebar-item-hover: #f3f4f6;
+  --sidebar-item-active: #009FC2;
+  --sidebar-item-text: #6b7280;
+  --sidebar-item-text-active: #ffffff;
+  --sidebar-border: #e5e7eb;
+  
+  /* Header */
+  --header-background: #ffffff;
+  --header-border: #e5e7eb;
+  
+  /* Drawer/Modal */
+  --drawer-background: #ffffff;
+  --drawer-border: #e5e7eb;
+  --drawer-overlay: rgba(0, 0, 0, 0.2);
+  
+  /* Dropdown/Select */
+  --dropdown-background: #ffffff;
+  --dropdown-border: #e5e7eb;
+  --dropdown-item-hover: #f3f4f6;
+  --dropdown-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+  
+  /* Status Colors */
+  --status-active-bg: #dcfce7;
+  --status-active-text: #166534;
+  --status-inactive-bg: #fee2e2;
+  --status-inactive-text: #991b1b;
+  
+  /* Icons */
+  --icon-primary: #6b7280;
+  --icon-secondary: #9ca3af;
+  --icon-active: #009FC2;
+  
+  /* Shadows */
+  --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+  
+  /* Empty State */
+  --empty-state-icon-bg: #f3f4f6;
+  --empty-state-icon-text: #9ca3af;
+  
+  /* Brand colors - Paleta completa de identidade visual */
+  --brand-50: #E6F7FB;
+  --brand-100: #CCEFF7;
+  --brand-200: #99DFEF;
+  --brand-300: #66CFE7;
+  --brand-400: #33BFDF;
+  --brand-500: #009FC2;
+  --brand-600: #0083A1;
+  --brand-700: #006780;
+  --brand-800: #004B5F;
+  --brand-900: #002F3E;
+  --brand-950: #001E28;
+  
+  /* Legacy tokens for compatibility */
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #030213;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --switch-background: #cbced4;
+  --ring: #9ca3af;
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #9ca3af;
+}
+
+.dark {
+  /* ========== DARK MODE COLORS ========== */
+  
+  /* Background & Surfaces */
+  --background: #0f1114;
+  --surface: #1a1d21;
+  --surface-hover: #22262b;
+  
+  /* Text Colors */
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-disabled: #4b5563;
+  
+  /* Borders */
+  --border-primary: #2d3238;
+  --border-secondary: #22262b;
+  
+  /* Interactive Elements */
+  --input-background: #1a1d21;
+  --input-border: #2d3238;
+  --input-border-hover: #3f4651;
+  --input-border-focus: var(--brand-400);
+  
+  /* Pills/Segmented Controls */
+  --pill-background: #22262b;
+  --pill-item-active: #2d3238;
+  --pill-item-inactive: transparent;
+  --pill-text-active: #f9fafb;
+  --pill-text-inactive: #9ca3af;
+  
+  /* Tables */
+  --table-header-bg: #1a1d21;
+  --table-header-text: #9ca3af;
+  --table-row-hover: #22262b;
+  --table-border: #2d3238;
+  
+  /* Cards */
+  --card-background: #1a1d21;
+  --card-border: #2d3238;
+  
+  /* Sidebar */
+  --sidebar-background: #1a1d21;
+  --sidebar-item-hover: #22262b;
+  --sidebar-item-active: #009FC2;
+  --sidebar-item-text: #9ca3af;
+  --sidebar-item-text-active: #ffffff;
+  --sidebar-border: #2d3238;
+  
+  /* Header */
+  --header-background: #1a1d21;
+  --header-border: #2d3238;
+  
+  /* Drawer/Modal */
+  --drawer-background: #1a1d21;
+  --drawer-border: #2d3238;
+  --drawer-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* Dropdown/Select */
+  --dropdown-background: #1a1d21;
+  --dropdown-border: #2d3238;
+  --dropdown-item-hover: #22262b;
+  --dropdown-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.5), 0px 4px 6px -4px rgba(0, 0, 0, 0.5);
+  
+  /* Status Colors */
+  --status-active-bg: #064e3b;
+  --status-active-text: #6ee7b7;
+  --status-inactive-bg: #7f1d1d;
+  --status-inactive-text: #fca5a5;
+  
+  /* Icons */
+  --icon-primary: #9ca3af;
+  --icon-secondary: #6b7280;
+  --icon-active: #33BFDF;
+  
+  /* Shadows */
+  --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.3), 0px 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.5), 0px 4px 6px -4px rgba(0, 0, 0, 0.5);
+  
+  /* Empty State */
+  --empty-state-icon-bg: #22262b;
+  --empty-state-icon-text: #6b7280;
+  
+  /* Legacy tokens for compatibility */
+  --foreground: #f9fafb;
+  --card: #1a1d21;
+  --card-foreground: #f9fafb;
+  --popover: #1a1d21;
+  --popover-foreground: #f9fafb;
+  --primary: #f9fafb;
+  --primary-foreground: #0f1114;
+  --secondary: #22262b;
+  --secondary-foreground: #f9fafb;
+  --muted: #22262b;
+  --muted-foreground: #9ca3af;
+  --accent: #22262b;
+  --accent-foreground: #f9fafb;
+  --destructive: #991b1b;
+  --destructive-foreground: #fca5a5;
+  --border: #2d3238;
+  --input: #2d3238;
+  --switch-background: #3f4651;
+  --ring: #6b7280;
+  --sidebar: #1a1d21;
+  --sidebar-foreground: #f9fafb;
+  --sidebar-primary: #009FC2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #22262b;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #2d3238;
+  --sidebar-ring: #6b7280;
+}
+
+@layer base {
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  /* Esconder scrollbar mantendo funcionalidade de scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE e Edge */
+    scrollbar-width: none;  /* Firefox */
+    scroll-behavior: smooth;  /* Scroll suave nativo */
+    -webkit-overflow-scrolling: touch;  /* Scroll suave em iOS */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari e Opera */
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
