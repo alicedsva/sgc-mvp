@@ -16,6 +16,7 @@ import MinhasAvaliacoesPage from "./pages/MinhasAvaliacoesPage";
 import MinhaCarreiraPage from "./pages/MinhaCarreiraPage";
 import ConfigurarCargoPage from "./pages/ConfigurarCargoPage";
 import EditarJornadaPage from "./pages/EditarJornadaPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
       { path: "minha-carreira", Component: MinhaCarreiraPage },
+      { path: "design-system", Component: DesignSystemPage },
     ],
   },
 ]);

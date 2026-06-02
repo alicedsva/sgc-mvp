@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, User, ChevronDown, ArrowLeftRight, LogOut, Menu, Award, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { Bell, User, ChevronDown, ArrowLeftRight, LogOut, Menu, Award, ClipboardCheck, RefreshCw, BookOpen } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router';
 import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
@@ -30,6 +31,9 @@ const notificacoesMockIniciais: Notificacao[] = [
 ];
 
 export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggleMobileMenu }: HeaderProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isDesignSystem = location.pathname.startsWith('/design-system');
   const [menuAberto, setMenuAberto] = useState(false);
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>(notificacoesMockIniciais);
@@ -67,16 +71,25 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
   };
 
   return (
-    <header className={`h-16 bg-white border-b border-gray-200 fixed top-0 right-0 z-50 transition-all duration-300 left-0 md:left-20 ${!isSidebarCollapsed ? 'lg:left-64' : ''}`}>
+    <header className={`h-16 bg-white border-b border-gray-200 fixed top-0 right-0 z-50 transition-all duration-300 ${
+      isDesignSystem ? 'left-0' : `left-0 md:left-20${!isSidebarCollapsed ? ' lg:left-64' : ''}`
+    }`}>
       <div className="h-full flex items-center justify-between px-4 md:px-6">
-        {/* Botão hamburger - apenas mobile */}
-        <button
-          onClick={onToggleMobileMenu}
-          className="md:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        {/* Botão hamburger - apenas mobile, apenas fora do design-system */}
+        {!isDesignSystem && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Título no header quando na rota /design-system */}
+        {isDesignSystem && (
+          <span className="hidden md:block text-sm font-semibold text-gray-900">Design System</span>
+        )}
 
         <div className="flex items-center gap-4 md:ml-auto">
           {/* Central de Notificações */}
@@ -180,14 +193,14 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
                     setMenuAberto(false);
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                    viewMode === 'admin'
+                    viewMode === 'admin' && !isDesignSystem
                       ? 'bg-[var(--brand-50)] text-[var(--brand-700)]'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <ArrowLeftRight className="w-4 h-4" />
                   <span>Visão do Administrador</span>
-                  {viewMode === 'admin' && (
+                  {viewMode === 'admin' && !isDesignSystem && (
                     <div className="ml-auto w-2 h-2 bg-[var(--brand-600)] rounded-full"></div>
                   )}
                 </button>
@@ -198,14 +211,14 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
                     setMenuAberto(false);
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                    viewMode === 'colaborador'
+                    viewMode === 'colaborador' && !isDesignSystem
                       ? 'bg-[var(--brand-50)] text-[var(--brand-700)]'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <User className="w-4 h-4" />
                   <span>Visão do Colaborador</span>
-                  {viewMode === 'colaborador' && (
+                  {viewMode === 'colaborador' && !isDesignSystem && (
                     <div className="ml-auto w-2 h-2 bg-[var(--brand-600)] rounded-full"></div>
                   )}
                 </button>
@@ -220,7 +233,33 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
 
                 <ThemeToggle />
 
-                <div className="my-2 border-t border-gray-100"></div>
+                <div className="my-1 border-t border-gray-100"></div>
+
+                <div className="px-3 py-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Padrões do Sistema
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    navigate('/design-system');
+                    setMenuAberto(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer ${
+                    isDesignSystem
+                      ? 'bg-[var(--brand-50)] text-[var(--brand-700)]'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Design System</span>
+                  {isDesignSystem && (
+                    <div className="ml-auto w-2 h-2 bg-[var(--brand-600)] rounded-full"></div>
+                  )}
+                </button>
+
+                <div className="my-1 border-t border-gray-100"></div>
 
                 <button
                   onClick={() => {

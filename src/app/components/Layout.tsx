@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
+
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CarreirasProvider } from '../context/CarreirasContext';
@@ -7,6 +8,7 @@ import { CarreirasProvider } from '../context/CarreirasContext';
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isDesignSystem = location.pathname.startsWith('/design-system');
   const [viewMode, setViewMode] = useState<'admin' | 'colaborador'>('admin');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -104,15 +106,17 @@ export default function Layout() {
           />
         )}
         
-        <Sidebar 
-          selectedItem={selectedItem} 
-          onSelectItem={handleSelectItem} 
-          viewMode={viewMode}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={setIsSidebarCollapsed}
-          isMobileMenuOpen={isMobileMenuOpen}
-          onCloseMobileMenu={handleCloseMobileMenu}
-        />
+        {!isDesignSystem && (
+          <Sidebar
+            selectedItem={selectedItem}
+            onSelectItem={handleSelectItem}
+            viewMode={viewMode}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={setIsSidebarCollapsed}
+            isMobileMenuOpen={isMobileMenuOpen}
+            onCloseMobileMenu={handleCloseMobileMenu}
+          />
+        )}
         <Header 
           viewMode={viewMode} 
           onChangeViewMode={handleViewModeChange}
