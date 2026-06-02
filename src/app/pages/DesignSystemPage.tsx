@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 type SectionId =
   | 'home'
@@ -2029,6 +2030,513 @@ function SecaoTabelas() {
   );
 }
 
+// ─── Seção: Filtros e Pills ────────────────────────────────────────────────────
+
+function PillGroupDemo({ pills }: { pills: string[] }) {
+  const [ativo, setAtivo] = useState(pills[0]);
+  return (
+    <div className="flex items-center bg-gray-100 rounded-lg p-1 flex-wrap gap-y-1">
+      {pills.map((p) => (
+        <button
+          key={p}
+          onClick={() => setAtivo(p)}
+          className={
+            ativo === p
+              ? 'px-3 py-2 text-sm font-normal rounded-md bg-white text-gray-900 shadow-sm transition-all whitespace-nowrap'
+              : 'px-3 py-2 text-sm font-normal rounded-md text-gray-600 hover:text-gray-900 transition-all whitespace-nowrap'
+          }
+        >
+          {p}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SecaoFiltrosEPills() {
+  const [filtroAtivo, setFiltroAtivo] = useState('Ativos');
+  const [competenciaBloco3, setCompetenciaBloco3] = useState('todas');
+  const [buscaBloco4, setBuscaBloco4] = useState('');
+  const [filtroBloco4, setFiltroBloco4] = useState('Ativos');
+  const [competenciaBloco4, setCompetenciaBloco4] = useState('todas');
+
+  const VARIACOES_PILLS = [
+    { contexto: 'Competências / Habilidades / Carreiras / Jornadas', pills: ['Todos', 'Ativas', 'Desativadas'] },
+    { contexto: 'Níveis', pills: ['Todos', 'Ativos', 'Desativados', 'Arquivados'] },
+    { contexto: 'Perfis', pills: ['Todos', 'Ativos', 'Desativados'] },
+    { contexto: 'Avaliações', pills: ['Todas', 'Rascunho', 'Ativas', 'Encerradas'] },
+    { contexto: 'Avaliações (Colaborador)', pills: ['Todos', 'Não iniciada', 'Em andamento', 'Concluída', 'Expirada'] },
+  ];
+
+  return (
+    <div>
+      <div className="max-w-2xl mb-8">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Filtros e Pills</h1>
+        <p className="text-sm text-gray-600">
+          Componentes de filtragem usados nas toolbars de listagem. Sempre use o padrão completo —
+          pills de status + campo de busca + dropdowns.
+        </p>
+      </div>
+
+      {/* Bloco 1 — Pills de filtro de status */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Pills de filtro de status</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Usadas para filtrar por estado do registro. Sempre dentro de um container{' '}
+          <code className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">bg-gray-100 rounded-lg</code>.
+        </p>
+        <div className="mb-4">
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            {['Todos', 'Ativos', 'Desativadas'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltroAtivo(f)}
+                className={
+                  filtroAtivo === f
+                    ? 'px-3 py-2 text-sm font-normal rounded-md bg-white text-gray-900 shadow-sm transition-all whitespace-nowrap'
+                    : 'px-3 py-2 text-sm font-normal rounded-md text-gray-600 hover:text-gray-900 transition-all whitespace-nowrap'
+                }
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="max-w-2xl">
+          <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Estado</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {[
+                { label: 'Container', classes: 'flex items-center bg-gray-100 rounded-lg p-1' },
+                { label: 'Item ativo', classes: 'px-3 py-2 text-sm font-normal rounded-md bg-white text-gray-900 shadow-sm transition-all whitespace-nowrap' },
+                { label: 'Item inativo', classes: 'px-3 py-2 text-sm font-normal rounded-md text-gray-600 hover:text-gray-900 transition-all whitespace-nowrap' },
+              ].map(({ label, classes }) => (
+                <tr key={label}>
+                  <td className="px-4 py-2.5 text-xs font-medium text-gray-700">{label}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{classes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 2 — Campo de busca */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Campo de busca</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Sempre com ícone Search à esquerda via{' '}
+          <code className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">position relative</code>.
+        </p>
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar habilidade..."
+              className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent w-64"
+            />
+          </div>
+        </div>
+        <div className="max-w-2xl">
+          <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Elemento</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {[
+                { label: 'Container', classes: 'relative' },
+                { label: 'Ícone Search', classes: 'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' },
+                { label: 'Input', classes: 'pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent w-64' },
+              ].map(({ label, classes }) => (
+                <tr key={label}>
+                  <td className="px-4 py-2.5 text-xs font-medium text-gray-700">{label}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{classes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Dropdown de filtro */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Dropdown de filtro</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Usado para filtros com múltiplas opções (gerência, cargo, competência). Sempre{' '}
+          <code className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">Radix Select</code> — nunca{' '}
+          <code className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{'<select>'}</code> nativo.
+        </p>
+        <div className="mb-4">
+          <Select value={competenciaBloco3} onValueChange={setCompetenciaBloco3}>
+            <SelectTrigger className="w-auto">
+              <SelectValue placeholder="Todas as competências" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as competências</SelectItem>
+              <SelectItem value="frontend">Desenvolvimento Frontend</SelectItem>
+              <SelectItem value="backend">Desenvolvimento Backend</SelectItem>
+              <SelectItem value="softskills">Soft Skills</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Toolbar completa */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Toolbar completa</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Combinação de todos os elementos numa toolbar real. Busca e filtros à esquerda,
+          botão de ação à direita.
+        </p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={buscaBloco4}
+                onChange={(e) => setBuscaBloco4(e.target.value)}
+                placeholder="Buscar habilidade..."
+                className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent w-64"
+              />
+            </div>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              {['Todos', 'Ativos', 'Desativadas'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFiltroBloco4(f)}
+                  className={
+                    filtroBloco4 === f
+                      ? 'px-3 py-2 text-sm font-normal rounded-md bg-white text-gray-900 shadow-sm transition-all whitespace-nowrap'
+                      : 'px-3 py-2 text-sm font-normal rounded-md text-gray-600 hover:text-gray-900 transition-all whitespace-nowrap'
+                  }
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <Select value={competenciaBloco4} onValueChange={setCompetenciaBloco4}>
+              <SelectTrigger className="w-auto">
+                <SelectValue placeholder="Todas as competências" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as competências</SelectItem>
+                <SelectItem value="frontend">Desenvolvimento Frontend</SelectItem>
+                <SelectItem value="backend">Desenvolvimento Backend</SelectItem>
+                <SelectItem value="softskills">Soft Skills</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <button className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors">
+            <Plus className="w-4 h-4" />
+            Criar habilidade
+          </button>
+        </div>
+      </div>
+
+      {/* Bloco 5 — Variações por contexto */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Variações por contexto</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          O texto das pills acompanha o gênero e o vocabulário do contexto.
+        </p>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5">Contexto</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pills</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {VARIACOES_PILLS.map(({ contexto, pills }) => (
+                <tr key={contexto}>
+                  <td className="px-4 py-3 text-xs text-gray-700 align-middle">{contexto}</td>
+                  <td className="px-4 py-3">
+                    <PillGroupDemo pills={pills} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 6 — Regras de uso */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Regras de uso</h2>
+        <div className="max-w-2xl bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside">
+            <li>
+              Pills sempre dentro do container{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">bg-gray-100 rounded-lg p-1</code>
+            </li>
+            <li>Aba padrão sempre "Ativos/Ativas" — nunca "Todos" como padrão</li>
+            <li>
+              Campo de busca sempre com ícone Search via{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">position absolute</code> — nunca inline
+            </li>
+            <li>
+              Botão de ação sempre com{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">ml-auto</code> ou{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">justify-between</code> no container pai
+            </li>
+            <li>
+              Dropdowns de filtro: usar Radix Select — nunca{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">{'<select>'}</code> nativo
+            </li>
+            <li>Filtros aplicados: mostrar contador no botão ex: "Gerência (2)" — nunca tags expandidas</li>
+            <li>
+              Toolbar sempre separada da tabela por{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">border-b border-gray-200</code>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Cards ─────────────────────────────────────────────────────────────
+
+function SecaoCards() {
+  const METRICAS = [
+    {
+      label: 'Colaboradores ativos',
+      valor: '97',
+      detalhe: 'Sincronizados do RM',
+      icone: Users,
+      badge: null,
+    },
+    {
+      label: 'Habilidades cadastradas',
+      valor: '28',
+      detalhe: 'Últimos 30 dias',
+      icone: BookOpen,
+      badge: { sinal: '↑', valor: '4%', classes: 'bg-green-100 text-green-700' },
+    },
+    {
+      label: 'Avaliações ativas',
+      valor: '5',
+      detalhe: 'Últimos 30 dias',
+      icone: ClipboardList,
+      badge: { sinal: '↓', valor: '8%', classes: 'bg-red-100 text-red-700' },
+    },
+    {
+      label: 'Avaliações respondidas',
+      valor: '12',
+      detalhe: 'Hoje vs. ontem',
+      icone: CheckCircle2,
+      badge: { sinal: '↑', valor: '20%', classes: 'bg-green-100 text-green-700' },
+    },
+  ];
+
+  const CARGOS = [
+    {
+      nome: 'Desenvolvedor Frontend — Pleno',
+      badgeLabel: 'Cargo atual',
+      badgeClasses: 'bg-[var(--brand-600)] text-white',
+      coberturaLabel: 'Boa cobertura — 85% das habilidades mapeadas atendidas',
+      coberturaClasses: 'text-xs text-green-600 mb-2',
+      barraClasses: 'bg-green-500',
+      largura: '85%',
+      cardBg: 'bg-[var(--brand-50)]',
+    },
+    {
+      nome: 'Desenvolvedor Frontend — Sênior',
+      badgeLabel: 'Referência para desenvolvimento',
+      badgeClasses: 'bg-gray-100 text-gray-700',
+      coberturaLabel: 'Cobertura parcial — 65% das habilidades mapeadas atendidas',
+      coberturaClasses: 'text-xs text-yellow-600 mb-2',
+      barraClasses: 'bg-yellow-500',
+      largura: '65%',
+      cardBg: '',
+    },
+    {
+      nome: 'Tech Lead — Frontend',
+      badgeLabel: null,
+      badgeClasses: '',
+      coberturaLabel: 'Baixa cobertura — 35% das habilidades mapeadas atendidas',
+      coberturaClasses: 'text-xs text-red-600 mb-2',
+      barraClasses: 'bg-red-500',
+      largura: '35%',
+      cardBg: '',
+    },
+  ];
+
+  return (
+    <div>
+      <div className="max-w-2xl mb-8">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Cards</h1>
+        <p className="text-sm text-gray-600">
+          Cards são containers de conteúdo agrupado. O sistema tem três variantes principais:
+          card de métrica, card de conteúdo e card de estado.
+        </p>
+      </div>
+
+      {/* Bloco 1 — Card de métrica */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Card de métrica</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Usado no Dashboard (Admin) e em Meu Perfil e Minhas Avaliações (Colaborador).
+          Exibe um número grande com label e ícone.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {METRICAS.map(({ label, valor, detalhe, icone: Icone, badge }) => (
+            <div key={label} className="bg-white border border-gray-200 rounded-lg p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-base font-semibold text-gray-700">{label}</span>
+                <Icone className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{valor}</p>
+              {badge ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-400">{detalhe}</span>
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium ${badge.classes}`}>
+                    {badge.sinal} {badge.valor}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 mt-2">{detalhe}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco 2 — Card de conteúdo */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Card de conteúdo</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Container genérico para agrupar seções de conteúdo relacionado.
+        </p>
+        <div className="max-w-lg">
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Título da seção</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Descrição opcional do conteúdo</p>
+              </div>
+              <button className="text-xs md:text-sm font-medium text-[var(--brand-600)] hover:underline">
+                Ver todos →
+              </button>
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                >
+                  <span className="text-sm text-gray-900">Item de exemplo {i}</span>
+                  <span className="text-sm text-gray-500">Detalhe</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Card de cargo */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Card de cargo</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Usado na Jornada de Carreira do Colaborador. Exibe cobertura de habilidades por cargo
+          com barra de progresso colorida.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {CARGOS.map(({ nome, badgeLabel, badgeClasses, coberturaLabel, coberturaClasses, barraClasses, largura, cardBg }) => (
+            <div key={nome} className={`border border-gray-200 rounded-lg p-4 ${cardBg}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{nome}</p>
+                  {badgeLabel && (
+                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full mt-1 ${badgeClasses}`}>
+                      {badgeLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className={coberturaClasses}>{coberturaLabel}</p>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className={`${barraClasses} h-1.5 rounded-full`} style={{ width: largura }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco 4 — Card de identificação */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Card de identificação</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Usado no topo de Meu Perfil. Gradiente slate com saudação dinâmica.
+        </p>
+        <div
+          className="rounded-xl p-6 md:p-8 border border-slate-200"
+          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}
+        >
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+              Boa tarde, João. 👋🏻
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Desenvolvedor Frontend · Pleno · 1 ano e 3 meses no cargo
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 5 — Regras de uso */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Regras de uso</h2>
+        <div className="max-w-2xl bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside">
+            <li>
+              Cards sempre com{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">bg-white border border-gray-200 rounded-lg</code>
+            </li>
+            <li>
+              Padding padrão:{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">p-5</code>{' '}
+              para cards de métrica e conteúdo — nunca{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">p-6</code> ou maior
+            </li>
+            <li>
+              Card de identificação usa{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">rounded-xl</code>{' '}
+              e gradiente slate — exceção documentada
+            </li>
+            <li>Nunca use shadow em cards — apenas border</li>
+            <li>
+              Card de métrica: label acima, número grande, ícone solto à direita — nunca container
+              colorido no ícone
+            </li>
+            <li>
+              Card de cargo com{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">bg-[var(--brand-50)]</code>{' '}
+              apenas quando é o cargo atual
+            </li>
+            <li>
+              Ação inline no card (Ver todos →): sempre{' '}
+              <code className="font-mono text-xs bg-white px-1 py-0.5 rounded border border-blue-100">text-[var(--brand-600)]</code>
+              , nunca botão com fundo
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const IMPLEMENTED: SectionId[] = [
@@ -2039,6 +2547,8 @@ const IMPLEMENTED: SectionId[] = [
   'componentes/botoes',
   'componentes/badges',
   'componentes/tabelas',
+  'componentes/filtros-pills',
+  'componentes/cards',
   'regras/niveis-cores',
   'regras/cobertura-habilidades',
   'regras/estados-avaliacao',
@@ -2130,6 +2640,8 @@ export default function DesignSystemPage() {
         {activeSection === 'componentes/botoes' && <SecaoBotoes />}
         {activeSection === 'componentes/badges' && <SecaoBadges />}
         {activeSection === 'componentes/tabelas' && <SecaoTabelas />}
+        {activeSection === 'componentes/filtros-pills' && <SecaoFiltrosEPills />}
+        {activeSection === 'componentes/cards' && <SecaoCards />}
         {activeSection === 'regras/niveis-cores' && <SecaoNiveisCores />}
         {activeSection === 'regras/cobertura-habilidades' && <SecaoCoberturaHabilidades />}
         {activeSection === 'regras/estados-avaliacao' && <SecaoEstadosAvaliacao />}
