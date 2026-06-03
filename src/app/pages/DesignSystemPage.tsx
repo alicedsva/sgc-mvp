@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   Info, Palette, Layout, BookOpen, Briefcase, User, ChevronRight,
-  Settings, LayoutDashboard, Layers, GitBranch, ClipboardList, ClipboardCheck,
+  Settings, LayoutDashboard, Award, UserCircle, ClipboardList, ClipboardCheck,
   TrendingUp, Users, CheckCircle2, Clock, CalendarClock, AlertCircle, XCircle,
   Eye, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
-  Plus, Download, Search,
+  Plus, Download, Search, X, AlertTriangle, ArrowLeft,
 } from 'lucide-react';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
@@ -526,10 +526,10 @@ function SecaoBadgesStatus() {
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-800`}>Inativa</span>
+                  <span className={`${BADGE_BASE} bg-red-100 text-red-700`}>Desativada</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-gray-100 text-gray-800</td>
-                <td className="px-4 py-3 text-xs text-gray-500">Idem desativados</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-red-100 text-red-700</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Registros desativados</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
@@ -1180,11 +1180,11 @@ function SecaoEspacamento() {
 // ─── Seção: Badges ───────────────────────────────────────────────────────────
 
 const STATUS_REGISTRO = [
-  { label: 'Ativa',     classes: 'bg-green-100 text-green-800',   uso: 'Competências, Habilidades, Carreiras, Jornadas, Avaliações ativas' },
-  { label: 'Inativa',   classes: 'bg-gray-100 text-gray-700',     uso: 'Registros desativados' },
-  { label: 'Rascunho',  classes: 'bg-yellow-100 text-yellow-800', uso: 'Avaliações não publicadas' },
-  { label: 'Encerrada', classes: 'bg-gray-100 text-gray-700',     uso: 'Avaliações com período encerrado' },
-  { label: 'Arquivado', classes: 'bg-gray-100 text-gray-700',     uso: 'Níveis arquivados (não aparece em seleções)' },
+  { label: 'Ativa',      classes: 'bg-green-100 text-green-800',   uso: 'Competências, Habilidades, Carreiras, Jornadas, Avaliações ativas' },
+  { label: 'Desativada', classes: 'bg-red-100 text-red-700',      uso: 'Registros desativados' },
+  { label: 'Rascunho',   classes: 'bg-yellow-100 text-yellow-800', uso: 'Avaliações não publicadas' },
+  { label: 'Encerrada',  classes: 'bg-gray-100 text-gray-700',    uso: 'Avaliações com período encerrado' },
+  { label: 'Arquivado',  classes: 'bg-gray-100 text-gray-700',    uso: 'Níveis arquivados (não aparece em seleções)' },
 ];
 
 const ESTADO_COLABORADOR_BADGES = [
@@ -1393,12 +1393,12 @@ const ICONES_GRUPOS: IconeGrupo[] = [
   { grupo: 'NAVEGAÇÃO (sidebar Admin)', rows: [
     { icone: LayoutDashboard, nome: 'LayoutDashboard', contexto: 'Dashboard' },
     { icone: Users,           nome: 'Users',           contexto: 'Perfis' },
-    { icone: Layers,          nome: 'Layers',          contexto: 'Habilidades' },
-    { icone: GitBranch,       nome: 'GitBranch',       contexto: 'Carreiras' },
-    { icone: ClipboardList,   nome: 'ClipboardList',   contexto: 'Avaliações' },
+    { icone: Award,           nome: 'Award',           contexto: 'Habilidades' },
+    { icone: Briefcase,       nome: 'Briefcase',       contexto: 'Carreiras' },
+    { icone: ClipboardCheck,  nome: 'ClipboardCheck',  contexto: 'Avaliações' },
   ]},
   { grupo: 'NAVEGAÇÃO (sidebar Colaborador)', rows: [
-    { icone: User,           nome: 'User',           contexto: 'Meu Perfil' },
+    { icone: UserCircle,     nome: 'UserCircle',     contexto: 'Meu Perfil' },
     { icone: ClipboardCheck, nome: 'ClipboardCheck', contexto: 'Minhas Avaliações' },
     { icone: TrendingUp,     nome: 'TrendingUp',     contexto: 'Minha Carreira' },
   ]},
@@ -1770,11 +1770,11 @@ function SecaoBotoes() {
         <h2 className="text-sm font-semibold text-gray-900 mb-1">Hierarquia de ações em drawers</h2>
         <p className="text-xs text-gray-500 mb-4">Padrão fixo para rodapé de drawers e modais de confirmação.</p>
         <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-end gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200">
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+          <div className="flex items-center justify-end gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50">
+            <button className="px-3 md:px-4 py-2 border border-gray-300 text-gray-700 text-xs md:text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
               Cancelar
             </button>
-            <button className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors">
+            <button className="px-3 md:px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-xs md:text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors">
               Salvar
             </button>
           </div>
@@ -2537,6 +2537,1202 @@ function SecaoCards() {
   );
 }
 
+// ─── Seção: Drawers ───────────────────────────────────────────────────────────
+
+function SecaoDrawers() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Drawers</h1>
+      <p className="text-sm text-gray-600 mb-8">
+        Painéis laterais deslizantes usados para criar e editar registros. Sempre surgem
+        pela direita e cobrem parcialmente o conteúdo.
+      </p>
+
+      {/* Bloco 1 — Anatomia */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Anatomia do drawer</h2>
+        <div
+          className="border border-gray-200 rounded-lg overflow-hidden flex flex-col"
+          style={{ height: '480px', width: '100%', maxWidth: '440px' }}
+        >
+          {/* Header */}
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">Criar habilidade</h2>
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Área de campos (scroll) */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-5">
+            {/* Campo texto */}
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                Nome da habilidade *
+              </label>
+              <input
+                readOnly
+                placeholder="Ex: React"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+              />
+            </div>
+
+            {/* Campo textarea */}
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                Descrição
+              </label>
+              <textarea
+                readOnly
+                placeholder="Descreva esta habilidade..."
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none"
+              />
+            </div>
+
+            {/* Campo select — Competência */}
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                Competência *
+              </label>
+              <Select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione uma competência" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="frontend">Desenvolvimento Frontend</SelectItem>
+                  <SelectItem value="backend">Desenvolvimento Backend</SelectItem>
+                  <SelectItem value="softskills">Soft Skills</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Campo select — Tipo */}
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                Tipo *
+              </label>
+              <Select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tecnica">Técnica</SelectItem>
+                  <SelectItem value="comportamental">Comportamental</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Footer fixo */}
+          <div className="flex items-center justify-end gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50">
+            <button className="px-3 md:px-4 py-2 border border-gray-300 text-gray-700 text-xs md:text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+              Cancelar
+            </button>
+            <button className="px-3 md:px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-xs md:text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors">
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 2 — Especificações de espaçamento */}
+      <div className="mb-8 max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Espaçamentos do drawer</h2>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Área</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Classes</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {[
+                { area: 'Header padding', classes: 'px-4 md:px-6 py-3 md:py-4', valor: 'H: 16–24px / V: 12–16px' },
+                { area: 'Campos padding', classes: 'px-4 md:px-6 py-4 md:py-6', valor: 'H: 16–24px / V: 16–24px' },
+                { area: 'Gap entre campos', classes: 'space-y-4 md:space-y-5', valor: '16–20px' },
+                { area: 'Footer padding', classes: 'px-4 md:px-6 py-3 md:py-4', valor: 'H: 16–24px / V: 12–16px' },
+                { area: 'Gap entre botões', classes: 'gap-2 md:gap-3', valor: '8–12px' },
+                { area: 'Label → input', classes: 'mb-1.5 md:mb-2', valor: '6–8px' },
+              ].map(({ area, classes, valor }) => (
+                <tr key={area} className="bg-white">
+                  <td className="px-4 py-3 font-medium text-gray-900">{area}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{classes}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{valor}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Drawer de somente leitura */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Drawer de somente leitura</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Usado para visualizar detalhes sem edição. Acessado pelo ícone Eye na tabela.
+          Não tem botão Salvar — apenas Fechar.
+        </p>
+        <div
+          className="border border-gray-200 rounded-lg overflow-hidden flex flex-col"
+          style={{ height: '320px', width: '100%', maxWidth: '440px' }}
+        >
+          {/* Header */}
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">Detalhes da habilidade</h2>
+            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Conteúdo estático */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
+            {[
+              { label: 'Nome', valor: 'React' },
+              { label: 'Competência', valor: 'Desenvolvimento Frontend' },
+              { label: 'Tipo', valor: 'Técnica' },
+              { label: 'Status', valor: 'Ativa' },
+            ].map(({ label, valor }) => (
+              <div key={label}>
+                <p className="text-xs font-medium text-gray-500 mb-0.5">{label}</p>
+                <p className="text-sm text-gray-900">{valor}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer — apenas Fechar */}
+          <div className="flex items-center justify-end px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50">
+            <button className="px-3 md:px-4 py-2 border border-gray-300 text-gray-700 text-xs md:text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Regras de uso */}
+      <div className="max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Regras de uso</h2>
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <ul className="text-sm text-gray-700 space-y-2 list-none">
+            <li>Drawers sempre surgem pela direita</li>
+            <li>Header sempre com título + botão X (nunca apenas X)</li>
+            <li>Área de campos sempre com <code className="font-mono text-xs bg-white/60 px-1 rounded">overflow-y-auto</code> e <code className="font-mono text-xs bg-white/60 px-1 rounded">flex-1</code> para respeitar o footer fixo</li>
+            <li>Footer sempre fixo no rodapé — nunca dentro da área de scroll</li>
+            <li>Cancelar sempre à esquerda do Salvar</li>
+            <li>Drawer de edição: botões Cancelar + Salvar</li>
+            <li>Drawer de criação: botões Cancelar + Criar/Salvar</li>
+            <li>Drawer somente leitura: apenas botão Fechar</li>
+            <li>Campos obrigatórios marcados com * no label</li>
+            <li>Nunca abra dois drawers simultaneamente</li>
+            <li>Largura padrão: <code className="font-mono text-xs bg-white/60 px-1 rounded">w-full md:w-[35%] md:max-w-xl md:min-w-[400px]</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Modais ────────────────────────────────────────────────────────────
+
+function SecaoModais() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Modais</h1>
+      <p className="text-sm text-gray-600 mb-8">
+        Janelas de confirmação para ações críticas ou irreversíveis. Sempre bloqueiam
+        a interação com o restante da página.
+      </p>
+
+      {/* Bloco 1 — Modal vs Drawer */}
+      <div className="mb-8 max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Modal vs Drawer</h2>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 w-32"></th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Modal</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Drawer</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {[
+                { aspecto: 'Propósito', modal: 'Confirmação de ação crítica', drawer: 'Criar ou editar registro' },
+                { aspecto: 'Conteúdo', modal: 'Curto — título + descrição + 2 botões', drawer: 'Longo — formulário com múltiplos campos' },
+                { aspecto: 'Bloqueio', modal: 'Sempre bloqueia a página', drawer: 'Não bloqueia — overlay parcial' },
+                { aspecto: 'Fechamento', modal: 'Botão Cancelar ou clique no overlay', drawer: 'Botão X ou Cancelar' },
+                { aspecto: 'Exemplos', modal: 'Desativar, arquivar, excluir', drawer: 'Criar habilidade, editar avaliação' },
+              ].map(({ aspecto, modal, drawer }) => (
+                <tr key={aspecto} className="bg-white">
+                  <td className="px-4 py-3 font-medium text-gray-900">{aspecto}</td>
+                  <td className="px-4 py-3 text-gray-600">{modal}</td>
+                  <td className="px-4 py-3 text-gray-600">{drawer}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 2 — Modal destrutiva */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Modal de confirmação destrutiva</h2>
+        <p className="text-xs text-gray-500 mb-3">Usado para desativar, arquivar ou ações irreversíveis.</p>
+        <div className="relative rounded-xl overflow-hidden" style={{ height: '340px' }}>
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-red-100 text-red-600">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                </div>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Desativar nível "Avançado"
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Ao desativar este nível, ele não será mais visível para os usuários.
+                    Este nível está vinculado a 22 habilidades.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                  </button>
+                  <button className="flex-1 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors bg-red-600 hover:bg-red-700">
+                    Desativar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Modal neutra */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Modal de confirmação neutra</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Usado para ações que precisam de confirmação mas não são destrutivas (ex: restaurar, ativar).
+        </p>
+        <div className="relative rounded-xl overflow-hidden" style={{ height: '340px' }}>
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--brand-100)] text-[var(--brand-600)]">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                </div>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Restaurar nível "Avançado"
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Ao restaurar, o nível voltará para o estado Desativado. As 22 habilidades
+                    vinculadas serão mantidas.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                  </button>
+                  <button className="flex-1 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors bg-[var(--brand-600)] hover:bg-[var(--brand-700)]">
+                    Restaurar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Anatomia */}
+      <div className="mb-8 max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Anatomia do modal</h2>
+        <ol className="space-y-3 text-sm text-gray-700 list-none">
+          {[
+            {
+              n: '1',
+              titulo: 'Overlay',
+              desc: 'Fundo escurecido que bloqueia interação.',
+              code: 'fixed inset-0 bg-black/35 z-50 flex items-center justify-center p-4',
+            },
+            {
+              n: '2',
+              titulo: 'Container',
+              desc: 'Caixa branca centralizada.',
+              code: 'bg-white rounded-lg shadow-xl max-w-md w-full',
+            },
+            {
+              n: '3',
+              titulo: 'Ícone',
+              desc: 'Centralizado em círculo colorido por variante (danger = bg-red-100 text-red-600, info = bg-brand-100 text-brand-600).',
+              code: 'w-12 h-12 rounded-full flex items-center justify-center',
+            },
+            {
+              n: '4',
+              titulo: 'Conteúdo',
+              desc: 'Centralizado — título text-lg font-semibold text-gray-900 mb-2 + mensagem text-sm text-gray-600.',
+              code: 'text-center mb-6',
+            },
+            {
+              n: '5',
+              titulo: 'Ações',
+              desc: 'Dois botões lado a lado, ambos flex-1. Sem botão X — fechamento apenas pelo Cancelar ou clique no overlay.',
+              code: 'flex items-center gap-3',
+            },
+          ].map(({ n, titulo, desc, code }) => (
+            <li key={n} className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold flex items-center justify-center">
+                {n}
+              </span>
+              <div>
+                <span className="font-medium text-gray-900">{titulo}</span>
+                {' — '}
+                <span className="text-gray-600">{desc}</span>
+                {code && (
+                  <code className="block font-mono text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded mt-1">
+                    {code}
+                  </code>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Bloco 5 — Regras de uso */}
+      <div className="max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Regras de uso</h2>
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <ul className="text-sm text-gray-700 space-y-2 list-none">
+            <li>Sempre use modal para ações destrutivas ou irreversíveis — nunca execute direto</li>
+            <li>Ação destrutiva: botão vermelho (<code className="font-mono text-xs bg-white/60 px-1 rounded">bg-red-600 hover:bg-red-700</code>)</li>
+            <li>Ação neutra de confirmação: botão primário (<code className="font-mono text-xs bg-white/60 px-1 rounded">bg-[var(--brand-600)]</code>)</li>
+            <li>Cancelar sempre à esquerda, ação de confirmação sempre à direita — ambos com <code className="font-mono text-xs bg-white/60 px-1 rounded">flex-1</code></li>
+            <li>Sem botão X — fechamento apenas pelo botão Cancelar ou clique no overlay</li>
+            <li>Descrição deve mencionar o impacto da ação (ex: "vinculado a 22 habilidades")</li>
+            <li>Nunca use modal para formulários com mais de 2 campos — use drawer</li>
+            <li>Título sempre menciona o nome do item afetado (ex: "Desativar nível 'Avançado'")</li>
+            <li>Nunca empilhe dois modais</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Formulários ───────────────────────────────────────────────────────
+
+function SecaoFormularios() {
+  const ETAPAS_WIZARD = [
+    { numero: 1, label: 'Identificação' },
+    { numero: 2, label: 'Escopo' },
+    { numero: 3, label: 'Configuração' },
+    { numero: 4, label: 'Revisão' },
+  ];
+
+  const ESTADOS_WIZARD = [
+    { estado: 'Completo', circulo: 'bg-[var(--brand-600)] text-white', texto: 'text-gray-500', linha: 'bg-[var(--brand-600)]' },
+    { estado: 'Ativo', circulo: 'bg-[var(--brand-600)] text-white ring-2 ring-offset-1 ring-[var(--brand-300)]', texto: 'text-[var(--brand-600)] font-medium', linha: 'bg-gray-200' },
+    { estado: 'Inativo', circulo: 'bg-gray-100 text-gray-400 border border-gray-200', texto: 'text-gray-400', linha: 'bg-gray-200' },
+  ];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Formulários</h1>
+      <p className="text-sm text-gray-600 mb-8">
+        Campos de entrada usados em drawers e wizards. Sempre use os padrões definidos —
+        nunca crie variações não documentadas.
+      </p>
+
+      {/* Bloco 1 — Campos de entrada */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Campos de entrada</h2>
+        <div className="space-y-6 max-w-sm">
+
+          {/* Text input — normal */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Text input — estado normal</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Nome da habilidade <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              placeholder="Ex: React"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+            />
+          </div>
+
+          {/* Text input — erro */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Text input — estado de erro</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Nome da habilidade <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              placeholder="Ex: React"
+              className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+            <p className="text-sm text-red-600 mt-1">Este campo é obrigatório.</p>
+          </div>
+
+          {/* Textarea */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Textarea</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Descrição
+            </label>
+            <textarea
+              readOnly
+              placeholder="Descreva esta habilidade..."
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">0/100</p>
+          </div>
+
+          {/* Select Radix */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Select (Radix)</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Tipo <span className="text-red-500">*</span>
+            </label>
+            <Select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tecnica">Técnica</SelectItem>
+                <SelectItem value="comportamental">Comportamental</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date input */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Date input</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Data de início <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+            />
+          </div>
+
+        </div>
+      </div>
+
+      {/* Bloco 2 — Tabela de classes */}
+      <div className="mb-8 max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Classes por elemento</h2>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Elemento</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Classes</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Observação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {[
+                { el: 'Label', classes: 'text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block', obs: '* para obrigatório' },
+                { el: 'Input normal', classes: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent', obs: '—' },
+                { el: 'Input erro', classes: '+ border-red-300 focus:ring-red-500', obs: 'Substituir border-gray-300' },
+                { el: 'Textarea', classes: '+ resize-none', obs: 'rows=4 padrão' },
+                { el: 'Contador de chars', classes: 'text-xs text-gray-400 mt-1 text-right', obs: 'Quando há limite' },
+                { el: 'Mensagem de erro', classes: 'text-sm text-red-600 mt-1', obs: 'Sempre abaixo do campo' },
+                { el: 'Hint text', classes: 'text-xs text-gray-500 mt-1', obs: 'Instrução adicional ao campo' },
+              ].map(({ el, classes, obs }) => (
+                <tr key={el} className="bg-white">
+                  <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{el}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500 break-all">{classes}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{obs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Wizard */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Wizard — formulário em etapas</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Usado na criação de avaliações. Estrutura copiada de <code className="font-mono bg-gray-100 px-1 rounded">NovaAvaliacaoDrawer.tsx</code>.
+        </p>
+
+        {/* Stepper demo — etapa 2 ativa (1 completa, 3 e 4 inativas) */}
+        <div className="max-w-sm mb-6">
+          <div className="flex items-start justify-between">
+            {ETAPAS_WIZARD.map((etapa, idx) => {
+              const completa = etapa.numero < 2;
+              const ativa = etapa.numero === 2;
+              return (
+                <div key={etapa.numero} className="flex items-start flex-1">
+                  <div className="flex flex-col items-center flex-shrink-0">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                      completa
+                        ? 'bg-[var(--brand-600)] text-white'
+                        : ativa
+                        ? 'bg-[var(--brand-600)] text-white ring-2 ring-offset-1 ring-[var(--brand-300)]'
+                        : 'bg-gray-100 text-gray-400 border border-gray-200'
+                    }`}>
+                      {completa ? '✓' : etapa.numero}
+                    </div>
+                    <span className={`mt-1 text-[10px] font-medium text-center whitespace-nowrap ${
+                      ativa ? 'text-[var(--brand-600)]' : completa ? 'text-gray-500' : 'text-gray-400'
+                    }`}>
+                      {etapa.label}
+                    </span>
+                  </div>
+                  {idx < ETAPAS_WIZARD.length - 1 && (
+                    <div className={`flex-1 h-px mt-3.5 mx-1.5 ${completa ? 'bg-[var(--brand-600)]' : 'bg-gray-200'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tabela de estados do stepper */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden max-w-2xl">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Estado</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Círculo</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Texto</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Linha</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {ESTADOS_WIZARD.map(({ estado, circulo, texto, linha }) => (
+                <tr key={estado} className="bg-white">
+                  <td className="px-4 py-3 font-medium text-gray-900">{estado}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500 break-all">{circulo}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500 break-all">{texto}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{linha}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Validação e feedback */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Validação e feedback</h2>
+        <div className="space-y-6 max-w-sm">
+
+          {/* 1. Campo válido */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">1 — Campo válido</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Nome da habilidade <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              defaultValue="React"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+            />
+            <p className="text-xs text-gray-400 mt-1">Sem indicador visual — o sistema não usa ícone de check.</p>
+          </div>
+
+          {/* 2. Campo com erro */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">2 — Campo com erro</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Nome da habilidade <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              placeholder="Ex: React"
+              className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+            <p className="text-sm text-red-600 mt-1">Este campo é obrigatório.</p>
+          </div>
+
+          {/* 3. Campo desabilitado */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">3 — Campo desabilitado</p>
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+              Nome da habilidade
+            </label>
+            <input
+              type="text"
+              disabled
+              defaultValue="React"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 opacity-50 cursor-not-allowed"
+            />
+          </div>
+
+        </div>
+      </div>
+
+      {/* Bloco 5 — Regras de uso */}
+      <div className="max-w-2xl">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Regras de uso</h2>
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <ul className="text-sm text-gray-700 space-y-2 list-none">
+            <li>Label sempre acima do campo — nunca inline ou placeholder como substituto de label</li>
+            <li>Campos obrigatórios marcados com <span className="text-red-500 font-medium">*</span> no label, via <code className="font-mono text-xs bg-white/60 px-1 rounded">&lt;span className="text-red-500"&gt;*&lt;/span&gt;</code></li>
+            <li>Mensagem de erro sempre abaixo do campo, nunca em tooltip ou modal</li>
+            <li>Nunca use border-red no label — apenas no input</li>
+            <li>Contador de caracteres sempre à direita, abaixo do campo</li>
+            <li>Hint text sempre abaixo do campo, acima da mensagem de erro</li>
+            <li>Ordem no formulário: label → input → hint text → mensagem de erro</li>
+            <li>Selects: sempre Radix Select — nunca select nativo</li>
+            <li>Datas: <code className="font-mono text-xs bg-white/60 px-1 rounded">input type=date</code> — sem date picker customizado no MVP</li>
+            <li>Gap entre campos: <code className="font-mono text-xs bg-white/60 px-1 rounded">space-y-4 md:space-y-5</code></li>
+            <li>Nunca use autofocus em campos de drawer</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Navegação ─────────────────────────────────────────────────────────
+
+function SecaoNavegacao() {
+  const [activeTabDemo, setActiveTabDemo] = useState('competencias');
+
+  const adminItems = [
+    { id: 'dashboard',   label: 'Dashboard',   icon: LayoutDashboard, active: true  },
+    { id: 'perfis',      label: 'Perfis',       icon: Users,           active: false },
+    { id: 'habilidades', label: 'Habilidades',  icon: Award,           active: false },
+    { id: 'carreiras',   label: 'Carreiras',    icon: Briefcase,       active: false },
+    { id: 'avaliacoes',  label: 'Avaliações',   icon: ClipboardCheck,  active: false },
+  ];
+
+  const colaboradorItems = [
+    { id: 'meu-perfil',        label: 'Meu Perfil',        icon: UserCircle,    active: true  },
+    { id: 'minhas-avaliacoes', label: 'Minhas Avaliações', icon: ClipboardCheck, active: false },
+    { id: 'minha-carreira',    label: 'Minha Carreira',    icon: TrendingUp,    active: false },
+  ];
+
+  const tabLabels: Record<string, string> = {
+    competencias: 'Competências',
+    niveis: 'Níveis de Habilidades',
+    habilidades: 'Habilidades',
+  };
+
+  return (
+    <div className="max-w-4xl space-y-10">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Navegação</h2>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Padrões de navegação do sistema. Sempre siga a hierarquia definida — nunca crie novos padrões sem documentar.
+        </p>
+      </div>
+
+      {/* ── Bloco 1: Sidebar ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Sidebar</h3>
+          <p className="text-sm text-gray-500">Navegação principal do sistema. Leia Sidebar.tsx e copie a estrutura exata.</p>
+        </div>
+
+        <div className="flex flex-wrap gap-8">
+          {/* Admin — expandida */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Admin — expandida</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1 w-52">
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      item.active ? 'bg-[var(--brand-50)]' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${item.active ? 'text-[var(--brand-600)]' : ''}`} />
+                    <span className={item.active ? 'text-[var(--brand-700)] font-medium' : ''}>
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Admin — recolhida */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Admin — recolhida</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1 w-20">
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    className={`w-full flex items-center justify-center p-3 rounded-lg text-sm font-medium transition-colors ${
+                      item.active ? 'bg-[var(--brand-50)]' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${item.active ? 'text-[var(--brand-600)]' : ''}`} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Colaborador — expandida */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Colaborador — expandida</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1 w-52">
+              {colaboradorItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      item.active ? 'bg-[var(--brand-50)]' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${item.active ? 'text-[var(--brand-600)]' : ''}`} />
+                    <span className={item.active ? 'text-[var(--brand-700)] font-medium' : ''}>
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bloco 2: Botão de voltar ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Botão de voltar</h3>
+          <p className="text-sm text-gray-500">Usado em páginas internas. Sempre com label da página anterior.</p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-3">
+          <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-6">
+            <ArrowLeft className="w-4 h-4" />
+            Carreiras
+          </button>
+          <code className="block text-xs font-mono text-gray-500 bg-gray-50 rounded px-3 py-2">
+            {'flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-6'}
+          </code>
+          <code className="block text-xs font-mono text-gray-500 bg-gray-50 rounded px-3 py-2">
+            {'<ArrowLeft className="w-4 h-4" />'}
+          </code>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contexto</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Label</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="px-4 py-3 text-gray-700">Dentro de uma carreira</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">← Carreiras</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700">Dentro de uma jornada</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">← Nome da carreira</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700">Respondendo avaliação</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">← Minhas Avaliações</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700">Resultado de avaliação</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">← Minhas Avaliações</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+          Nunca use apenas '←' sem label. Nunca use breadcrumb.
+        </div>
+      </section>
+
+      {/* ── Bloco 3: Tabs de conteúdo ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Tabs de conteúdo</h3>
+          <p className="text-sm text-gray-500">
+            Usadas para alternar entre seções de uma mesma página. Leia ContentArea.tsx e copie a implementação exata das tabs de Habilidades.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="border-b border-gray-200 mb-6 -mx-6">
+            <div className="flex gap-3 md:gap-8 overflow-x-auto scrollbar-hide px-6">
+              {['competencias', 'niveis', 'habilidades'].map((tab) => {
+                const isActive = activeTabDemo === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTabDemo(tab)}
+                    className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap flex-shrink-0 inline-flex items-center gap-2 ${
+                      isActive
+                        ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {tabLabels[tab]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 italic">
+            Conteúdo da aba: {tabLabels[activeTabDemo]}
+          </p>
+        </div>
+      </section>
+
+      {/* ── Bloco 4: Hierarquia de navegação ── */}
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Hierarquia de navegação</h3>
+
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Admin</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Dashboard</span>
+              </div>
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Perfis</span>
+                <span className="text-gray-400 mt-2">→</span>
+                <div>
+                  <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 inline-block">Perfil individual</span>
+                  <p className="text-xs text-gray-400 mt-1 ml-1">abas: Visão Geral · Habilidades · Carreira · Avaliações</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Habilidades</span>
+                <p className="text-xs text-gray-400 mt-2 ml-1">abas: Competências · Níveis · Habilidades</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Carreiras</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Carreira</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Jornada</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Matriz</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Avaliações</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Detalhe da avaliação</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Colaborador</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">Meu Perfil</span>
+              </div>
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 whitespace-nowrap">Minhas Avaliações</span>
+                <span className="text-gray-400 mt-2">→</span>
+                <div className="space-y-1">
+                  <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 block">Responder avaliação</span>
+                  <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 block">Resultado da avaliação</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 whitespace-nowrap">Minha Carreira</span>
+                <p className="text-xs text-gray-400 mt-2 ml-1">abas: Minha Jornada · Próximo passo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bloco 5: Regras de uso ── */}
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Regras de uso</h3>
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <ul className="text-sm text-gray-700 space-y-2 list-disc list-outside pl-5">
+            <li>Páginas internas sempre com botão ← Label — nunca breadcrumb</li>
+            <li>Nunca use o botão de voltar do browser como navegação principal</li>
+            <li>Tabs sempre com border-b na aba ativa — nunca background colorido</li>
+            <li>Sidebar sempre com ícone + label no modo expandido</li>
+            <li>Item ativo na sidebar: nunca destaque apenas por cor do ícone — sempre fundo + cor do texto + ícone</li>
+            <li>Navegação do Colaborador: React Router (rotas separadas) — não é viewMode condicional</li>
+            <li>Nunca adicione item à sidebar sem atualizar esta documentação</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Seção: Mensagens de orientação ──────────────────────────────────────────
+
+function SecaoMensagensOrientacao() {
+  return (
+    <div className="max-w-4xl space-y-10">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Mensagens de orientação</h2>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Banners informativos, instruções e avisos de estado usados no SGC. Existem 3 variantes — escolha pela semântica, não pela preferência de cor.
+        </p>
+      </div>
+
+      {/* ── Bloco 1: Variante A — Informativo contextual (brand) ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Informativo contextual</h3>
+          <p className="text-sm text-gray-500">
+            Explica como dados são calculados, limitações da tela ou caveats importantes. Variante mais usada no SGC (3 instâncias).
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          {/* Demo */}
+          <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-700">
+              O progresso é calculado com base nas habilidades mapeadas na matriz da jornada. Atingir 100% das habilidades não garante promoção — outros fatores são considerados pela liderança.
+            </p>
+          </div>
+
+          {/* Classes */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-1 font-mono text-xs text-gray-600">
+            <p className="text-gray-400 mb-2">{`<!-- Container -->`}</p>
+            <p>{`<div class="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Ícone -->`}</p>
+            <p className="ml-4">{`<Info class="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Texto -->`}</p>
+            <p className="ml-4">{`<p class="text-sm text-gray-700">...</p>`}</p>
+            <p>{`</div>`}</p>
+          </div>
+        </div>
+
+        {/* Onde é usado */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arquivo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contexto</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">MinhaCarreira.tsx:203</td>
+                <td className="px-4 py-3 text-gray-700">Seção "Jornada de Carreira" — explica cálculo de cobertura</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">MinhaCarreira.tsx:276</td>
+                <td className="px-4 py-3 text-gray-700">Aba "Próximo passo" — explica origem dos dados do comparativo</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">ResultadoAvaliacao.tsx:85</td>
+                <td className="px-4 py-3 text-gray-700">"Banner de contexto" — orienta o uso dos resultados</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Bloco 2: Variante B — Instrução de formulário (slate) ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Instrução de formulário</h3>
+          <p className="text-sm text-gray-500">
+            Instrução direta ao usuário antes de um formulário ou ação. Diferencia-se da variante brand pelo tom slate neutro e pelo bold label "Instruções:".
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          {/* Demo */}
+          <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+            <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-700">
+              <span className="font-medium text-slate-800">Instruções: </span>
+              Avalie seu nível de proficiência em cada habilidade listada. Seja honesto e considere sua experiência prática e conhecimento teórico. Você pode salvar como rascunho e continuar depois.
+            </p>
+          </div>
+
+          {/* Classes */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-1 font-mono text-xs text-gray-600">
+            <p className="text-gray-400 mb-2">{`<!-- Container -->`}</p>
+            <p>{`<div class="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Ícone -->`}</p>
+            <p className="ml-4">{`<Info class="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Texto com label em bold -->`}</p>
+            <p className="ml-4">{`<p class="text-sm text-slate-700">`}</p>
+            <p className="ml-8">{`<span class="font-medium text-slate-800">Instruções: </span>`}</p>
+            <p className="ml-8">{`Texto da instrução aqui.`}</p>
+            <p className="ml-4">{`</p>`}</p>
+            <p>{`</div>`}</p>
+          </div>
+        </div>
+
+        {/* Onde é usado */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arquivo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contexto</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">RespostaAvaliacao.tsx:108</td>
+                <td className="px-4 py-3 text-gray-700">Bloco "Instruções" — acima dos campos de autoavaliação</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Bloco 3: Variante C — Aviso de estado (yellow) ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Aviso de estado</h3>
+          <p className="text-sm text-gray-500">
+            Indica o estado atual da página (ex: rascunho, prévia). Usa <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">Eye</code> em vez de <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">Info</code>, e padding assimétrico <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">px-4 py-3</code>.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          {/* Demo */}
+          <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+            <Eye className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-yellow-800">
+              <span className="font-semibold">Prévia</span> — esta avaliação ainda não foi ativada. Você está visualizando como ela será apresentada aos colaboradores.
+            </p>
+          </div>
+
+          {/* Classes */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-1 font-mono text-xs text-gray-600">
+            <p className="text-gray-400 mb-2">{`<!-- Container — px-4 py-3, não p-4 -->`}</p>
+            <p>{`<div class="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Ícone Eye, não Info -->`}</p>
+            <p className="ml-4">{`<Eye class="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />`}</p>
+            <p className="ml-4 text-gray-400">{`<!-- Texto com label em bold -->`}</p>
+            <p className="ml-4">{`<p class="text-sm text-yellow-800">`}</p>
+            <p className="ml-8">{`<span class="font-semibold">Prévia</span> — texto aqui.`}</p>
+            <p className="ml-4">{`</p>`}</p>
+            <p>{`</div>`}</p>
+          </div>
+        </div>
+
+        {/* Onde é usado */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arquivo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contexto</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">AvaliacaoDetalhePage.tsx:454</td>
+                <td className="px-4 py-3 text-gray-700">"Banner de prévia" — avaliação em rascunho ainda não ativada</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Divergência documentada ── */}
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Divergência detectada</h3>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 space-y-2">
+          <p className="font-semibold">Variante A (brand) vs Variante B (slate) — mesma semântica, cores diferentes</p>
+          <p>Ambas usam o ícone <code className="bg-amber-100 px-1 py-0.5 rounded text-xs font-mono">Info</code> e servem para orientar o usuário. A diferença está nas cores (brand vs slate). Variante A aparece 3× no SGC; variante B aparece 1×.</p>
+          <p><span className="font-medium">Padrão going forward:</span> use <strong>variante A (brand)</strong> para informativo contextual. Reserve a variante slate apenas para instrução direta antes de formulário, quando a neutralidade de cor é importante para não distrair do formulário abaixo.</p>
+        </div>
+      </section>
+
+      {/* ── Tabela comparativa ── */}
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Comparativo de variantes</h3>
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variante</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ícone</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Texto</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Padding</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium">Informativo contextual</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">bg-[var(--brand-50)] border-[var(--brand-100)]</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">Info · text-[var(--brand-600)]</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">text-sm text-gray-700</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">p-4</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium">Instrução de formulário</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">bg-slate-100 border-slate-300</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">Info · text-slate-500</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">text-sm text-slate-700</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">p-4</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium">Aviso de estado</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">bg-yellow-50 border-yellow-200</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">Eye · text-yellow-600</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">text-sm text-yellow-800</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">px-4 py-3</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Regras de uso ── */}
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Regras de uso</h3>
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <ul className="text-sm text-gray-700 space-y-2 list-disc list-outside pl-5">
+            <li>Sempre use <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">flex items-start gap-3</code> — nunca <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">items-center</code>, pois textos longos precisam alinhar ao topo</li>
+            <li>Sempre adicione <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">mt-0.5</code> no ícone para alinhar visualmente com a primeira linha do texto</li>
+            <li>Sempre adicione <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">flex-shrink-0</code> no ícone para evitar que seja comprimido em telas estreitas</li>
+            <li>Variante brand (A) = informativo contextual: dados calculados, limitações, caveats</li>
+            <li>Variante slate (B) = instrução de formulário: o que o usuário deve fazer antes de preencher</li>
+            <li>Variante yellow (C) = aviso de estado: comunica que a página está em modo especial (rascunho, prévia)</li>
+            <li>Nunca use estas variantes para erros — erros usam <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">text-red-600</code> inline abaixo do campo</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const IMPLEMENTED: SectionId[] = [
@@ -2549,10 +3745,15 @@ const IMPLEMENTED: SectionId[] = [
   'componentes/tabelas',
   'componentes/filtros-pills',
   'componentes/cards',
+  'componentes/drawers',
+  'componentes/modais',
+  'componentes/formularios',
   'regras/niveis-cores',
   'regras/cobertura-habilidades',
   'regras/estados-avaliacao',
   'regras/badges-status',
+  'padroes/navegacao',
+  'padroes/mensagens-orientacao',
 ];
 
 export default function DesignSystemPage() {
@@ -2642,10 +3843,15 @@ export default function DesignSystemPage() {
         {activeSection === 'componentes/tabelas' && <SecaoTabelas />}
         {activeSection === 'componentes/filtros-pills' && <SecaoFiltrosEPills />}
         {activeSection === 'componentes/cards' && <SecaoCards />}
+        {activeSection === 'componentes/drawers' && <SecaoDrawers />}
+        {activeSection === 'componentes/modais' && <SecaoModais />}
+        {activeSection === 'componentes/formularios' && <SecaoFormularios />}
         {activeSection === 'regras/niveis-cores' && <SecaoNiveisCores />}
         {activeSection === 'regras/cobertura-habilidades' && <SecaoCoberturaHabilidades />}
         {activeSection === 'regras/estados-avaliacao' && <SecaoEstadosAvaliacao />}
         {activeSection === 'regras/badges-status' && <SecaoBadgesStatus />}
+        {activeSection === 'padroes/navegacao' && <SecaoNavegacao />}
+        {activeSection === 'padroes/mensagens-orientacao' && <SecaoMensagensOrientacao />}
 
         {activeSection !== 'home' && !IMPLEMENTED.includes(activeSection) && (
           <div className="max-w-2xl">
