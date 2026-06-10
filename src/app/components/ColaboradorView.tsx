@@ -6,14 +6,37 @@ import {
   CalendarClock,
   AlertCircle,
   CheckCircle2,
+  List,
+  BarChart2,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { calcularCobertura, HabilidadeColaborador, MatrizCargo } from '../utils/cobertura';
-import { getCorFromPeso, niveisDefaultData, nivelToNumber } from '../data/mockData';
+import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
+import { Table, Column, PaginationConfig } from './ui/Table';
 
 function getPesoFromNome(nome: string): number {
   const nivel = niveisDefaultData.find(n => n.nome === nome);
   return nivel?.peso ?? 0;
+}
+
+const PESO_MAX = Math.max(...niveisDefaultData.map(n => n.peso));
+
+function getPageNumbers(currentPage: number, totalPages: number): (number | string)[] {
+  const pages: (number | string)[] = [];
+  if (totalPages <= 5) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else if (currentPage <= 3) {
+    for (let i = 1; i <= 4; i++) pages.push(i);
+    pages.push('...'); pages.push(totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    pages.push(1); pages.push('...');
+    for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1); pages.push('...');
+    pages.push(currentPage - 1); pages.push(currentPage); pages.push(currentPage + 1);
+    pages.push('...'); pages.push(totalPages);
+  }
+  return pages;
 }
 
 interface Competencia {
@@ -47,6 +70,7 @@ export function ColaboradorView() {
   const [filtroTipo, setFiltroTipo] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [visualizacao, setVisualizacao] = useState<'tabela' | 'barras'>('tabela');
 
   // Dados mockados
   const colaborador = {
@@ -238,8 +262,8 @@ export function ColaboradorView() {
   const todasHabilidades = competencias.flatMap(comp =>
     comp.habilidades.map(h => {
       const nivelEsperado = nivelEsperadoMap.get(h.id);
-      const nivelAtualNum = nivelToNumber[h.nivel] ?? 0;
-      const nivelEsperadoNum = nivelEsperado != null ? (nivelToNumber[nivelEsperado] ?? 0) : null;
+      const nivelAtualNum = getPesoFromNome(h.nivel);
+      const nivelEsperadoNum = nivelEsperado != null ? getPesoFromNome(nivelEsperado) : null;
 
       let statusIndicador: 'Acima do esperado' | 'No esperado' | 'Abaixo do esperado' | null = null;
       if (nivelEsperadoNum !== null) {
@@ -248,7 +272,18 @@ export function ColaboradorView() {
         else statusIndicador = 'Abaixo do esperado';
       }
 
-      return { id: h.id, nome: h.nome, nivel: h.nivel, competenciaId: comp.id, competenciaNome: comp.nome, tipo: comp.tipo, statusIndicador };
+      return {
+        id: h.id,
+        nome: h.nome,
+        nivel: h.nivel,
+        competenciaId: comp.id,
+        competenciaNome: comp.nome,
+        tipo: comp.tipo,
+        statusIndicador,
+        pesoAtual: nivelAtualNum,
+        pesoEsperado: nivelEsperadoNum,
+        nivelEsperadoNome: nivelEsperado ?? null,
+      };
     })
   );
 
@@ -266,6 +301,53 @@ export function ColaboradorView() {
     (paginaAtual - 1) * ITENS_POR_PAGINA,
     paginaAtual * ITENS_POR_PAGINA
   );
+  const paginacaoInicioItem = habilidadesFiltradas.length === 0 ? 0 : (paginaAtual - 1) * ITENS_POR_PAGINA + 1;
+  const paginacaoFimItem = Math.min(paginaAtual * ITENS_POR_PAGINA, habilidadesFiltradas.length);
+
+  const columns: Column[] = [
+    { key: 'nome', label: 'Habilidade' },
+    {
+      key: 'competenciaNome',
+      label: 'Competência',
+      render: (value: any) => <span className="text-gray-500">{value}</span>,
+    },
+    {
+      key: 'nivel',
+      label: 'Nível Atual',
+      render: (_: any, row: any) => (
+        <span
+          className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
+          style={{
+            backgroundColor: getPesoFromNome(row.nivel) > 0
+              ? getCorFromPeso(getPesoFromNome(row.nivel))
+              : '#9CA3AF',
+          }}
+        >
+          {row.nivel}
+        </span>
+      ),
+    },
+    {
+      key: 'statusIndicador',
+      label: 'Status',
+      render: (_: any, row: any) =>
+        row.statusIndicador ? (
+          <span className={row.statusIndicador === 'Abaixo do esperado' ? 'text-xs text-red-500' : 'text-xs text-green-600'}>
+            {row.statusIndicador}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        ),
+    },
+  ];
+
+  const paginationConfig: PaginationConfig = {
+    currentPage: paginaAtual,
+    itemsPerPage: ITENS_POR_PAGINA,
+    totalItems: habilidadesFiltradas.length,
+    onPageChange: (page) => setPaginaAtual(page),
+    onItemsPerPageChange: () => {},
+  };
 
   return (
     <div className="space-y-6">
@@ -374,81 +456,155 @@ export function ColaboradorView() {
                 </button>
               ))}
             </div>
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                onClick={() => { setVisualizacao('tabela'); setPaginaAtual(1); }}
+                title="Visualização em tabela"
+                className={`p-2 rounded-md transition-colors ${
+                  visualizacao === 'tabela'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => { setVisualizacao('barras'); setPaginaAtual(1); }}
+                title="Visualização em barras"
+                className={`p-2 rounded-md transition-colors ${
+                  visualizacao === 'barras'
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <BarChart2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Tabela */}
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Competência</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Nível Atual</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {habilidadesPagina.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-3 md:px-6 py-8 text-center text-sm text-gray-500">
-                    Nenhuma habilidade encontrada para os filtros aplicados.
-                  </td>
-                </tr>
-              ) : (
-                habilidadesPagina.map(h => (
-                  <tr key={h.id}>
-                    <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-900">{h.nome}</td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-500">{h.competenciaNome}</td>
-                    <td className="px-3 md:px-6 py-3 md:py-4">
-                      <span
-                        className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                        style={{
-                          backgroundColor: getPesoFromNome(h.nivel) > 0
-                            ? getCorFromPeso(getPesoFromNome(h.nivel))
-                            : '#9CA3AF',
-                        }}
-                      >
-                        {h.nivel}
-                      </span>
-                    </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4">
-                      {h.statusIndicador ? (
-                        <span className={h.statusIndicador === 'Abaixo do esperado' ? 'text-xs text-red-500' : 'text-xs text-green-600'}>
-                          {h.statusIndicador}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {visualizacao === 'tabela' && (
+            habilidadesPagina.length === 0 ? (
+              <div className="px-3 md:px-6 py-8 text-center text-sm text-gray-500">
+                Nenhuma habilidade encontrada para os filtros aplicados.
+              </div>
+            ) : (
+              <Table columns={columns} data={habilidadesPagina} pagination={paginationConfig} />
+            )
+          )}
 
-          {/* Paginação */}
-          {totalPaginas > 1 && (
-            <div className="px-3 md:px-6 py-3 md:py-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-xs md:text-sm text-gray-700">
-                {habilidadesFiltradas.length} {habilidadesFiltradas.length === 1 ? 'habilidade' : 'habilidades'}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
-                  disabled={paginaAtual === 1}
-                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4 text-gray-500" />
-                </button>
-                <span className="text-xs font-normal text-gray-500 px-2">
-                  {paginaAtual} / {totalPaginas}
-                </span>
-                <button
-                  onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
-                  disabled={paginaAtual === totalPaginas}
-                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
-                </button>
+          {/* Visualização em barras */}
+          {visualizacao === 'barras' && (
+            <div>
+              <div className="px-4 md:px-6 py-2 flex justify-end items-center gap-4 border-b border-gray-100">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[var(--brand-600)]" />
+                  <span className="text-xs text-gray-500">Nível atual</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
+                  <span className="text-xs text-gray-500">Nível esperado</span>
+                </div>
+              </div>
+              <div className="px-4 md:px-6">
+                {habilidadesPagina.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-gray-500">
+                    Nenhuma habilidade encontrada para os filtros aplicados.
+                  </p>
+                ) : (
+                  habilidadesPagina.map(h => {
+                    const naoAvaliado = h.pesoAtual === 0;
+                    const semEsperado = h.nivelEsperadoNome === null;
+                    const larguraAtual = naoAvaliado ? 0 : Math.round((h.pesoAtual / PESO_MAX) * 100);
+                    const larguraEsperado = semEsperado ? 0 : Math.round((h.pesoEsperado! / PESO_MAX) * 100);
+
+                    return (
+                      <div key={h.id} className="py-4 border-b border-gray-100 flex items-start gap-4">
+                        <div className="w-40 flex-shrink-0">
+                          <p className="text-sm font-medium text-gray-900">{h.nome}</p>
+                          <p className="text-xs text-gray-500">{h.competenciaNome}</p>
+                        </div>
+                        <div className="flex-1 flex flex-col gap-2">
+                          {naoAvaliado ? (
+                            <div className="flex items-center gap-2">
+                              <span className="w-14 text-xs text-gray-400 shrink-0">Atual</span>
+                              <span className="text-xs italic text-gray-400">Não avaliado</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="w-14 text-xs text-gray-400 shrink-0">Atual</span>
+                              <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-[var(--brand-600)] transition-all duration-300"
+                                  style={{ width: `${larguraAtual}%` }}
+                                />
+                              </div>
+                              <span className="w-24 text-xs font-medium text-gray-700 shrink-0">{h.nivel}</span>
+                            </div>
+                          )}
+                          {!semEsperado && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-14 text-xs text-gray-400 shrink-0">Esperado</span>
+                              <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-slate-300 transition-all duration-300"
+                                  style={{ width: `${larguraEsperado}%` }}
+                                />
+                              </div>
+                              <span className="w-24 text-xs font-medium text-gray-700 shrink-0">{h.nivelEsperadoNome}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              {/* Paginação */}
+              <div className="flex flex-col md:flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 gap-3 md:gap-0">
+                <div className="text-xs md:text-sm text-gray-700">
+                  <span className="hidden md:inline">Exibindo </span>
+                  <span className="font-medium">{paginacaoInicioItem}</span>–
+                  <span className="font-medium">{paginacaoFimItem}</span> de{' '}
+                  <span className="font-medium">{habilidadesFiltradas.length}</span>
+                </div>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <button
+                    onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+                    disabled={paginaAtual === 1}
+                    className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                  >
+                    <ChevronLeft className="w-3 md:w-4 h-3 md:h-4" />
+                  </button>
+                  <div className="flex items-center gap-0.5 md:gap-1">
+                    {getPageNumbers(paginaAtual, totalPaginas).map((page, index) =>
+                      typeof page === 'number' ? (
+                        <button
+                          key={index}
+                          onClick={() => setPaginaAtual(page)}
+                          className={`min-w-[32px] md:min-w-[40px] px-2 md:px-3 py-1.5 md:py-2 text-xs font-normal rounded-lg transition-colors ${
+                            paginaAtual === page
+                              ? 'bg-gray-100 text-gray-900 border border-gray-200'
+                              : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ) : (
+                        <span key={index} className="px-1 md:px-2 text-xs text-gray-400">
+                          {page}
+                        </span>
+                      )
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaAtual === totalPaginas}
+                    className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                  >
+                    <ChevronRight className="w-3 md:w-4 h-3 md:h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           )}

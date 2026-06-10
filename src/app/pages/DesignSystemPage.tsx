@@ -1,11 +1,14 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Info, Palette, Layout, BookOpen, Briefcase, User, ChevronRight,
   Settings, LayoutDashboard, Award, UserCircle, ClipboardList, ClipboardCheck,
   TrendingUp, Users, CheckCircle2, Clock, CalendarClock, AlertCircle, XCircle,
   Eye, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
   Plus, Download, Search, X, AlertTriangle, ArrowLeft,
+  Layers, Target, BarChart2, Calendar, Wrench,
+  Bell, ArrowLeftRight, LogOut, Menu,
 } from 'lucide-react';
+import { EmptyState } from '../components/ui/EmptyState';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -102,6 +105,68 @@ const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 const BADGE_BASE = 'inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full';
 
+// ─── SectionMeta ──────────────────────────────────────────────────────────────
+
+type SectionMetaProps = {
+  status: 'documentado' | 'em-construcao' | 'desatualizado';
+  ultimaAtualizacao: string | null;
+  debitosTecnicos: number;
+  alertas: number;
+};
+
+function SectionMeta({ status, ultimaAtualizacao, debitosTecnicos, alertas }: SectionMetaProps) {
+  return (
+    <div className="grid grid-cols-4 gap-4 mb-8 items-stretch">
+      <div className={`border rounded-lg p-4 flex flex-col gap-3 ${
+        status === 'documentado' ? 'bg-green-50 border-green-200' :
+        status === 'em-construcao' ? 'bg-yellow-50 border-yellow-200' :
+        'bg-red-50 border-red-200'
+      }`}>
+        {status === 'documentado' && <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />}
+        {status === 'em-construcao' && <Clock className="w-4 h-4 flex-shrink-0 text-yellow-600" />}
+        {status === 'desatualizado' && <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />}
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Status</p>
+          <p className="text-sm font-semibold leading-tight">
+            {status === 'documentado' ? 'Documentado' : status === 'em-construcao' ? 'Em construção' : 'Desatualizado'}
+          </p>
+        </div>
+      </div>
+      <div className="border rounded-lg p-4 flex flex-col gap-3 bg-white border-gray-200">
+        <Calendar className="w-4 h-4 flex-shrink-0 text-gray-400" />
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Última atualização</p>
+          <p className={`text-sm font-semibold leading-tight ${!ultimaAtualizacao ? 'text-gray-400 italic' : ''}`}>
+            {ultimaAtualizacao ?? 'Não commitado'}
+          </p>
+        </div>
+      </div>
+      <div className={`border rounded-lg p-4 flex flex-col gap-3 ${
+        debitosTecnicos > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200'
+      }`}>
+        <Wrench className={`w-4 h-4 flex-shrink-0 ${debitosTecnicos > 0 ? 'text-orange-600' : 'text-gray-400'}`} />
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Débitos técnicos</p>
+          <p className={`text-sm font-semibold leading-tight ${debitosTecnicos > 0 ? 'text-orange-600' : ''}`}>
+            {debitosTecnicos}
+          </p>
+        </div>
+      </div>
+      <div className={`border rounded-lg p-4 flex flex-col gap-3 ${
+        alertas > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'
+      }`}>
+        <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${alertas > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Alertas</p>
+          <p className={`text-sm font-semibold leading-tight ${alertas > 0 ? 'text-yellow-600' : ''}`}>
+            {alertas}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Seção: Níveis e cores ────────────────────────────────────────────────────
 
 const ORDENS_PROGRESSAO = [
@@ -133,12 +198,13 @@ function SecaoNiveisCores() {
   niveisDefaultData.forEach((n) => { nomesPorOrdem[n.peso] = n.nome; });
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Níveis e cores</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Níveis são cadastrados pelo RH com nome livre e ordem de progressão (1–5). A cor é derivada
         automaticamente da ordem — não é configurável.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Tabela de ordens */}
       <div className="mb-8">
@@ -241,20 +307,17 @@ function SecaoNiveisCores() {
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Como usar no front-end</h2>
         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">
-{`// A função getCorFromPeso recebe a ordem de progressão
+{`// A função getCorFromPeso recebe o campo 'peso' do nível
 // e retorna o hex correspondente
 import { getCorFromPeso } from '@/app/data/mockData';
 
 // Renderizar badge de nível
 <span
-  style={{ backgroundColor: getCorFromPeso(nivel.ordemProgressao) }}
+  style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
   className="inline-flex px-2.5 py-1 rounded-full
              text-xs font-medium text-white">
   {nivel.nome}
-</span>
-
-// Nota: internamente o campo se chama 'peso' no mock atual.
-// Na implementação real, usar 'ordemProgressao'.`}
+</span>`}
         </pre>
       </div>
     </div>
@@ -277,12 +340,13 @@ const EXEMPLOS_CARGOS = [
 
 function SecaoCoberturaHabilidades() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Cobertura de habilidades</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Mede o percentual de habilidades onde o nível atual do colaborador atende ou supera o nível
         esperado na matriz para o cargo.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Fórmula */}
       <div className="mb-8">
@@ -352,28 +416,24 @@ function SecaoCoberturaHabilidades() {
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Função de cálculo</h2>
         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">
 {`// src/app/utils/cobertura.ts
+
+export interface ResultadoCobertura {
+  percentual: number;
+  label: string;
+  cor: string;   // Tailwind text color class
+  bgCor: string; // Tailwind bg color class (for progress bars)
+}
+
+// Retorna true se nivelAtual (peso) >= nivelEsperado (peso)
 export function calcularCobertura(
+  nivelAtual: number,
+  nivelEsperado: number
+): boolean
+
+export function calcularCoberturaCargo(
   habilidadesColaborador: HabilidadeColaborador[],
-  matrizCargo: MatrizCargo[]
-): { percentual: number; label: string; cor: string } {
-  const atendidas = matrizCargo.filter(exigida => {
-    const hab = habilidadesColaborador
-      .find(h => h.habilidadeId === exigida.habilidadeId);
-    return hab && hab.peso >= exigida.pesoExigido;
-  });
-  const percentual = Math.round(
-    (atendidas.length / matrizCargo.length) * 100
-  );
-  if (percentual >= 80) return {
-    percentual, label: 'Boa cobertura', cor: 'text-green-600'
-  };
-  if (percentual >= 50) return {
-    percentual, label: 'Cobertura parcial', cor: 'text-yellow-600'
-  };
-  return {
-    percentual, label: 'Baixa cobertura', cor: 'text-red-600'
-  };
-}`}
+  matrizCargo: MatrizCargo[],
+): ResultadoCobertura`}
         </pre>
       </div>
     </div>
@@ -384,12 +444,21 @@ export function calcularCobertura(
 
 function SecaoEstadosAvaliacao() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Estados de avaliação</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         O Admin gerencia o status da avaliação. O Colaborador tem um estado próprio que reflete
         sua participação naquela avaliação.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Divergência interna no DS</p>
+          <p className="text-sm text-yellow-700 mt-1">Badge Encerrada documentada com <code className="font-mono text-xs">text-gray-800</code> nesta seção vs <code className="font-mono text-xs">text-gray-700</code> em SecaoBadgesStatus. O código real usa <code className="font-mono text-xs">text-gray-700</code>. Verificar se foi corrigido.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Status do Admin */}
       <div className="mb-8">
@@ -421,7 +490,7 @@ function SecaoEstadosAvaliacao() {
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Encerrada</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-800`}>Encerrada</span>
+                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Encerrada</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Período encerrado. Não aceita mais respostas.</td>
               </tr>
@@ -491,11 +560,12 @@ function SecaoEstadosAvaliacao() {
 
 function SecaoBadgesStatus() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Badges de status</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Badges usados em todo o sistema para comunicar estado de registros.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Tabela completa */}
       <div className="mb-8">
@@ -666,13 +736,14 @@ function SecaoCores() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Cores</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Tokens de cor do sistema definidos em{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">src/styles/theme.css</code>.
         Sempre use os tokens CSS (
         <code className="bg-gray-100 px-1 rounded text-xs">var(--brand-600)</code>
         ) em vez de valores hex diretamente.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
 
       {/* Bloco 1 — Paleta de marca */}
       <div className="mb-8">
@@ -819,14 +890,13 @@ function SecaoCores() {
       {/* Bloco 5 — Dark mode */}
       <div className="mb-8 max-w-2xl">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Dark mode</h2>
-        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
-          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-[var(--brand-700)]">
-            Os tokens de marca (<code className="font-mono text-xs">--brand-*</code>) não se alteram no dark mode.
-            As cores de superfície, texto e borda são redefinidas via classe{' '}
-            <code className="font-mono text-xs">.dark</code> em{' '}
-            <code className="font-mono text-xs">src/styles/dark-mode.css</code>.
-            Sempre use tokens CSS e classes Tailwind — nunca valores hex fixos no código.
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-yellow-800">
+            Dark mode ainda não foi implementado nem validado. O token{' '}
+            <code className="font-mono text-xs">.dark</code> existe em{' '}
+            <code className="font-mono text-xs">theme.css</code> mas as telas não foram revisadas
+            neste modo. Não usar como referência de implementação.
           </p>
         </div>
       </div>
@@ -872,14 +942,23 @@ const ESCALA_TIPOGRAFICA = [
 
 function SecaoTipografia() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Tipografia</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Fonte base: DM Sans (Google Fonts).{' '}
         Definida em{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">src/styles/fonts.css</code>.{' '}
         Tamanho base: 16px. Line-height padrão: 1.5.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Escala omite text-lg (18px)</p>
+          <p className="text-sm text-yellow-700 mt-1">A escala tipográfica não documenta o passo intermediário <code className="font-mono text-xs">text-lg</code> (18px) usado no título do drawer entre md e lg breakpoints. O DS documenta 16–20px mas o valor real em md é 18px.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Família tipográfica */}
       <div className="mb-8">
@@ -972,7 +1051,7 @@ function SecaoTipografia() {
               Siga estas regras para manter consistência tipográfica:
             </p>
             <ul className="text-sm text-gray-700 space-y-2">
-              <li>Nunca use <code className="font-mono text-xs bg-white/60 px-1 rounded">font-bold</code> (700) — não está no design system</li>
+              <li><code className="font-mono text-xs bg-white/60 px-1 rounded">font-bold</code> (700) é reservado para valores numéricos de destaque em cards de métricas (ex: <code className="font-mono text-xs bg-white/60 px-1 rounded">text-3xl font-bold</code>). Não usar em texto corrido, labels, botões ou cabeçalhos.</li>
               <li>Nunca use tamanhos fora da escala acima (ex: <code className="font-mono text-xs bg-white/60 px-1 rounded">text-3xl</code> em conteúdo de página)</li>
               <li>Sempre use <code className="font-mono text-xs bg-white/60 px-1 rounded">text-gray-900</code> para texto principal e <code className="font-mono text-xs bg-white/60 px-1 rounded">text-gray-500</code> para texto secundário</li>
               <li>Labels de formulário sempre em <code className="font-mono text-xs bg-white/60 px-1 rounded">font-medium text-gray-700</code></li>
@@ -1072,12 +1151,21 @@ const BORDER_RADIUS_VALORES = [
 
 function SecaoEspacamento() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Espaçamento</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         O sistema usa a escala de espaçamento padrão do Tailwind CSS. Não há tokens customizados
         de espaçamento — use sempre as classes Tailwind.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">thead e tbody com valores idênticos</p>
+          <p className="text-sm text-yellow-700 mt-1">A tabela de espaçamento agrupa thead e tbody com os mesmos valores <code className="font-mono text-xs">px-3 md:px-6 py-3 md:py-4</code>, sugerindo que são configurados separadamente quando na prática são idênticos em Table.tsx.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Espaçamento por contexto */}
       <div className="mb-8">
@@ -1198,12 +1286,21 @@ function SecaoBadges() {
   const nomesMock = niveisDefaultData.map((n) => `${n.nome} (${n.peso})`).join(' / ');
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Badges</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Badges comunicam estado de forma compacta. Nunca use badges para decoração — cada cor tem
         significado semântico definido.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Divergência interna no DS</p>
+          <p className="text-sm text-yellow-700 mt-1">SecaoEstadosAvaliacao documenta badge Encerrada com <code className="font-mono text-xs">text-gray-800</code>. SecaoBadgesStatus documenta a mesma badge com <code className="font-mono text-xs">text-gray-700</code>. O código real usa <code className="font-mono text-xs">text-gray-700</code>. Verificar se a correção foi aplicada em ambas as seções.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Classe base */}
       <div className="mb-8">
@@ -1429,13 +1526,23 @@ const ICONES_GRUPOS: IconeGrupo[] = [
     { icone: XCircle,     nome: 'XCircle',     contexto: 'Erro' },
   ]},
   { grupo: 'NAVEGAÇÃO INTERNA', rows: [
-    { icone: ChevronLeft,  nome: 'ChevronLeft',  contexto: 'Botão voltar (← Página anterior)' },
-    { icone: ChevronRight, nome: 'ChevronRight', contexto: 'Próximo / expandir' },
-    { icone: ChevronDown,  nome: 'ChevronDown',  contexto: 'Dropdown aberto' },
+    { icone: ArrowLeft,    nome: 'ArrowLeft',    contexto: 'Botão "← Voltar" em páginas internas' },
+    { icone: ChevronLeft,  nome: 'ChevronLeft',  contexto: 'Paginação — página anterior' },
+    { icone: ChevronRight, nome: 'ChevronRight', contexto: 'Próximo / paginação — próxima página' },
+    { icone: ChevronDown,  nome: 'ChevronDown',  contexto: 'Dropdown aberto / menu do usuário' },
     { icone: ChevronUp,    nome: 'ChevronUp',    contexto: 'Dropdown fechado / accordion fechado' },
   ]},
-  { grupo: 'DESIGN SYSTEM (menu)', rows: [
-    { icone: BookOpen, nome: 'BookOpen', contexto: 'Link "Design System" no dropdown do perfil' },
+  { grupo: 'SIDEBAR — logo', rows: [
+    { icone: Layers, nome: 'Layers', contexto: 'Ícone do logo SGC no header da sidebar' },
+  ]},
+  { grupo: 'HEADER / MENU DO USUÁRIO', rows: [
+    { icone: Bell,           nome: 'Bell',           contexto: 'Botão de notificações no header' },
+    { icone: User,           nome: 'User',           contexto: 'Avatar do usuário no header e item "Visão do Colaborador" no menu' },
+    { icone: ChevronDown,    nome: 'ChevronDown',    contexto: 'Seta do dropdown do menu do usuário' },
+    { icone: ArrowLeftRight, nome: 'ArrowLeftRight', contexto: 'Item "Visão do Administrador" no menu' },
+    { icone: BookOpen,       nome: 'BookOpen',       contexto: 'Item "Design System" no menu' },
+    { icone: LogOut,         nome: 'LogOut',         contexto: 'Item "Sair" no menu' },
+    { icone: Menu,           nome: 'Menu',           contexto: 'Botão hamburger — apenas mobile, fora do Design System' },
   ]},
 ];
 
@@ -1451,12 +1558,21 @@ const ICONES_CORES = [
 
 function SecaoIcones() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Ícones</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         O sistema usa exclusivamente a biblioteca Lucide React. Nunca use outras bibliotecas de ícones
         ou SVGs inline não documentados.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">ArrowLeft ausente no grupo Navegação Interna</p>
+          <p className="text-sm text-yellow-700 mt-1">O ícone <code className="font-mono text-xs">ArrowLeft</code> usado no botão de voltar não está listado no grupo NAVEGAÇÃO INTERNA da tabela de ícones, apesar de estar documentado na seção Navegação.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Biblioteca e importação */}
       <div className="mb-8">
@@ -1600,11 +1716,12 @@ function SecaoIcones() {
 
 function SecaoBotoes() {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Botões</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Botões comunicam ações. Use a variante correta para cada nível de hierarquia de ação.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Variantes */}
       <div className="mb-8">
@@ -1815,13 +1932,14 @@ const TABELA_ROWS = [
 function SecaoTabelas() {
   return (
     <div>
-      <div className="max-w-2xl mb-8">
+      <div className="max-w-2xl mb-4">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Tabelas</h1>
         <p className="text-sm text-gray-600">
           Componente principal de listagem do sistema. Sempre use a estrutura completa — container,
           toolbar, thead, tbody e paginação.
         </p>
       </div>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Estrutura completa */}
       <div className="mb-8">
@@ -1943,7 +2061,7 @@ function SecaoTabelas() {
             { n: 2, titulo: 'Toolbar', desc: 'p-3 md:p-4 border-b border-gray-200. Contém busca, filtros e botão de ação principal. Botão de ação sempre com ml-auto à direita.' },
             { n: 3, titulo: 'thead', desc: 'bg-gray-50 border-b border-gray-200. Texto uppercase tracking-wider text-gray-500. Nunca use bold no cabeçalho.' },
             { n: 4, titulo: 'tbody', desc: 'divide-y divide-gray-200. Sem hover em linhas não clicáveis. Hover brand-translúcido apenas em linhas clicáveis (cursor-pointer).' },
-            { n: 5, titulo: 'Paginação', desc: 'border-t border-gray-200. Contagem à esquerda, controles à direita. Botões desabilitados com opacity-40.' },
+            { n: 5, titulo: 'Paginação', desc: 'border-t border-gray-200. Contagem à esquerda, controles à direita. Botões desabilitados com opacity-50.' },
           ].map(({ n, titulo, desc }) => (
             <li key={n} className="flex gap-3">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--brand-100)] text-[var(--brand-700)] text-xs font-semibold flex items-center justify-center">{n}</span>
@@ -2070,12 +2188,21 @@ function SecaoFiltrosEPills() {
 
   return (
     <div>
-      <div className="max-w-2xl mb-8">
+      <div className="max-w-2xl mb-4">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Filtros e Pills</h1>
         <p className="text-sm text-gray-600">
           Componentes de filtragem usados nas toolbars de listagem. Sempre use o padrão completo —
           pills de status + campo de busca + dropdowns.
         </p>
+      </div>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Ícone Search com tamanho divergente</p>
+          <p className="text-sm text-yellow-700 mt-1">ListingPage.tsx usa ícone <code className="font-mono text-xs">Search</code> com <code className="font-mono text-xs">w-5 h-5</code> no desktop. O DS documenta apenas <code className="font-mono text-xs">w-4 h-4</code> na seção de ícones e no exemplo da toolbar.</p>
+        </div>
       </div>
 
       {/* Bloco 1 — Pills de filtro de status */}
@@ -2375,12 +2502,21 @@ function SecaoCards() {
 
   return (
     <div>
-      <div className="max-w-2xl mb-8">
+      <div className="max-w-2xl mb-4">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Cards</h1>
         <p className="text-sm text-gray-600">
           Cards são containers de conteúdo agrupado. O sistema tem três variantes principais:
           card de métrica, card de conteúdo e card de estado.
         </p>
+      </div>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Badge do cargo atual divergente</p>
+          <p className="text-sm text-yellow-700 mt-1">O DS documenta o badge do cargo atual na Jornada de Carreira como <code className="font-mono text-xs">bg-[var(--brand-600)] text-white</code>. MinhaCarreira.tsx usa <code className="font-mono text-xs">bg-[var(--brand-50)] text-[var(--brand-600)]</code>. A ser resolvido quando a Visão do Colaborador for documentada.</p>
+        </div>
       </div>
 
       {/* Bloco 1 — Card de métrica */}
@@ -2543,10 +2679,11 @@ function SecaoDrawers() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Drawers</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Painéis laterais deslizantes usados para criar e editar registros. Sempre surgem
         pela direita e cobrem parcialmente o conteúdo.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Anatomia */}
       <div className="mb-8">
@@ -2740,10 +2877,11 @@ function SecaoModais() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Modais</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Janelas de confirmação para ações críticas ou irreversíveis. Sempre bloqueiam
         a interação com o restante da página.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Modal vs Drawer */}
       <div className="mb-8 max-w-2xl">
@@ -2813,7 +2951,44 @@ function SecaoModais() {
         </div>
       </div>
 
-      {/* Bloco 3 — Modal neutra */}
+      {/* Bloco 3 — Modal atenção (warning) */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Modal de confirmação — atenção (warning)</h2>
+        <p className="text-xs text-gray-500 mb-3">Usado para ações reversíveis com impacto potencial (ex: desativar avaliação com participantes em andamento).</p>
+        <div className="relative rounded-xl overflow-hidden" style={{ height: '340px' }}>
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-yellow-100 text-yellow-600">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                </div>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Desativar avaliação em andamento
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Esta avaliação tem 8 participantes com respostas em andamento.
+                    Desativar irá interromper o ciclo — as respostas parciais serão preservadas.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                  </button>
+                  <button className="flex-1 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors bg-yellow-600 hover:bg-yellow-700">
+                    Desativar assim mesmo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Modal neutra */}
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">Modal de confirmação neutra</h2>
         <p className="text-xs text-gray-500 mb-3">
@@ -2947,10 +3122,19 @@ function SecaoFormularios() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Formulários</h1>
-      <p className="text-sm text-gray-600 mb-8">
+      <p className="text-sm text-gray-600 mb-4">
         Campos de entrada usados em drawers e wizards. Sempre use os padrões definidos —
         nunca crie variações não documentadas.
       </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800">Asterisco de campo obrigatório</p>
+          <p className="text-sm text-yellow-700 mt-1">O DS documenta campos obrigatórios marcados com <code className="font-mono text-xs">*</code> no label sem especificar margin. FormDrawer.tsx usa <code className="font-mono text-xs">ml-1</code> no <code className="font-mono text-xs">{'<span>'}</code> do asterisco — detalhe não documentado.</p>
+        </div>
+      </div>
 
       {/* Bloco 1 — Campos de entrada */}
       <div className="mb-8">
@@ -3232,13 +3416,14 @@ function SecaoNavegacao() {
   };
 
   return (
-    <div className="max-w-4xl space-y-10">
+    <div className="space-y-10">
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Navegação</h2>
-        <p className="text-sm text-gray-500 leading-relaxed">
+        <p className="text-sm text-gray-500 leading-relaxed mb-4">
           Padrões de navegação do sistema. Sempre siga a hierarquia definida — nunca crie novos padrões sem documentar.
         </p>
+        <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
       </div>
 
       {/* ── Bloco 1: Sidebar ── */}
@@ -3314,6 +3499,22 @@ function SecaoNavegacao() {
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Bloco 1b: Mobile ── */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-0.5">Mobile</h3>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-yellow-800">
+            O layout mobile existe no código (sidebar deslizante via <code className="font-mono text-xs">translate-x</code>,
+            breakpoints responsivos) mas não foi validado nem projetado intencionalmente.
+            As classes responsivas <code className="font-mono text-xs">md:</code> existem como base mas o comportamento
+            mobile não foi revisado.
+          </p>
         </div>
       </section>
 
@@ -3493,13 +3694,14 @@ function SecaoNavegacao() {
 
 function SecaoMensagensOrientacao() {
   return (
-    <div className="max-w-4xl space-y-10">
+    <div className="space-y-10">
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Mensagens de orientação</h2>
-        <p className="text-sm text-gray-500 leading-relaxed">
+        <p className="text-sm text-gray-500 leading-relaxed mb-4">
           Banners informativos, instruções e avisos de estado usados no SGC. Existem 3 variantes — escolha pela semântica, não pela preferência de cor.
         </p>
+        <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
       </div>
 
       {/* ── Bloco 1: Variante A — Informativo contextual (brand) ── */}
@@ -3733,6 +3935,735 @@ function SecaoMensagensOrientacao() {
   );
 }
 
+// ─── Seção: Estados vazios ────────────────────────────────────────────────────
+
+function SecaoEstadosVazios() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Estados vazios</h1>
+      <p className="text-sm text-gray-600 mb-4 max-w-2xl">
+        Levantamento de todos os estados vazios encontrados no SGC. Quatro variantes existem no código real —
+        cada uma com estrutura, ícone e hierarquia de texto distintos.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={4} alertas={1} />
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-10 max-w-2xl">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">
+          <strong>Esta seção está marcada para revisão.</strong> Existem inconsistências de estilo entre
+          os estados vazios do Admin e do Colaborador — tamanhos de fonte, estilos de ícone e estrutura
+          de container não seguem um padrão único. O formato atual é temporário e será padronizado em versão futura.
+        </p>
+      </div>
+
+      {/* ── Variante A: EmptyState canônico ── */}
+      <div className="mb-14">
+        <div className="flex items-baseline gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">A — EmptyState canônico</h2>
+          <span className="text-xs text-gray-400 font-mono">ui/EmptyState.tsx</span>
+        </div>
+        <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+          Componente reutilizável. Usado nas listagens de Competências, Carreiras, Avaliações (via{' '}
+          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">ListingPage</code>) e diretamente
+          na listagem de Jornadas.
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Sem dados — sem ação</p>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <EmptyState
+                icon={<Layers className="w-8 h-8" />}
+                title="Nenhuma competência cadastrada"
+                description="Comece criando a primeira competência para organizar as habilidades da sua organização."
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Sem dados — com ação</p>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <EmptyState
+                icon={<Briefcase className="w-8 h-8" />}
+                title="Nenhuma carreira cadastrada"
+                description="Comece criando a primeira carreira para estruturar as jornadas da organização."
+                action={{ label: '+ Criar carreira', onClick: () => {} }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Sem resultado de filtro/busca</p>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <EmptyState
+                icon={<Award className="w-8 h-8" />}
+                title="Nenhum resultado encontrado"
+                description='Não encontramos resultados para "typescript avançado". Tente ajustar sua busca.'
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+              Jornadas — com wrapper <code className="bg-gray-100 px-1 rounded text-xs font-mono">p-8 md:p-12</code>
+            </p>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <div className="p-8 md:p-12">
+                <EmptyState
+                  icon={<Briefcase className="w-8 h-8" />}
+                  title="Nenhuma jornada cadastrada nesta carreira"
+                  description="Comece criando a primeira jornada para estruturar os cargos e competências."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — EmptyState</p>
+          <div className="space-y-1.5 font-mono text-xs text-gray-600">
+            <div><span className="text-gray-400">container</span>{"  "}<code>flex flex-col items-center justify-center py-12 px-4</code></div>
+            <div><span className="text-gray-400">ícone wrapper</span>{"  "}<code>w-12 md:w-16 h-12 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400</code></div>
+            <div><span className="text-gray-400">ícone</span>{"  "}<code>w-8 h-8</code> (passado via prop)</div>
+            <div><span className="text-gray-400">título</span>{"  "}<code>text-sm md:text-base lg:text-lg font-medium text-gray-900 mb-2</code></div>
+            <div><span className="text-gray-400">descrição</span>{"  "}<code>text-xs md:text-sm lg:text-base text-gray-500 text-center max-w-md mb-6</code></div>
+            <div><span className="text-gray-400">botão ação</span>{"  "}<code>px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors</code></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Variante B: Orientativo ── */}
+      <div className="mb-14">
+        <div className="flex items-baseline gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">B — Orientativo</h2>
+          <span className="text-xs text-gray-400 font-mono">MinhaCarreira.tsx</span>
+        </div>
+        <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+          Usado quando o estado vazio é consequência de uma ação pendente do usuário (ex: nenhuma avaliação respondida,
+          nenhum cargo selecionado). Ícone sem wrapper circular, cor mais suave (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">text-gray-300</code>).
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Sem avaliação respondida</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <BarChart2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-700 mb-1">Nenhuma avaliação respondida ainda</p>
+              <p className="text-sm text-gray-500">Responda uma avaliação para visualizar seu perfil de competências.</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Aguardando seleção (filtro não aplicado)</p>
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <Target className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-500">Selecione um cargo para ver seus gaps</p>
+              <p className="text-xs text-gray-400 mt-2 max-w-sm mx-auto">
+                Escolha um cargo de referência no filtro acima para visualizar as habilidades com maior
+                distância entre seu nível atual e o esperado.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante B</p>
+          <div className="space-y-1.5 font-mono text-xs text-gray-600">
+            <div><span className="text-gray-400">container</span>{"  "}<code>bg-white border border-gray-200 rounded-lg p-8 text-center</code></div>
+            <div><span className="text-gray-400">ícone</span>{"  "}<code>w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper circular)</div>
+            <div><span className="text-gray-400">título — sem avaliação</span>{"  "}<code>text-sm font-medium text-gray-700 mb-1</code></div>
+            <div><span className="text-gray-400">título — aguardando seleção</span>{"  "}<code>text-sm font-medium text-gray-500</code></div>
+            <div><span className="text-gray-400">descrição — sem avaliação</span>{"  "}<code>text-sm text-gray-500</code></div>
+            <div><span className="text-gray-400">descrição — aguardando seleção</span>{"  "}<code>text-xs text-gray-400 mt-2 max-w-sm mx-auto</code></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Variante C: Inline em painel compacto ── */}
+      <div className="mb-14">
+        <div className="flex items-baseline gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">C — Inline em painel compacto</h2>
+          <span className="text-xs text-gray-400 font-mono">ConfigurarHabilidadesCargo.tsx</span>
+        </div>
+        <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+          Usado dentro de drawers ou painéis com espaço reduzido. Sem ícone. Fundo{' '}
+          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bg-gray-50</code> com borda para
+          delimitar a área. Texto principal + texto orientativo.
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Tabela vazia dentro de drawer</p>
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-500">Nenhuma habilidade configurada para este cargo</p>
+              <p className="text-xs text-gray-400 mt-1">Clique em "Adicionar" para vincular habilidades</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante C</p>
+          <div className="space-y-1.5 font-mono text-xs text-gray-600">
+            <div><span className="text-gray-400">container</span>{"  "}<code>text-center py-8 bg-gray-50 rounded-lg border border-gray-200</code></div>
+            <div><span className="text-gray-400">sem ícone</span></div>
+            <div><span className="text-gray-400">texto principal</span>{"  "}<code>text-sm text-gray-500</code></div>
+            <div><span className="text-gray-400">texto orientativo</span>{"  "}<code>text-xs text-gray-400 mt-1</code></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Variante D: Inline mínimo ── */}
+      <div className="mb-14">
+        <div className="flex items-baseline gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">D — Inline mínimo</h2>
+          <span className="text-xs text-gray-400 font-mono">ColaboradorView.tsx · ConfigurarHabilidadesCargo.tsx</span>
+        </div>
+        <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+          Somente texto, sem ícone, sem estrutura. Usado diretamente dentro de células de tabela{' '}
+          (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{'<td>'}</code>) ou em
+          listas de busca com espaço muito reduzido.
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+              Dentro de tabela (ColaboradorView — tabela e barras)
+            </p>
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <table className="w-full">
+                <tbody>
+                  <tr>
+                    <td colSpan={4} className="px-3 md:px-6 py-8 text-center text-sm text-gray-500">
+                      Nenhuma habilidade encontrada para os filtros aplicados.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+              Dentro de lista de busca (ConfigurarHabilidadesCargo — panel add)
+            </p>
+            <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg border border-gray-200 p-3">
+              <p className="text-xs text-gray-500 text-center py-4">Nenhuma habilidade disponível</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante D</p>
+          <div className="space-y-1.5 font-mono text-xs text-gray-600">
+            <div><span className="text-gray-400">td (ColaboradorView)</span>{"  "}<code>px-3 md:px-6 py-8 text-center text-sm text-gray-500</code></div>
+            <div><span className="text-gray-400">p (ColaboradorView barras)</span>{"  "}<code>py-8 text-center text-sm text-gray-500</code></div>
+            <div><span className="text-gray-400">p (panel add)</span>{"  "}<code>text-xs text-gray-500 text-center py-4</code></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tabela comparativa ── */}
+      <div className="mb-14">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Comparativo das variantes</h2>
+        <div className="h-px bg-gray-200 mb-6" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Variante</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Contexto</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Ícone</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Container</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Título</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Descrição</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="px-4 py-3 border border-gray-200 font-medium">A — EmptyState</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-600">Listas admin vazias ou sem filtro</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">w-12 md:w-16 bg-gray-100 rounded-full text-gray-400</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-12 px-4</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm md:text-base font-medium text-gray-900</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-xs md:text-sm text-gray-500 max-w-md</code></td>
+                <td className="px-4 py-3 border border-gray-200">Opcional — brand-600</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="px-4 py-3 border border-gray-200 font-medium">B — Orientativo</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-600">Estado dependente de ação do usuário</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper)</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">p-8 text-center</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm font-medium text-gray-700</code> ou <code className="bg-gray-100 px-1 rounded">text-gray-500</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code> ou <code className="bg-gray-100 px-1 rounded">text-xs text-gray-400</code></td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 border border-gray-200 font-medium">C — Painel compacto</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-600">Dentro de drawers, espaço reduzido</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-8 bg-gray-50 rounded-lg border border-gray-200 text-center</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-xs text-gray-400 mt-1</code></td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="px-4 py-3 border border-gray-200 font-medium">D — Inline mínimo</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-600">Dentro de td ou lista de busca</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-8 text-center</code> (td ou p)</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code> ou <code className="bg-gray-100 px-1 rounded">text-xs text-gray-500</code></td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Inconsistências ── */}
+      <div className="mb-14">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Inconsistências encontradas</h2>
+        <div className="h-px bg-gray-200 mb-6" />
+        <div className="space-y-3">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">Tab Habilidades não usa o componente <code>EmptyState</code></p>
+              <p className="text-sm text-orange-700">
+                <strong>Arquivo:</strong> ContentArea.tsx (tab habilidades, linhas 1470–1486).
+                Duplica manualmente o padrão com diferenças: ícone <code>w-6 h-6</code> em vez de{' '}
+                <code>w-8 h-8</code>, wrapper <code>w-12 h-12</code> fixo em vez de responsivo
+                (<code>w-12 md:w-16</code>), título <code>text-base</code> fixo em vez de responsivo,
+                sem botão de ação. Deve ser substituído pelo componente canônico.
+              </p>
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">Variante B tem duas hierarquias de cor no título</p>
+              <p className="text-sm text-orange-700">
+                <strong>Arquivo:</strong> MinhaCarreira.tsx.
+                "Sem avaliação" usa <code>text-gray-700</code>; "Sem cargo selecionado" usa{' '}
+                <code>text-gray-500</code>. Não há distinção semântica clara que justifique a diferença —
+                o padrão deveria ser <code>text-gray-700</code> para título em ambos os casos.
+              </p>
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">Variante A passa ícone <code>w-8 h-8</code> dentro de wrapper <code>w-12 md:w-16</code></p>
+              <p className="text-sm text-orange-700">
+                <strong>Arquivo:</strong> EmptyState.tsx + CallerSites.
+                O ícone fica pequeno dentro do wrapper circular em desktop (8px de folga de cada lado).
+                Deve ser documentado como intencional ou o wrapper deve ser ajustado para{' '}
+                <code>w-14 md:w-16</code> com ícone <code>w-7 md:w-8</code>.
+              </p>
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">Variante B usa <code>text-gray-300</code> no ícone; Variante A usa <code>text-gray-400</code></p>
+              <p className="text-sm text-orange-700">
+                <strong>Arquivos:</strong> MinhaCarreira.tsx vs EmptyState.tsx.
+                A diferença pode ser intencional (ícone orientativo mais suave = instrução pendente)
+                mas não está documentada. Se for padrão, deve ser adotada consistentemente.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Regras de uso ── */}
+      <div className="mb-4 bg-gray-50 rounded-lg border border-gray-200 p-6">
+        <h2 className="text-sm font-semibold text-gray-900 mb-5">Regras de uso</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Quando usar Variante A</h3>
+            <ul className="space-y-1 text-gray-700">
+              <li>• Lista de entidades admin nunca teve dados</li>
+              <li>• Lista filtrada sem resultado (via <code className="bg-white px-1.5 py-0.5 rounded">ListingPage</code>)</li>
+              <li>• Sempre que houver uma ação primária associável ao empty</li>
+              <li>• Usar <code className="bg-white px-1.5 py-0.5 rounded">EmptyState</code> — nunca duplicar inline</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Quando usar Variante B</h3>
+            <ul className="space-y-1 text-gray-700">
+              <li>• Conteúdo ausente por inação do usuário (nenhum filtro selecionado, nenhuma avaliação)</li>
+              <li>• Contexto colaborador (MinhaCarreira, MeuPerfil)</li>
+              <li>• Sem ação disponível no estado vazio</li>
+              <li>• Ícone direto <code className="bg-white px-1.5 py-0.5 rounded">text-gray-300</code>, sem wrapper circular</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Quando usar Variante C</h3>
+            <ul className="space-y-1 text-gray-700">
+              <li>• Dentro de drawers ou modais com espaço limitado</li>
+              <li>• Tabela interna vazia (não lista principal da tela)</li>
+              <li>• Texto orientativo apontando a ação disponível no mesmo container</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Quando usar Variante D</h3>
+            <ul className="space-y-1 text-gray-700">
+              <li>• Diretamente dentro de <code className="bg-white px-1.5 py-0.5 rounded">{'<td>'}</code> de tabela</li>
+              <li>• Listas de busca em tempo real com altura restrita</li>
+              <li>• Quando ícone e título adicionariam ruído sem benefício</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Paginação ────────────────────────────────────────────────────────
+
+function pgNums(currentPage: number, totalPages: number): (number | string)[] {
+  const pages: (number | string)[] = [];
+  if (totalPages <= 5) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else if (currentPage <= 3) {
+    for (let i = 1; i <= 4; i++) pages.push(i);
+    pages.push('...'); pages.push(totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    pages.push(1); pages.push('...');
+    for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1); pages.push('...');
+    pages.push(currentPage - 1); pages.push(currentPage); pages.push(currentPage + 1);
+    pages.push('...'); pages.push(totalPages);
+  }
+  return pages;
+}
+
+interface PaginacaoFooterDemoProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  perPage: number;
+  onPageChange: (p: number) => void;
+}
+
+function PaginacaoFooterDemo({ currentPage, totalPages, totalItems, perPage, onPageChange }: PaginacaoFooterDemoProps) {
+  const start = (currentPage - 1) * perPage + 1;
+  const end = Math.min(currentPage * perPage, totalItems);
+  const pages = pgNums(currentPage, totalPages);
+  return (
+    <div className="flex flex-col md:flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 gap-3 md:gap-0">
+      <div className="text-xs md:text-sm text-gray-700">
+        <span className="hidden md:inline">Exibindo </span>
+        <span className="font-medium">{start}</span>–
+        <span className="font-medium">{end}</span> de{' '}
+        <span className="font-medium">{totalItems}</span>
+      </div>
+      <div className="flex items-center gap-1 md:gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+        >
+          <ChevronLeft className="w-3 md:w-4 h-3 md:h-4" />
+        </button>
+        <div className="flex items-center gap-0.5 md:gap-1">
+          {pages.map((page, index) =>
+            typeof page === 'number' ? (
+              <button
+                key={index}
+                onClick={() => onPageChange(page)}
+                className={`min-w-[32px] md:min-w-[40px] px-2 md:px-3 py-1.5 md:py-2 text-xs font-normal rounded-lg transition-colors ${
+                  currentPage === page
+                    ? 'bg-gray-100 text-gray-900 border border-gray-200'
+                    : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ) : (
+              <span key={index} className="px-1 md:px-2 text-xs text-gray-400">{page}</span>
+            )
+          )}
+        </div>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+        >
+          <ChevronRight className="w-3 md:w-4 h-3 md:h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SecaoPaginacao() {
+  const [page1, setPage1] = useState(1);
+  const [page2, setPage2] = useState(5);
+
+  const TOTAL1 = 48; const PER1 = 10; const TOTALPAGES1 = Math.ceil(TOTAL1 / PER1);
+  const TOTAL2 = 200; const PER2 = 10; const TOTALPAGES2 = Math.ceil(TOTAL2 / PER2);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Paginação</h1>
+      <p className="text-sm text-gray-600 mb-4 max-w-2xl">
+        Padrão de paginação do SGC. Implementado no componente{' '}
+        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Table.tsx</code> (canônico). A tabela de habilidades em{' '}
+        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">ColaboradorView.tsx</code> foi migrada para{' '}
+        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Table.tsx</code> — débito técnico residual registrado ao final.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={1} alertas={0} />
+
+      {/* Demo 1 — poucas páginas */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Poucas páginas (≤ 5 total)</h2>
+        <p className="text-sm text-gray-500 mb-4">Todos os números são exibidos diretamente, sem reticências.</p>
+        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs text-gray-400">
+            48 itens · 10 por página · 5 páginas no total
+          </div>
+          <PaginacaoFooterDemo
+            currentPage={page1}
+            totalPages={TOTALPAGES1}
+            totalItems={TOTAL1}
+            perPage={PER1}
+            onPageChange={p => setPage1(Math.max(1, Math.min(TOTALPAGES1, p)))}
+          />
+        </div>
+      </section>
+
+      {/* Demo 2 — muitas páginas */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Muitas páginas (&gt; 5 total)</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Reticências condensam a sequência. Clique nos números para ver os três estados de janela.
+        </p>
+        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs text-gray-400">
+            200 itens · 10 por página · 20 páginas no total
+          </div>
+          <PaginacaoFooterDemo
+            currentPage={page2}
+            totalPages={TOTALPAGES2}
+            totalItems={TOTAL2}
+            perPage={PER2}
+            onPageChange={p => setPage2(Math.max(1, Math.min(TOTALPAGES2, p)))}
+          />
+        </div>
+      </section>
+
+      {/* Algoritmo de janela */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Algoritmo de janela</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Função <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">getPageNumbers()</code> em{' '}
+          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Table.tsx</code>.{' '}
+          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">ColaboradorView.tsx</code> mantém uma cópia local usada exclusivamente pelo modo barras.
+        </p>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 w-1/3">Condição</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 w-1/3">Sequência exibida</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Exemplo com N = 20</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              <tr>
+                <td className="px-4 py-3 text-gray-700 font-mono">totalPages ≤ 5</td>
+                <td className="px-4 py-3 text-gray-600">Todas as páginas</td>
+                <td className="px-4 py-3 text-gray-400">1 2 3 4 5</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700 font-mono">currentPage ≤ 3</td>
+                <td className="px-4 py-3 text-gray-600">1 2 3 4 … N</td>
+                <td className="px-4 py-3 text-gray-400">1 2 3 4 … 20</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700 font-mono">currentPage ≥ totalPages − 2</td>
+                <td className="px-4 py-3 text-gray-600">1 … N−3 N−2 N−1 N</td>
+                <td className="px-4 py-3 text-gray-400">1 … 17 18 19 20</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-700 font-mono">demais</td>
+                <td className="px-4 py-3 text-gray-600">1 … p−1 p p+1 … N</td>
+                <td className="px-4 py-3 text-gray-400">1 … 9 10 11 … 20</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Classes por elemento */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Classes por elemento</h2>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 w-1/4">Elemento</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Classes Tailwind</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Container footer</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">flex flex-col md:flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 gap-3 md:gap-0</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Texto de contagem</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">text-xs md:text-sm text-gray-700</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">"Exibindo" (desktop)</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">hidden md:inline</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Valores N, M, T</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">font-medium (em {'<span>'})</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Container de controles</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">flex items-center gap-1 md:gap-2</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Botão Anterior / Próximo</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Ícone nav (Chevron)</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">w-3 md:w-4 h-3 md:h-4</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Container de números</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">flex items-center gap-0.5 md:gap-1</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Número — ativo</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">min-w-[32px] md:min-w-[40px] px-2 md:px-3 py-1.5 md:py-2 text-xs font-normal rounded-lg transition-colors bg-gray-100 text-gray-900 border border-gray-200</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Número — inativo</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">min-w-[32px] md:min-w-[40px] px-2 md:px-3 py-1.5 md:py-2 text-xs font-normal rounded-lg transition-colors text-gray-600 bg-white border border-gray-300 hover:bg-gray-50</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-gray-900 font-medium align-top">Reticências (…)</td>
+                <td className="px-4 py-3 text-gray-500 font-mono break-all">px-1 md:px-2 text-xs text-gray-400 — {'<span>'}, não {'<button>'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Inconsistências */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Inconsistências encontradas</h2>
+        <div className="space-y-3">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">Débito técnico — paginação inline residual</p>
+              <p className="text-sm text-orange-700">
+                <code className="bg-orange-100 px-1 rounded text-xs">ColaboradorView.tsx</code> ainda define{' '}
+                <code className="bg-orange-100 px-1 rounded text-xs">getPageNumbers()</code> localmente (linhas 24–40),
+                usada pelo modo barras (aba Explorar cargos, atualmente oculta). Débito técnico registrado — migrar quando a aba for reativada.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Regras de uso */}
+      <section className="mb-10">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Regras de uso</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Sempre usar Table.tsx</p>
+            <p className="text-sm text-gray-600">
+              Passe um objeto <code className="bg-gray-100 px-1 rounded text-xs">PaginationConfig</code> para o componente{' '}
+              <code className="bg-gray-100 px-1 rounded text-xs">Table</code>. Nunca copie a lógica de paginação inline.
+            </p>
+          </div>
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Reset ao filtrar</p>
+            <p className="text-sm text-gray-600">
+              Ao aplicar qualquer filtro ou busca, retornar para a página 1. Em{' '}
+              <code className="bg-gray-100 px-1 rounded text-xs">ColaboradorView.tsx</code>, feito chamando{' '}
+              <code className="bg-gray-100 px-1 rounded text-xs">setPaginaAtual(1)</code> junto com o setter do filtro.
+            </p>
+          </div>
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Formato da contagem</p>
+            <p className="text-sm text-gray-600">
+              Sempre <strong>N–M de T</strong>. O texto "Exibindo" aparece somente no desktop (<code className="bg-gray-100 px-1 rounded text-xs">hidden md:inline</code>). Os três valores usam <code className="bg-gray-100 px-1 rounded text-xs">font-medium</code>.
+            </p>
+          </div>
+          <div className="p-4 bg-white border border-gray-200 rounded-lg">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Estado desabilitado</p>
+            <p className="text-sm text-gray-600">
+              Botão Anterior desabilitado na página 1; botão Próximo desabilitado na última página. Ambos aplicam{' '}
+              <code className="bg-gray-100 px-1 rounded text-xs">disabled:opacity-50 disabled:cursor-not-allowed</code>.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Seção: Meu Perfil ────────────────────────────────────────────────────────
+
+function SecaoMeuPerfil() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Meu Perfil</h1>
+      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">
+          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
+          O conteúdo será documentado após as decisões de produto serem tomadas.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SecaoMinhasAvaliacoes() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Minhas Avaliações</h1>
+      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">
+          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
+          O conteúdo será documentado após as decisões de produto serem tomadas.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SecaoMinhaCarreira() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Minha Carreira</h1>
+      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">
+          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
+          O conteúdo será documentado após as decisões de produto serem tomadas.
+        </p>
+      </div>
+    </div>
+  );
+}
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const IMPLEMENTED: SectionId[] = [
@@ -3754,6 +4685,11 @@ const IMPLEMENTED: SectionId[] = [
   'regras/badges-status',
   'padroes/navegacao',
   'padroes/mensagens-orientacao',
+  'padroes/estados-vazios',
+  'padroes/paginacao',
+  'colaborador/meu-perfil',
+  'colaborador/minhas-avaliacoes',
+  'colaborador/minha-carreira',
 ];
 
 export default function DesignSystemPage() {
@@ -3804,11 +4740,95 @@ export default function DesignSystemPage() {
       {/* Área de conteúdo */}
       <main className="flex-1 md:ml-56 p-4 md:p-8">
         {activeSection === 'home' && (
-          <div className="max-w-2xl">
+          <div>
             <h1 className="text-2xl font-semibold text-gray-900 mb-2">Design System</h1>
             <p className="text-sm text-gray-600 mb-8">
               Documentação de componentes, padrões visuais e regras de negócio do Sistema de Gestão de Carreiras.
             </p>
+
+            <p className="text-base font-semibold text-gray-900 mb-4">Visão geral da documentação</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-green-50 border-green-200">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
+                  <p className="text-sm font-semibold leading-tight">18</p>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
+                <Clock className="w-4 h-4 flex-shrink-0 text-yellow-600" />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Em construção</p>
+                  <p className="text-sm font-semibold leading-tight">3</p>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-orange-50 border-orange-200">
+                <Wrench className="w-4 h-4 flex-shrink-0 text-orange-600" />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Débitos técnicos</p>
+                  <p className="text-sm font-semibold leading-tight">5</p>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-yellow-600" />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Alertas ativos</p>
+                  <p className="text-sm font-semibold leading-tight">11</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm font-medium text-gray-700 mb-3">Atenção necessária</p>
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Seção</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Status</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Débitos</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Alertas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {([
+                    { secao: 'Cores',             status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Tipografia',        status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Espaçamento',       status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Badges',            status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Ícones',            status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Filtros e Pills',   status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Cards',             status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Formulários',       status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Navegação',         status: 'documentado',   debitos: 0, alertas: 1 },
+                    { secao: 'Estados de avaliação', status: 'documentado', debitos: 0, alertas: 1 },
+                    { secao: 'Estados vazios',    status: 'documentado',   debitos: 4, alertas: 1 },
+                    { secao: 'Paginação',         status: 'documentado',   debitos: 1, alertas: 0 },
+                    { secao: 'Meu Perfil',        status: 'em-construcao', debitos: 0, alertas: 0 },
+                    { secao: 'Minhas Avaliações', status: 'em-construcao', debitos: 0, alertas: 0 },
+                    { secao: 'Minha Carreira',    status: 'em-construcao', debitos: 0, alertas: 0 },
+                  ] as const).map(({ secao, status, debitos, alertas }) => (
+                    <tr key={secao} className="bg-white">
+                      <td className="px-4 py-3 text-sm text-gray-900">{secao}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                          status === 'documentado' ? 'text-green-700' :
+                          status === 'em-construcao' ? 'text-yellow-700' :
+                          'text-red-700'
+                        }`}>
+                          {status === 'documentado' && <CheckCircle2 className="w-3 h-3" />}
+                          {status === 'em-construcao' && <Clock className="w-3 h-3" />}
+                          {status === 'desatualizado' && <AlertCircle className="w-3 h-3" />}
+                          {status === 'documentado' ? 'Documentado' : status === 'em-construcao' ? 'Em construção' : 'Desatualizado'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-600">{debitos}</td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-600">{alertas}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               {QUICK_ACCESS.map((card) => {
                 const Icon = card.icon;
@@ -3852,6 +4872,11 @@ export default function DesignSystemPage() {
         {activeSection === 'regras/badges-status' && <SecaoBadgesStatus />}
         {activeSection === 'padroes/navegacao' && <SecaoNavegacao />}
         {activeSection === 'padroes/mensagens-orientacao' && <SecaoMensagensOrientacao />}
+        {activeSection === 'padroes/estados-vazios' && <SecaoEstadosVazios />}
+        {activeSection === 'padroes/paginacao' && <SecaoPaginacao />}
+        {activeSection === 'colaborador/meu-perfil' && <SecaoMeuPerfil />}
+        {activeSection === 'colaborador/minhas-avaliacoes' && <SecaoMinhasAvaliacoes />}
+        {activeSection === 'colaborador/minha-carreira' && <SecaoMinhaCarreira />}
 
         {activeSection !== 'home' && !IMPLEMENTED.includes(activeSection) && (
           <div className="max-w-2xl">

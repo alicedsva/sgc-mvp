@@ -6,6 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { Layers, Briefcase, Award, Target, BarChart2 } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 
 export function ComponentShowcase() {
   const [defaultValue, setDefaultValue] = useState('');
@@ -338,6 +340,438 @@ export function ComponentShowcase() {
             </ul>
           </div>
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ESTADOS VAZIOS                                                 */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        <div className="mt-16" id="estados-vazios">
+          <div className="flex flex-col gap-[10px] mb-6">
+            <h2 className="font-semibold text-[18px] text-[#1f2937] tracking-[0.09px]">
+              Estados Vazios
+            </h2>
+            <div className="bg-[#e5e7eb] h-px w-full" />
+          </div>
+
+          <p className="text-sm text-gray-600 mb-10 max-w-2xl">
+            Levantamento de todos os estados vazios encontrados no SGC. Quatro variantes existem no código real —
+            cada uma com estrutura, ícone e hierarquia de texto distintos. Inconsistências sinalizadas ao final.
+          </p>
+
+          {/* ── Variante A: EmptyState (componente canônico) ── */}
+          <div className="mb-14">
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="font-semibold text-[15px] text-gray-900">A — EmptyState canônico</h3>
+              <span className="text-xs text-gray-400 font-mono">ui/EmptyState.tsx</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+              Componente reutilizável. Usado nas listagens de Competências, Carreiras, Avaliações (via{' '}
+              <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">ListingPage</code>) e diretamente
+              na listagem de Jornadas.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Sem dados — sem ação */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Sem dados — sem ação
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <EmptyState
+                    icon={<Layers className="w-8 h-8" />}
+                    title="Nenhuma competência cadastrada"
+                    description="Comece criando a primeira competência para organizar as habilidades da sua organização."
+                  />
+                </div>
+              </div>
+
+              {/* Sem dados — com ação */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Sem dados — com ação
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <EmptyState
+                    icon={<Briefcase className="w-8 h-8" />}
+                    title="Nenhuma carreira cadastrada"
+                    description="Comece criando a primeira carreira para estruturar as jornadas da organização."
+                    action={{ label: '+ Criar carreira', onClick: () => {} }}
+                  />
+                </div>
+              </div>
+
+              {/* Sem resultado de filtro */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Sem resultado de filtro/busca
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <EmptyState
+                    icon={<Award className="w-8 h-8" />}
+                    title="Nenhum resultado encontrado"
+                    description='Não encontramos resultados para "typescript avançado". Tente ajustar sua busca.'
+                  />
+                </div>
+              </div>
+
+              {/* Jornadas — com wrapper externo */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Jornadas — com wrapper <code className="bg-gray-100 px-1 rounded text-xs font-mono">p-8 md:p-12</code>
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <div className="p-8 md:p-12">
+                    <EmptyState
+                      icon={<Briefcase className="w-8 h-8" />}
+                      title="Nenhuma jornada cadastrada nesta carreira"
+                      description="Comece criando a primeira jornada para estruturar os cargos e competências."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — EmptyState</p>
+              <div className="space-y-1.5 font-mono text-xs text-gray-600">
+                <div><span className="text-gray-400">container</span>  <code>flex flex-col items-center justify-center py-12 px-4</code></div>
+                <div><span className="text-gray-400">ícone wrapper</span>  <code>w-12 md:w-16 h-12 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400</code></div>
+                <div><span className="text-gray-400">ícone</span>  <code>w-8 h-8</code> (passado via prop)</div>
+                <div><span className="text-gray-400">título</span>  <code>text-sm md:text-base lg:text-lg font-medium text-gray-900 mb-2</code></div>
+                <div><span className="text-gray-400">descrição</span>  <code>text-xs md:text-sm lg:text-base text-gray-500 text-center max-w-md mb-6</code></div>
+                <div><span className="text-gray-400">botão ação</span>  <code>px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors</code></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Variante B: Orientativo (MinhaCarreira) ── */}
+          <div className="mb-14">
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="font-semibold text-[15px] text-gray-900">B — Orientativo</h3>
+              <span className="text-xs text-gray-400 font-mono">MinhaCarreira.tsx</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+              Usado quando o estado vazio é consequência de uma ação pendente do usuário (ex: nenhuma avaliação respondida,
+              nenhum cargo selecionado). Ícone sem wrapper circular, cor mais suave (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">text-gray-300</code>).
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Sem avaliação */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Sem avaliação respondida
+                </p>
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <BarChart2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Nenhuma avaliação respondida ainda
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Responda uma avaliação para visualizar seu perfil de competências.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sem cargo selecionado */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Aguardando seleção (filtro não aplicado)
+                </p>
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <Target className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-500">
+                    Selecione um cargo para ver seus gaps
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2 max-w-sm mx-auto">
+                    Escolha um cargo de referência no filtro acima para visualizar as habilidades com maior
+                    distância entre seu nível atual e o esperado.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante B</p>
+              <div className="space-y-1.5 font-mono text-xs text-gray-600">
+                <div><span className="text-gray-400">container</span>  <code>bg-white border border-gray-200 rounded-lg p-8 text-center</code></div>
+                <div><span className="text-gray-400">ícone</span>  <code>w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper circular)</div>
+                <div><span className="text-gray-400">título — sem avaliação</span>  <code>text-sm font-medium text-gray-700 mb-1</code></div>
+                <div><span className="text-gray-400">título — aguardando seleção</span>  <code>text-sm font-medium text-gray-500</code></div>
+                <div><span className="text-gray-400">descrição — sem avaliação</span>  <code>text-sm text-gray-500</code></div>
+                <div><span className="text-gray-400">descrição — aguardando seleção</span>  <code>text-xs text-gray-400 mt-2 max-w-sm mx-auto</code></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Variante C: Inline em painel compacto ── */}
+          <div className="mb-14">
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="font-semibold text-[15px] text-gray-900">C — Inline em painel compacto</h3>
+              <span className="text-xs text-gray-400 font-mono">ConfigurarHabilidadesCargo.tsx</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+              Usado dentro de drawers ou painéis com espaço reduzido. Sem ícone. Fundo{' '}
+              <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bg-gray-50</code> com borda para
+              delimitar a área. Texto principal + texto orientativo.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Habilidades vinculadas vazio */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Tabela vazia dentro de drawer
+                </p>
+                <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">
+                    Nenhuma habilidade configurada para este cargo
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Clique em "Adicionar" para vincular habilidades
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante C</p>
+              <div className="space-y-1.5 font-mono text-xs text-gray-600">
+                <div><span className="text-gray-400">container</span>  <code>text-center py-8 bg-gray-50 rounded-lg border border-gray-200</code></div>
+                <div><span className="text-gray-400">sem ícone</span></div>
+                <div><span className="text-gray-400">texto principal</span>  <code>text-sm text-gray-500</code></div>
+                <div><span className="text-gray-400">texto orientativo</span>  <code>text-xs text-gray-400 mt-1</code></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Variante D: Inline mínimo ── */}
+          <div className="mb-14">
+            <div className="flex items-baseline gap-3 mb-2">
+              <h3 className="font-semibold text-[15px] text-gray-900">D — Inline mínimo</h3>
+              <span className="text-xs text-gray-400 font-mono">ColaboradorView.tsx · ConfigurarHabilidadesCargo.tsx</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 max-w-2xl">
+              Somente texto, sem ícone, sem estrutura. Usado diretamente dentro de células de tabela{' '}
+              (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">&lt;td&gt;</code>) ou em
+              listas de busca com espaço muito reduzido.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Tabela sem resultado */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Dentro de tabela (ColaboradorView — tabela e barras)
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <table className="w-full">
+                    <tbody>
+                      <tr>
+                        <td colSpan={4} className="px-3 md:px-6 py-8 text-center text-sm text-gray-500">
+                          Nenhuma habilidade encontrada para os filtros aplicados.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Painel de busca sem resultado */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Dentro de lista de busca (ConfigurarHabilidadesCargo — panel add)
+                </p>
+                <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg border border-gray-200 p-3">
+                  <p className="text-xs text-gray-500 text-center py-4">
+                    Nenhuma habilidade disponível
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante D</p>
+              <div className="space-y-1.5 font-mono text-xs text-gray-600">
+                <div><span className="text-gray-400">td (ColaboradorView)</span>  <code>px-3 md:px-6 py-8 text-center text-sm text-gray-500</code></div>
+                <div><span className="text-gray-400">p (ColaboradorView barras)</span>  <code>py-8 text-center text-sm text-gray-500</code></div>
+                <div><span className="text-gray-400">p (panel add)</span>  <code>text-xs text-gray-500 text-center py-4</code></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Tabela comparativa ── */}
+          <div className="mb-14">
+            <div className="flex flex-col gap-[10px] mb-6">
+              <h3 className="font-semibold text-[15px] text-gray-900">Comparativo das variantes</h3>
+              <div className="bg-[#e5e7eb] h-px w-full" />
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Variante</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Contexto</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Ícone</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Container</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Título</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Descrição</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 border border-gray-200">Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="px-4 py-3 border border-gray-200 font-medium">A — EmptyState</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-600">Listas admin vazias ou sem filtro</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">w-12 md:w-16 bg-gray-100 rounded-full text-gray-400</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-12 px-4</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm md:text-base font-medium text-gray-900</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-xs md:text-sm text-gray-500 max-w-md</code></td>
+                    <td className="px-4 py-3 border border-gray-200">Opcional — brand-600</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-4 py-3 border border-gray-200 font-medium">B — Orientativo</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-600">Estado dependente de ação do usuário</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper)</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">p-8 text-center</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm font-medium text-gray-700</code> ou <code className="bg-gray-100 px-1 rounded">text-gray-500</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code> ou <code className="bg-gray-100 px-1 rounded">text-xs text-gray-400</code></td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 border border-gray-200 font-medium">C — Painel compacto</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-600">Dentro de drawers, espaço reduzido</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-8 bg-gray-50 rounded-lg border border-gray-200 text-center</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code></td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-xs text-gray-400 mt-1</code></td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="px-4 py-3 border border-gray-200 font-medium">D — Inline mínimo</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-600">Dentro de td ou lista de busca</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-8 text-center</code> (td ou p)</td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                    <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code> ou <code className="bg-gray-100 px-1 rounded">text-xs text-gray-500</code></td>
+                    <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── Inconsistências sinalizadas ── */}
+          <div className="mb-14">
+            <div className="flex flex-col gap-[10px] mb-6">
+              <h3 className="font-semibold text-[15px] text-gray-900">Inconsistências encontradas</h3>
+              <div className="bg-[#e5e7eb] h-px w-full" />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-600 font-bold text-sm flex-shrink-0">1</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Tab Habilidades não usa o componente <code>EmptyState</code>
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    <strong>Arquivo:</strong> ContentArea.tsx (tab habilidades, linhas 1470–1486).
+                    Duplica manualmente o padrão com diferenças: ícone <code>w-6 h-6</code> em vez de{' '}
+                    <code>w-8 h-8</code>, wrapper <code>w-12 h-12</code> fixo em vez de responsivo
+                    (<code>w-12 md:w-16</code>), título <code>text-base</code> fixo em vez de responsivo,
+                    sem botão de ação. Deve ser substituído pelo componente canônico.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-600 font-bold text-sm flex-shrink-0">2</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Variante B tem duas hierarquias de cor no título
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    <strong>Arquivo:</strong> MinhaCarreira.tsx.
+                    "Sem avaliação" usa <code>text-gray-700</code>; "Sem cargo selecionado" usa{' '}
+                    <code>text-gray-500</code>. Não há distinção semântica clara que justifique a diferença —
+                    o padrão deveria ser <code>text-gray-700</code> para título em ambos os casos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-600 font-bold text-sm flex-shrink-0">3</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Variante A passa ícone <code>w-8 h-8</code> dentro de wrapper <code>w-12 md:w-16</code>
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    <strong>Arquivo:</strong> EmptyState.tsx + CallerSites.
+                    O ícone fica pequeno dentro do wrapper circular em desktop (8px de folga de cada lado).
+                    Deve ser documentado como intencional ou o wrapper deve ser ajustado para{' '}
+                    <code>w-14 md:w-16</code> com ícone <code>w-7 md:w-8</code>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-600 font-bold text-sm flex-shrink-0">4</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Variante B usa <code>text-gray-300</code> no ícone; Variante A usa <code>text-gray-400</code>
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    <strong>Arquivos:</strong> MinhaCarreira.tsx vs EmptyState.tsx.
+                    A diferença pode ser intencional (ícone orientativo mais suave = instrução pendente)
+                    mas não está documentada. Se for padrão, deve ser adotada consistentemente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Regras de uso ── */}
+          <div className="mb-4 bg-gray-50 rounded-lg border border-gray-200 p-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-5">Regras de uso</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Quando usar Variante A</h4>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• Lista de entidades admin nunca teve dados</li>
+                  <li>• Lista filtrada sem resultado (via <code className="bg-white px-1.5 py-0.5 rounded">ListingPage</code>)</li>
+                  <li>• Sempre que houver uma ação primária associável ao empty</li>
+                  <li>• Usar <code className="bg-white px-1.5 py-0.5 rounded">EmptyState</code> — nunca duplicar inline</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Quando usar Variante B</h4>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• Conteúdo ausente por inação do usuário (nenhum filtro selecionado, nenhuma avaliação)</li>
+                  <li>• Contexto colaborador (MinhaCarreira, MeuPerfil)</li>
+                  <li>• Sem ação disponível no estado vazio</li>
+                  <li>• Ícone direto <code className="bg-white px-1.5 py-0.5 rounded">text-gray-300</code>, sem wrapper circular</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Quando usar Variante C</h4>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• Dentro de drawers ou modais com espaço limitado</li>
+                  <li>• Tabela interna vazia (não lista principal da tela)</li>
+                  <li>• Texto orientativo apontando a ação disponível no mesmo container</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Quando usar Variante D</h4>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• Diretamente dentro de <code className="bg-white px-1.5 py-0.5 rounded">&lt;td&gt;</code> de tabela</li>
+                  <li>• Listas de busca em tempo real com altura restrita</li>
+                  <li>• Quando ícone e título adicionariam ruído sem benefício</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        {/* ══ FIM ESTADOS VAZIOS ══ */}
+
       </div>
     </div>
   );
