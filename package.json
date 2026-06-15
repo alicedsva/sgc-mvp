@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "prebuild": "cp SGC-design-system.md public/design-system.md",
     "build": "vite build",
     "dev": "vite"
   },
