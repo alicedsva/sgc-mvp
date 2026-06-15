@@ -149,10 +149,9 @@ export function MatrizCell({ nivel, onChange, niveisAplicaveis }: MatrizCellProp
 
           <button
             onClick={handleSetNotRequired}
-            className="w-full px-4 py-2.5 flex items-center gap-2 text-[#374151] text-sm hover:bg-[#FEF9C3] hover:text-[#92400E] transition-colors"
+            className="w-full px-4 py-2.5 flex items-center text-[#374151] text-sm hover:bg-[#FEF9C3] hover:text-[#92400E] transition-colors"
           >
-            <X className="w-4 h-4" />
-            <span>Não exigido neste cargo</span>
+            <span className="whitespace-nowrap">Não exigido neste cargo</span>
           </button>
 
           {nivel && (

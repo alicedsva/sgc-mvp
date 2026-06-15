@@ -6,7 +6,7 @@ import {
   Eye, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
   Plus, Download, Search, X, AlertTriangle, ArrowLeft,
   Layers, Target, BarChart2, Calendar, Wrench,
-  Bell, ArrowLeftRight, LogOut, Menu,
+  Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
@@ -35,12 +35,23 @@ type SectionId =
   | 'regras/cobertura-habilidades'
   | 'regras/estados-avaliacao'
   | 'regras/badges-status'
+  | 'regras/jornadas-e-matriz'
+  | 'telas-admin/matriz-habilidades'
   | 'colaborador/meu-perfil'
   | 'colaborador/minhas-avaliacoes'
   | 'colaborador/minha-carreira';
 
-interface NavItem { id: SectionId; label: string; }
-interface NavGroup { label: string; items: NavItem[]; }
+type NavItem = { id: SectionId; label: string; }
+
+type NavGroup = {
+  label: string;
+  items?: NavItem[];
+  subgroups?: {
+    label: string;
+    id: string;
+    items: NavItem[];
+  }[];
+}
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -81,27 +92,49 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'regras/cobertura-habilidades', label: 'Cobertura de habilidades' },
       { id: 'regras/estados-avaliacao', label: 'Estados de avaliação' },
       { id: 'regras/badges-status', label: 'Badges de status' },
+      { id: 'regras/jornadas-e-matriz', label: 'Jornadas e Matriz' },
     ],
   },
   {
-    label: 'Visão do Colaborador',
-    items: [
-      { id: 'colaborador/meu-perfil', label: 'Meu Perfil' },
-      { id: 'colaborador/minhas-avaliacoes', label: 'Minhas Avaliações' },
-      { id: 'colaborador/minha-carreira', label: 'Minha Carreira' },
+    label: 'Especificação de Telas',
+    subgroups: [
+      {
+        label: 'Admin / RH',
+        id: 'telas-admin',
+        items: [
+          { id: 'telas-admin/matriz-habilidades', label: 'Matriz de Habilidades' },
+        ],
+      },
+      {
+        label: 'Gestor',
+        id: 'telas-gestor',
+        items: [],
+      },
+      {
+        label: 'Colaborador',
+        id: 'telas-colaborador',
+        items: [
+          { id: 'colaborador/meu-perfil', label: 'Meu Perfil' },
+          { id: 'colaborador/minhas-avaliacoes', label: 'Minhas Avaliações' },
+          { id: 'colaborador/minha-carreira', label: 'Minha Carreira' },
+        ],
+      },
     ],
   },
 ];
+
 
 const QUICK_ACCESS = [
   { groupId: 'fundamentos', label: 'Fundamentos', description: 'Cores, tipografia, espaçamento e ícones do sistema.', icon: Palette, firstSection: 'fundamentos/cores' as SectionId },
   { groupId: 'componentes', label: 'Componentes', description: 'Botões, tabelas, cards, drawers, modais e formulários.', icon: Layout, firstSection: 'componentes/botoes' as SectionId },
   { groupId: 'padroes', label: 'Padrões', description: 'Navegação, estados vazios, mensagens de orientação.', icon: BookOpen, firstSection: 'padroes/navegacao' as SectionId },
   { groupId: 'regras', label: 'Regras de negócio', description: 'Níveis, cobertura, estados de avaliação e badges.', icon: Briefcase, firstSection: 'regras/niveis-cores' as SectionId },
-  { groupId: 'colaborador', label: 'Visão do Colaborador', description: 'Meu Perfil, Minhas Avaliações e Minha Carreira.', icon: User, firstSection: 'colaborador/meu-perfil' as SectionId },
+  { groupId: 'telas', label: 'Especificação de Telas', description: 'Telas documentadas por perfil de acesso: Admin/RH, Gestor e Colaborador.', icon: Monitor, firstSection: 'telas-admin/matriz-habilidades' as SectionId },
 ];
 
-const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) =>
+  g.items ?? g.subgroups?.flatMap(sg => sg.items) ?? []
+);
 
 const BADGE_BASE = 'inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full';
 
@@ -690,6 +723,156 @@ function SecaoBadgesStatus() {
 {`inline-flex px-1.5 md:px-2 py-0.5 md:py-1
 text-[10px] md:text-xs font-medium rounded-full`}
         </pre>
+      </div>
+    </div>
+  );
+}
+
+// ─── Seção: Jornadas e Matriz de Habilidades ──────────────────────────────────
+
+const REGRAS_CRIACAO_JORNADA = [
+  'A jornada pertence a uma carreira e não pode existir sem ela.',
+  'O modelo de evolução é definido na criação e determina o tipo de progressão: Contribuidor Individual (evolução técnica) ou Gestão (evolução para liderança).',
+  'Os cargos são selecionados e ordenados pelo RH via drag-and-drop, definindo a sequência de progressão.',
+  'A ordem dos cargos define a progressão — o primeiro cargo é o ponto de entrada, o último é o topo da jornada.',
+  'Um mesmo cargo pode pertencer a múltiplas jornadas simultaneamente.',
+  'Cada jornada tem sua própria matriz de habilidades — o mesmo cargo pode ter exigências diferentes em jornadas distintas.',
+];
+
+const REGRAS_MATRIZ = [
+  'As habilidades disponíveis na matriz são as cadastradas no módulo Habilidades — técnicas e comportamentais.',
+  'Para cada habilidade, o RH define o nível mínimo exigido por cargo usando os níveis cadastrados (ex: Básico para Júnior, Intermediário para Pleno, Avançado para Sênior).',
+  'Uma habilidade pode ter níveis diferentes para cada cargo da mesma jornada.',
+  'O colaborador é avaliado contra a matriz do cargo atual na sua jornada.',
+  'Habilidades não incluídas na matriz não afetam a cobertura do colaborador naquela jornada.',
+];
+
+const REGRAS_VINCULO = [
+  'O vínculo é colaborador × jornada, não colaborador × cargo.',
+  'A cobertura de habilidades é calculada sempre em relação à matriz da jornada do colaborador.',
+  'Times diferentes podem ter jornadas diferentes para o mesmo cargo — ex: um time focado em React e outro em Vue, ambos com Desenvolvedores Plenos.',
+];
+
+function SecaoJornadasEMatriz() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Jornadas e Matriz de Habilidades</h1>
+      <p className="text-sm text-gray-600 mb-4">
+        Regras que governam a construção de jornadas de carreira e a definição de habilidades exigidas por cargo.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="12/06/2026" debitosTecnicos={0} alertas={0} />
+
+      {/* Bloco 1 — Hierarquia de carreiras */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Hierarquia de carreiras</h2>
+        <div className="flex flex-col items-center gap-0 max-w-sm">
+          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 w-full">
+            <p className="text-sm font-semibold text-gray-900">Carreira</p>
+            <p className="text-xs text-gray-500 mt-0.5">Agrupa jornadas de uma mesma área funcional</p>
+          </div>
+          <p className="text-gray-400 text-lg text-center leading-none py-1">↓</p>
+          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 w-full">
+            <p className="text-sm font-semibold text-gray-900">Jornada</p>
+            <p className="text-xs text-gray-500 mt-0.5">Define a progressão de cargos e o modelo de evolução do colaborador</p>
+          </div>
+          <p className="text-gray-400 text-lg text-center leading-none py-1">↓</p>
+          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 w-full">
+            <p className="text-sm font-semibold text-gray-900">Cargo (ordenado na jornada)</p>
+            <p className="text-xs text-gray-500 mt-0.5">Posição que o colaborador ocupa ou almeja</p>
+          </div>
+          <p className="text-gray-400 text-lg text-center leading-none py-1">↓</p>
+          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 w-full">
+            <p className="text-sm font-semibold text-gray-900">Matriz de Habilidades</p>
+            <p className="text-xs text-gray-500 mt-0.5">Define o nível mínimo exigido por habilidade para cada cargo da jornada</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bloco 2 — Criação de jornada */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Criação de jornada</h2>
+        <ul className="space-y-2">
+          {REGRAS_CRIACAO_JORNADA.map((regra, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {regra}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bloco 3 — Matriz de habilidades */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Matriz de habilidades</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          A matriz define o nível mínimo exigido para cada habilidade em cada cargo da jornada. É configurada após a
+          criação da jornada e pode ser editada a qualquer momento pelo RH.
+        </p>
+        <ul className="space-y-2">
+          {REGRAS_MATRIZ.map((regra, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {regra}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bloco 4 — Vínculo com o colaborador */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Vínculo com o colaborador</h2>
+        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3 mb-4">
+          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-700">
+            O colaborador é vinculado a uma jornada específica — não apenas a um cargo. Dois colaboradores no mesmo
+            cargo podem seguir jornadas diferentes com matrizes de habilidades distintas.
+          </p>
+        </div>
+        <ul className="space-y-2">
+          {REGRAS_VINCULO.map((regra, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {regra}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bloco 5 — Exemplo prático */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Exemplo prático</h2>
+        <div className="border border-gray-200 rounded-lg overflow-hidden mb-3">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Habilidade</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Dev Pleno — Jornada Frontend</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Dev Pleno — Jornada Backend</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              <tr className="bg-white">
+                <td className="px-4 py-3 text-sm text-gray-900 font-medium">React</td>
+                <td className="px-4 py-3 text-sm text-gray-700">Avançado</td>
+                <td className="px-4 py-3 text-sm text-gray-400 italic">Não exigido</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3 text-sm text-gray-900 font-medium">Node.js</td>
+                <td className="px-4 py-3 text-sm text-gray-400 italic">Não exigido</td>
+                <td className="px-4 py-3 text-sm text-gray-700">Avançado</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3 text-sm text-gray-900 font-medium">Comunicação</td>
+                <td className="px-4 py-3 text-sm text-gray-700">Intermediário</td>
+                <td className="px-4 py-3 text-sm text-gray-700">Intermediário</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-gray-500">
+          O mesmo cargo (Dev Pleno) tem matrizes diferentes em cada jornada. A cobertura do colaborador é calculada
+          contra a matriz da sua jornada.
+        </p>
       </div>
     </div>
   );
@@ -4664,6 +4847,411 @@ function SecaoMinhaCarreira() {
     </div>
   );
 }
+// ─── Seção: Matriz de Habilidades — Edição (Admin / RH) ──────────────────────
+
+function SecaoMatrizHabilidadesAdmin() {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Matriz de Habilidades — Edição</h1>
+      <p className="text-sm text-gray-600 mb-4">
+        Especificação da tela de edição da matriz de habilidades por cargo.
+        Para as regras de negócio conceituais, consulte Regras de negócio → Jornadas e Matriz.
+        Fonte: <code className="bg-gray-100 px-1 rounded text-xs">JornadaDetalhePage.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">MatrizCell.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">HabilidadesSelectionModal.tsx</code>.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="15/06/2026" debitosTecnicos={0} alertas={0} />
+
+      {/* Bloco 1 — Estrutura visual da tabela */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Estrutura visual da tabela</h2>
+        <ul className="space-y-1.5 mb-5">
+          {[
+            'Eixo das linhas: habilidades agrupadas por competência.',
+            'Eixo das colunas: cargos da jornada (mínimo 160px por coluna, scroll horizontal).',
+            'Coluna fixa (sticky left-0 z-10, w-[220px]): nome da habilidade com botão MoreVertical aparece no hover.',
+            'Cabeçalho de cargo: nome truncado + barra de progresso configuradas/total. Verde (#16A34A) quando 100%, âmbar (#F59E0B) quando parcial, cinza (#E5E7EB) quando zero.',
+            'Agrupador de competência: linha de cabeçalho bg-[#F3F4F6] separando grupos — text-xs font-medium text-gray-500 uppercase tracking-wider.',
+            'Alternância de fundo: bg-white (par) / bg-[#F9FAFB] (ímpar) por índice da habilidade filtrada.',
+            'Botão MoreVertical por linha: opacity-0 → opacity-100 no hover do grupo, remove a habilidade via ConfirmationModal.',
+          ].map((r, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {r}
+            </li>
+          ))}
+        </ul>
+
+        {/* Mockup estático da tabela */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="sticky left-0 bg-gray-50 w-[200px] px-4 py-3 text-left">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</span>
+                </th>
+                {/* Cargo 1 — completo */}
+                <th className="px-4 py-3 text-center min-w-[160px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Júnior</span>
+                    <div className="w-full flex items-center gap-1.5">
+                      <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: '100%', backgroundColor: '#16A34A' }} />
+                      </div>
+                      <span className="text-[10px] font-medium" style={{ color: '#16A34A' }}>3/3</span>
+                    </div>
+                  </div>
+                </th>
+                {/* Cargo 2 — parcial */}
+                <th className="px-4 py-3 text-center min-w-[160px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Pleno</span>
+                    <div className="w-full flex items-center gap-1.5">
+                      <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: '67%', backgroundColor: '#F59E0B' }} />
+                      </div>
+                      <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>2/3</span>
+                    </div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Agrupador de competência */}
+              <tr>
+                <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Técnica</span>
+                </td>
+              </tr>
+              {/* Linha par — bg-white */}
+              <tr className="bg-white group">
+                <td className="sticky left-0 bg-white px-4 py-3 z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-900 flex-1">React</span>
+                    <span className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-300 rounded">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    </span>
+                  </div>
+                </td>
+                {/* Célula com nível */}
+                <td className="px-4 py-3 text-center">
+                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#2563EB' }}>
+                    <div className="px-2.5 py-2 space-y-0.5">
+                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#2563EB' }}>Básico</span>
+                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 1</span>
+                    </div>
+                  </div>
+                </td>
+                {/* Célula com nível avançado */}
+                <td className="px-4 py-3 text-center">
+                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
+                    <div className="px-2.5 py-2 space-y-0.5">
+                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Avançado</span>
+                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 4</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {/* Agrupador segunda competência */}
+              <tr>
+                <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Comportamental</span>
+                </td>
+              </tr>
+              {/* Linha ímpar — bg-[#F9FAFB] */}
+              <tr className="bg-[#F9FAFB]">
+                <td className="sticky left-0 bg-[#F9FAFB] px-4 py-3 z-10">
+                  <span className="text-sm text-gray-900">Comunicação</span>
+                </td>
+                {/* Célula não exigida */}
+                <td className="px-4 py-3 text-center">
+                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-dashed border-amber-300 text-amber-500">
+                    –
+                  </div>
+                </td>
+                {/* Célula vazia */}
+                <td className="px-4 py-3 text-center">
+                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                    +
+                  </div>
+                </td>
+              </tr>
+              {/* Linha par */}
+              <tr className="bg-white">
+                <td className="sticky left-0 bg-white px-4 py-3 z-10">
+                  <span className="text-sm text-gray-900">Trabalho em equipe</span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
+                    <div className="px-2.5 py-2 space-y-0.5">
+                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Intermediário</span>
+                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 2</span>
+                    </div>
+                  </div>
+                </td>
+                {/* Célula vazia */}
+                <td className="px-4 py-3 text-center">
+                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                    +
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Bloco 2 — Estados da célula */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Estados da célula (MatrizCell)</h2>
+        <div className="grid grid-cols-3 gap-4">
+          {/* Estado 1 — Vazio */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-900 mb-3">Vazio (null)</p>
+            <div className="flex justify-center mb-4">
+              <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                +
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {[
+                'Valor: null ou undefined',
+                'Borda dashed #D1D5DB',
+                'Hover: solid #3B82F6, bg #EFF6FF',
+                'Nível não configurado',
+              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+            </ul>
+          </div>
+
+          {/* Estado 2 — Não exigido */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-900 mb-3">Não exigido ('not_required')</p>
+            <div className="flex justify-center mb-4">
+              <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-dashed border-amber-300 text-amber-500">
+                –
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {[
+                "Valor: 'not_required'",
+                'Borda dashed amber-300',
+                'Hover: sólido amber-400',
+                'Decisão explícita do RH',
+              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+            </ul>
+          </div>
+
+          {/* Estado 3 — Com nível */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-900 mb-3">Com nível definido</p>
+            <div className="mb-4">
+              <div
+                className="rounded-lg border border-gray-200 bg-white text-left cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+                style={{ borderLeftWidth: 3, borderLeftColor: '#5B21B6' }}
+                title="Especialista: Usa hooks, gerencia estado local e consome APIs REST"
+              >
+                <div className="px-2.5 py-2 space-y-0.5">
+                  <span className="block text-xs font-semibold leading-tight" style={{ color: '#5B21B6' }}>Especialista</span>
+                  <p className="text-xs text-gray-500 leading-snug line-clamp-3">Usa hooks, gerencia estado local e consome APIs REST</p>
+                  <span className="block text-[10px] text-gray-400 leading-tight">Progressão 5</span>
+                </div>
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {[
+                'Valor: string com nome do nível',
+                'Borda esquerda: 3px via borderLeftColor',
+                'Cor via getCorFromPeso(peso)',
+                'Critério: text-xs text-gray-500 line-clamp-3 (condicional — só aparece se criterio não for vazio)',
+                'Tooltip: title="Nome do nível: criterio"',
+                'Hover: border-gray-300 + shadow-sm',
+              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+            </ul>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 italic mt-4">
+          A descrição exibida na célula é o critério específico cadastrado para aquela habilidade naquele nível no módulo Habilidades. Se não houver critério cadastrado, a célula exibe apenas o nome e a progressão.
+        </p>
+      </div>
+
+      {/* Bloco 3 — Dropdown de seleção */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Dropdown de seleção de nível</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Abre ao clicar em qualquer célula da matriz. Largura fixa 200px, posição <code className="bg-gray-100 px-1 rounded text-xs">absolute top-full mt-1</code>.
+        </p>
+        <div className="flex items-start gap-8 mb-5">
+          {/* Mockup do dropdown */}
+          <div className="w-[200px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden flex-shrink-0" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+            {[
+              { nome: 'Básico', peso: 1, cor: '#60A5FA' },
+              { nome: 'Intermediário', peso: 2, cor: '#2563EB' },
+              { nome: 'Avançado', peso: 4, cor: '#4338CA' },
+              { nome: 'Especialista', peso: 5, cor: '#5B21B6' },
+            ].map((n, idx, arr) => (
+              <div key={n.nome} className={`px-4 py-2.5 flex items-center gap-2 hover:bg-[#F3F4F6] transition-colors ${idx < arr.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap text-white" style={{ backgroundColor: n.cor }}>{n.nome}</span>
+                <span className="text-xs text-gray-400">{n.peso}</span>
+              </div>
+            ))}
+            <div className="border-t border-[#E5E7EB]" />
+            <div className="px-4 py-2.5 flex items-center text-[#374151] text-sm hover:bg-[#FEF9C3] hover:text-[#92400E]">
+              <span className="whitespace-nowrap">Não exigido neste cargo</span>
+            </div>
+            <div className="border-t border-[#E5E7EB]" />
+            <div className="px-4 py-2.5 flex items-center gap-2 text-[#6B7280] text-sm hover:bg-[#F3F4F6]">
+              <X className="w-4 h-4" />
+              <span>Remover nível</span>
+            </div>
+          </div>
+
+          {/* Notas */}
+          <ul className="space-y-2 pt-1">
+            {[
+              'Itens de nível: badge com cor via getCorFromPeso(peso) + peso em gray-400',
+              'Separador border-t border-[#E5E7EB] antes de "Não exigido" e antes de "Remover nível"',
+              '"Não exigido neste cargo": whitespace-nowrap, hover bg-[#FEF9C3] text-[#92400E]',
+              '"Remover nível": só renderizado se já havia nível (nivel !== null), ícone X lucide',
+              'Fechar: clique fora via useEffect mousedown no document',
+            ].map((t, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-700">
+            Os níveis disponíveis são os cadastrados para aquela habilidade no módulo Habilidades. Se nenhum nível estiver vinculado, o sistema usa todos os níveis cadastrados como fallback.
+          </p>
+        </div>
+      </div>
+
+      {/* Bloco 4 — Modal Gerenciar habilidades */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Modal — Gerenciar habilidades</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Componente <code className="bg-gray-100 px-1 rounded text-xs">HabilidadesSelectionModal.tsx</code>. Modal centralizado (não drawer): 640px × 80vh, máximo 720px.
+        </p>
+        <ul className="space-y-2 mb-5">
+          {[
+            'Header: título "Gerenciar habilidades" + subtítulo "Marque as habilidades que devem estar na matriz" + botão X.',
+            'Busca: input text com ícone Search à esquerda, foco automático ao abrir.',
+            'Filtros: segmented control Todas/Técnica/Comportamental (bg-gray-100 rounded-lg p-1) + Radix Select por competência.',
+            'Lista agrupada por competência: header sticky bg-gray-50, ChevronDown/Right para collapse individual, contador N/M (brand) ou só N (gray).',
+            '"Selecionar todas" / "Desmarcar todas" por grupo (text-[var(--brand-600)]).',
+            'Item marcado para adicionar: bg-blue-50 hover:bg-blue-100 + checkbox brand preenchido.',
+            'Item marcado para remover: bg-red-50 hover:bg-red-100 + nome text-red-500 line-through + badge "Será removida".',
+          ].map((r, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {r}
+            </li>
+          ))}
+        </ul>
+
+        <div className="border border-gray-200 rounded-lg overflow-hidden mb-5">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Estado do item</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Fundo da linha</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Checkbox</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Botão confirmar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              <tr className="bg-white">
+                <td className="px-4 py-3 text-sm text-gray-900">Desmarcado (não estava)</td>
+                <td className="px-4 py-3 text-xs text-gray-500">hover:bg-gray-50</td>
+                <td className="px-4 py-3 text-xs text-gray-500">border-gray-300 vazio</td>
+                <td className="px-4 py-3 text-xs text-gray-500">—</td>
+              </tr>
+              <tr className="bg-blue-50">
+                <td className="px-4 py-3 text-sm text-gray-900">Marcado para adicionar</td>
+                <td className="px-4 py-3 text-xs text-gray-500">bg-blue-50</td>
+                <td className="px-4 py-3 text-xs text-gray-500">bg-[var(--brand-600)] preenchido</td>
+                <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-[var(--brand-600)] text-white">Adicionar N</span></td>
+              </tr>
+              <tr className="bg-red-50">
+                <td className="px-4 py-3 text-sm text-red-500 line-through">Marcado para remover</td>
+                <td className="px-4 py-3 text-xs text-gray-500">bg-red-50</td>
+                <td className="px-4 py-3 text-xs text-gray-500">border-red-300 vazio</td>
+                <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-red-600 text-white">Remover N</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul className="space-y-2">
+          {[
+            'Rodapé esquerda: "+N a adicionar · -N a remover" quando há diff; "N habilidades na matriz" quando sem diff.',
+            'Botão confirmar: desabilitado (bg-gray-200) quando sem diff; bg-red-600 quando só remoções; bg-[var(--brand-600)] quando há adições.',
+            'Label do botão: "Adicionar N · Remover N" — exibe apenas as partes com contagem > 0.',
+          ].map((r, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {r}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bloco 5 — Salvamento */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Salvamento</h2>
+        <ul className="space-y-2 mb-5">
+          {[
+            'Rodapé fixo aparece apenas quando há alterações não salvas (max-h transition: max-h-0 ↔ max-h-20).',
+            '"Alterações não salvas" text-sm text-gray-500 à esquerda.',
+            'Botão "Salvar alterações" bg-[var(--brand-600)] text-white à direita.',
+            'Ao salvar: itera todos os cargos → monta array HabilidadeCargo por cargo → chama atualizarHabilidadesCargo(cargo.id, habilidadesDocargo) no contexto.',
+            'Células null/undefined omitidas (não persistidas).',
+            "Valores 'not_required' e nomes de nível (strings) são salvos como nivelEsperado.",
+            'Persiste em CarreirasContext via localStorage.',
+          ].map((r, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+              {r}
+            </li>
+          ))}
+        </ul>
+        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-700">
+            Navegar sem salvar descarta todas as alterações da sessão atual.
+          </p>
+        </div>
+      </div>
+
+      {/* Bloco 6 — Importante */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Importante</h2>
+        <div className="space-y-3">
+          <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-700">
+              Cargos são adicionados ou removidos via "Editar jornada" (menu de 3 pontos no header da página) — não pela matriz. A matriz define apenas os níveis mínimos.
+            </p>
+          </div>
+          <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-700">
+              <strong>"Não exigido"</strong> e <strong>"não configurado"</strong> são estados distintos:{' '}
+              <em>Não configurado</em> = célula vazia, RH ainda não definiu.{' '}
+              <em>Não exigido</em> = decisão explícita do RH de que a habilidade não é necessária neste cargo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const IMPLEMENTED: SectionId[] = [
@@ -4683,6 +5271,8 @@ const IMPLEMENTED: SectionId[] = [
   'regras/cobertura-habilidades',
   'regras/estados-avaliacao',
   'regras/badges-status',
+  'regras/jornadas-e-matriz',
+  'telas-admin/matriz-habilidades',
   'padroes/navegacao',
   'padroes/mensagens-orientacao',
   'padroes/estados-vazios',
@@ -4694,6 +5284,15 @@ const IMPLEMENTED: SectionId[] = [
 
 export default function DesignSystemPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('home');
+  const [expandedSubgroups, setExpandedSubgroups] = useState<Record<string, boolean>>({
+    'telas-admin': false,
+    'telas-gestor': false,
+    'telas-colaborador': true,
+  });
+
+  const toggleSubgroup = (id: string) => {
+    setExpandedSubgroups(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const activeSectionLabel =
     ALL_ITEMS.find((item) => item.id === activeSection)?.label ?? '';
@@ -4701,17 +5300,18 @@ export default function DesignSystemPage() {
   return (
     <div className="mt-16 min-h-screen flex">
       {/* Sidebar de navegação */}
-      <aside className="w-56 flex-shrink-0 border-r border-gray-200 bg-white fixed top-16 bottom-0 overflow-y-auto hidden md:block">
+      <aside className="w-64 flex-shrink-0 border-r border-gray-200 bg-white fixed top-16 bottom-0 overflow-y-auto hidden md:block">
         <nav className="px-2 pt-4 pb-8">
           <button
             onClick={() => setActiveSection('home')}
-            className={`w-full text-left text-sm px-3 py-1.5 rounded-md transition-colors ${
+            className={`w-full text-left text-sm px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
               activeSection === 'home'
                 ? 'text-[var(--brand-600)] font-medium bg-[var(--brand-50)]'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
-            Home
+            <Activity className="w-4 h-4 flex-shrink-0" />
+            Status
           </button>
 
           {NAV_GROUPS.map((group) => (
@@ -4719,7 +5319,7 @@ export default function DesignSystemPage() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-4">
                 {group.label}
               </p>
-              {group.items.map((item) => (
+              {group.items?.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
@@ -4732,13 +5332,43 @@ export default function DesignSystemPage() {
                   {item.label}
                 </button>
               ))}
+              {group.subgroups?.map((subgroup) => (
+                <div key={subgroup.id}>
+                  <button
+                    onClick={() => toggleSubgroup(subgroup.id)}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    <span>{subgroup.label}</span>
+                    <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${expandedSubgroups[subgroup.id] ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSubgroups[subgroup.id] && (
+                    subgroup.items.length > 0 ? (
+                      subgroup.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveSection(item.id)}
+                          className={`w-full text-left text-sm pl-6 pr-3 py-1.5 rounded-md transition-colors ${
+                            activeSection === item.id
+                              ? 'text-[var(--brand-600)] font-medium bg-[var(--brand-50)]'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="pl-6 py-1.5 text-xs text-gray-400 italic">Nenhuma tela documentada ainda</p>
+                    )
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </nav>
       </aside>
 
       {/* Área de conteúdo */}
-      <main className="flex-1 md:ml-56 p-4 md:p-8">
+      <main className="flex-1 md:ml-64 p-4 md:p-8">
         {activeSection === 'home' && (
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 mb-2">Design System</h1>
@@ -4752,7 +5382,7 @@ export default function DesignSystemPage() {
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
-                  <p className="text-sm font-semibold leading-tight">18</p>
+                  <p className="text-sm font-semibold leading-tight">22</p>
                 </div>
               </div>
               <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
@@ -4870,6 +5500,8 @@ export default function DesignSystemPage() {
         {activeSection === 'regras/cobertura-habilidades' && <SecaoCoberturaHabilidades />}
         {activeSection === 'regras/estados-avaliacao' && <SecaoEstadosAvaliacao />}
         {activeSection === 'regras/badges-status' && <SecaoBadgesStatus />}
+        {activeSection === 'regras/jornadas-e-matriz' && <SecaoJornadasEMatriz />}
+        {activeSection === 'telas-admin/matriz-habilidades' && <SecaoMatrizHabilidadesAdmin />}
         {activeSection === 'padroes/navegacao' && <SecaoNavegacao />}
         {activeSection === 'padroes/mensagens-orientacao' && <SecaoMensagensOrientacao />}
         {activeSection === 'padroes/estados-vazios' && <SecaoEstadosVazios />}

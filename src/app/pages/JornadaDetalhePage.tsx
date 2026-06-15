@@ -1,17 +1,14 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { GripVertical, Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { carreirasData, habilidadesData, niveisDefaultData, getCorFromPeso } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { SelectionDrawer, SelectionItem } from '../components/templates/SelectionDrawer';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
-import { AccordionItem } from '../components/ui/Accordion';
-import { MatrizProgressao } from '../components/carreiras/MatrizProgressao';
 import { MatrizCell } from '../components/carreiras/MatrizCell';
-import { HabilidadesDrawer } from '../components/carreiras/HabilidadesDrawer';
 import { HabilidadesSelectionModal, HabilidadeItem } from '../components/templates/HabilidadesSelectionModal';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
 
@@ -61,298 +58,6 @@ const cargosDisponiveisRM: CargoDisponivel[] = [
   { id: 'rm14', nome: 'Product Manager Sênior', categoria: 'Produto' },
 ];
 
-const niveisDisponiveis = niveisDefaultData.map((n) => n.nome);
-
-interface DraggableCargoItemProps {
-  cargo: Cargo;
-  index: number;
-  moveCargo: (dragIndex: number, hoverIndex: number) => void;
-  isOpen: boolean;
-  onToggle: () => void;
-  onEdit: (cargo: Cargo) => void;
-  onDelete: (cargo: Cargo) => void;
-  habilidades: HabilidadeCargo[];
-  onAdicionarHabilidades: (cargoId: string) => void;
-  onRemoverHabilidade: (cargoId: string, habilidadeId: string) => void;
-  onAlterarNivel: (cargoId: string, habilidadeId: string, novoNivel: string) => void;
-}
-
-const DraggableCargoItem = ({
-  cargo,
-  index,
-  moveCargo,
-  isOpen,
-  onToggle,
-  onEdit,
-  onDelete,
-  habilidades,
-  onAdicionarHabilidades,
-  onRemoverHabilidade,
-  onAlterarNivel,
-}: DraggableCargoItemProps) => {
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: 'CARGO',
-    item: { index },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = useDrop({
-    accept: 'CARGO',
-    hover: (item: { index: number }) => {
-      if (item.index !== index) {
-        moveCargo(item.index, index);
-        item.index = index;
-      }
-    },
-  });
-
-  // Calcular resumo de habilidades por nível
-  const resumoNiveis = useMemo(() => {
-    const contagem = {
-      'Básico': 0,
-      'Intermediário': 0,
-      'Avançado': 0,
-      'Especialista': 0,
-    };
-    habilidades.forEach(h => {
-      if (contagem.hasOwnProperty(h.nivelEsperado)) {
-        contagem[h.nivelEsperado as keyof typeof contagem]++;
-      }
-    });
-    return contagem;
-  }, [habilidades]);
-
-  // Obter config do nível pelo nome
-  const getNivelConfig = (nomeNivel: string) =>
-    niveisDefaultData.find((n) => n.nome === nomeNivel) ?? null;
-
-  function obterCorTexto(corHex: string): string {
-    const r = parseInt(corHex.slice(1, 3), 16);
-    const g = parseInt(corHex.slice(3, 5), 16);
-    const b = parseInt(corHex.slice(5, 7), 16);
-    const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminancia > 0.55 ? '#1F2937' : '#FFFFFF';
-  }
-
-  const trigger = (
-    <div className="flex items-center gap-4 flex-1">
-      <div
-        ref={(node) => {
-          const dragRef = drag(node);
-          const dropRef = drop(node);
-        }}
-        className={`flex items-center gap-4 flex-1 ${isDragging ? 'opacity-50' : ''}`}
-      >
-        <div
-          className="cursor-grab active:cursor-grabbing flex items-center justify-center"
-        >
-          <GripVertical className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-        </div>
-
-        <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full text-sm font-medium text-gray-700">
-          {index + 1}
-        </div>
-
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-900">{cargo.cargoRM}</div>
-          <div className="text-xs text-gray-600 mt-0.5">
-            {habilidades.length === 0 ? (
-              <div className="flex items-center gap-2">
-                <span>Nenhuma habilidade configurada</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAdicionarHabilidades(cargo.id);
-                  }}
-                  className="text-[var(--brand-600)] hover:text-[var(--brand-700)] font-medium transition-colors"
-                >
-                  + Adicionar habilidades
-                </button>
-              </div>
-            ) : (
-              <span>{habilidades.length} {habilidades.length === 1 ? 'habilidade' : 'habilidades'}</span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-              cargo.status === 'Configurado'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-yellow-100 text-yellow-800'
-            }`}
-          >
-            {cargo.status}
-          </span>
-        </div>
-      </div>
-
-      {/* Ações - fora do botão do accordion */}
-      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(cargo);
-          }}
-          className="p-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-          title="Editar cargo"
-        >
-          <Edit className="w-4 h-4" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(cargo);
-          }}
-          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-          title="Remover cargo"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-
-  const content = (
-    <div className="p-6">
-      {/* Resumo de habilidades por nível */}
-      {habilidades.length > 0 && (
-        <div className="mb-6 flex items-center gap-6 text-sm pb-6 border-b border-gray-200">
-          <div>
-            <span className="text-2xl font-semibold text-gray-900">{habilidades.length}</span>
-            <span className="text-gray-600 ml-2">Total</span>
-          </div>
-          <div className="h-6 w-px bg-gray-300"></div>
-          {Object.entries(resumoNiveis)
-            .filter(([nivel, count]) => count > 0)
-            .map(([nivel, count]) => (
-              <div key={nivel}>
-                <span className="text-lg font-semibold text-gray-900">{count}</span>
-                <span className="text-gray-600 ml-2 text-xs">{nivel}</span>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* Header da seção de habilidades */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-900">Habilidades configuradas</h3>
-        <button
-          onClick={() => onAdicionarHabilidades(cargo.id)}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar habilidades
-        </button>
-      </div>
-
-      {/* Tabela de habilidades */}
-      {habilidades.length > 0 ? (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="max-h-96 overflow-y-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Habilidade
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Categoria
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nível esperado
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {habilidades.map((habilidade) => (
-                  <tr key={habilidade.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <span className="text-xs md:text-sm text-gray-900">{habilidade.habilidadeNome}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs md:text-sm text-gray-500">
-                      {habilidade.categoria}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={habilidade.nivelEsperado}
-                          onChange={(e) => onAlterarNivel(cargo.id, habilidade.id, e.target.value)}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[var(--brand-500)] focus:border-[var(--brand-500)] outline-none"
-                        >
-                          {niveisDisponiveis.map((nivel) => (
-                            <option key={nivel} value={nivel}>
-                              {nivel}
-                            </option>
-                          ))}
-                        </select>
-                        {(() => {
-                          const cfg = getNivelConfig(habilidade.nivelEsperado);
-                          return (
-                            <span
-                              className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap"
-                              style={cfg ? { backgroundColor: getCorFromPeso(cfg.peso), color: '#FFFFFF' } : { backgroundColor: '#9CA3AF', color: '#FFFFFF' }}
-                            >
-                              {habilidade.nivelEsperado}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => onRemoverHabilidade(cargo.id, habilidade.id)}
-                        className="inline-flex items-center gap-1 p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                        title="Remover"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="border border-gray-200 rounded-lg p-8 text-center bg-white">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Plus className="w-6 h-6 text-gray-400" />
-          </div>
-          <h4 className="text-sm font-medium text-gray-900 mb-1">
-            Nenhuma habilidade configurada
-          </h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Configure as habilidades necessárias para este cargo.
-          </p>
-          <button
-            onClick={() => onAdicionarHabilidades(cargo.id)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar habilidades
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <AccordionItem
-      id={cargo.id}
-      trigger={trigger}
-      content={content}
-      isOpen={isOpen}
-      onToggle={onToggle}
-    />
-  );
-};
 
 function JornadaDetalheContent() {
   const { carreiraId, jornadaId } = useParams();
@@ -379,9 +84,6 @@ function JornadaDetalheContent() {
   const [cargos, setCargos] = useState<Cargo[]>(cargosDaJornadaIniciais);
   const [cargoExpandido, setCargoExpandido] = useState<string | null>(null);
   const [isAddCargoDrawerOpen, setIsAddCargoDrawerOpen] = useState(false);
-  const [isAddHabilidadeDrawerOpen, setIsAddHabilidadeDrawerOpen] = useState(false);
-  const [cargoSelecionadoParaHabilidades, setCargoSelecionadoParaHabilidades] = useState<string | null>(null);
-  const [nivelPadraoHabilidade, setNivelPadraoHabilidade] = useState('Básico');
   const [isEditCargoDrawerOpen, setIsEditCargoDrawerOpen] = useState(false);
   const [cargoParaEditar, setCargoParaEditar] = useState<Cargo | null>(null);
   const [cargoParaExcluir, setCargoParaExcluir] = useState<Cargo | null>(null);
@@ -471,6 +173,24 @@ function JornadaDetalheContent() {
   // Salvar alterações da matriz explicitamente
   const handleSalvarMatriz = () => {
     if (!hasUnsavedChanges) return;
+
+    cargos.forEach(cargo => {
+      const habilidadesDocargo: { id: string; cargoId: string; habilidadeId: string; nivelEsperado: string }[] = [];
+
+      habilidadesNaMatriz.forEach(hab => {
+        const nivel = matrizNiveis[hab.id]?.[cargo.id];
+        if (nivel === null || nivel === undefined) return;
+        habilidadesDocargo.push({
+          id: generateId('hc'),
+          cargoId: cargo.id,
+          habilidadeId: hab.id,
+          nivelEsperado: nivel,
+        });
+      });
+
+      atualizarHabilidadesCargo(cargo.id, habilidadesDocargo);
+    });
+
     setHasUnsavedChanges(false);
     toast.success('Alterações salvas com sucesso');
   };
@@ -485,30 +205,6 @@ function JornadaDetalheContent() {
     }).length;
     return { configuradas, total, percentual: total > 0 ? (configuradas / total) * 100 : 0 };
   };
-
-  // Carregar habilidades por cargo
-  const habilidadesPorCargo = useMemo(() => {
-    const map: Record<string, HabilidadeCargo[]> = {};
-    
-    cargos.forEach(cargo => {
-      const habilidadesDoCargo = todasHabilidadesCargo
-        .filter(hc => hc.cargoId === cargo.id)
-        .map(hc => {
-          const hab = habilidadesData.find(h => h.id === hc.habilidadeId);
-          return {
-            id: hc.id,
-            habilidadeId: hc.habilidadeId,
-            habilidadeNome: hab?.nome || 'N/A',
-            categoria: hab?.competencia || 'N/A',
-            nivelEsperado: hc.nivelEsperado,
-          };
-        });
-      
-      map[cargo.id] = habilidadesDoCargo;
-    });
-
-    return map;
-  }, [cargos, todasHabilidadesCargo]);
 
   const moveCargo = useCallback((dragIndex: number, hoverIndex: number) => {
     setCargos((prevCargos) => {
@@ -600,55 +296,6 @@ function JornadaDetalheContent() {
       toast.success('Cargo removido da jornada');
       setCargoParaExcluir(null);
     }
-  };
-
-  // Adicionar habilidades
-  const handleAbrirAdicionarHabilidades = (cargoId: string) => {
-    setCargoSelecionadoParaHabilidades(cargoId);
-    setIsAddHabilidadeDrawerOpen(true);
-  };
-
-  const handleAdicionarHabilidades = (selectedIds: string[]) => {
-    if (!cargoSelecionadoParaHabilidades) return;
-
-    const habilidadesAtuais = habilidadesPorCargo[cargoSelecionadoParaHabilidades] || [];
-    const habilidadesAtuaisIds = habilidadesAtuais.map(h => h.habilidadeId);
-
-    const novasHabilidades = selectedIds
-      .filter(id => !habilidadesAtuaisIds.includes(id))
-      .map(habilidadeId => {
-        const habilidade = habilidadesData.find(h => h.id === habilidadeId);
-        return {
-          id: generateId('habilidade-cargo'),
-          cargoId: cargoSelecionadoParaHabilidades,
-          habilidadeId,
-          nivelEsperado: nivelPadraoHabilidade,
-        };
-      });
-
-    if (novasHabilidades.length === 0) {
-      toast.info('Todas as habilidades selecionadas já foram adicionadas');
-      return;
-    }
-
-    const todasHabilidades = [
-      ...todasHabilidadesCargo.filter(h => h.cargoId !== cargoSelecionadoParaHabilidades),
-      ...habilidadesAtuais.map(h => ({
-        id: h.id,
-        cargoId: cargoSelecionadoParaHabilidades,
-        habilidadeId: h.habilidadeId,
-        nivelEsperado: h.nivelEsperado,
-      })),
-      ...novasHabilidades,
-    ];
-
-    atualizarHabilidadesCargo(
-      cargoSelecionadoParaHabilidades,
-      todasHabilidades.filter(h => h.cargoId === cargoSelecionadoParaHabilidades)
-    );
-
-    toast.success(`${novasHabilidades.length} ${novasHabilidades.length === 1 ? 'habilidade adicionada' : 'habilidades adicionadas'}`);
-    setCargoSelecionadoParaHabilidades(null);
   };
 
   // Remover habilidade
@@ -805,22 +452,6 @@ function JornadaDetalheContent() {
       ).length,
     [habilidadesNaMatriz, cargos, matrizNiveis]
   );
-
-  // Habilidades disponíveis para adicionar
-  const habilidadesParaAdicionar: SelectionItem[] = useMemo(() => {
-    if (!cargoSelecionadoParaHabilidades) return [];
-    
-    const habilidadesJaAdicionadas = habilidadesPorCargo[cargoSelecionadoParaHabilidades] || [];
-    const idsJaAdicionados = habilidadesJaAdicionadas.map(h => h.habilidadeId);
-    
-    return habilidadesData
-      .filter(h => !idsJaAdicionados.includes(h.id))
-      .map(h => ({
-        id: h.id,
-        label: h.nome,
-        sublabel: h.competencia,
-      }));
-  }, [cargoSelecionadoParaHabilidades, habilidadesPorCargo]);
 
   if (!carreira || !jornada) {
     return (
@@ -1186,45 +817,6 @@ function JornadaDetalheContent() {
         emptyMessage="Todos os cargos já foram adicionados"
         confirmLabel="Adicionar selecionados"
       />
-
-      {/* Drawer de adicionar habilidades */}
-      <HabilidadesDrawer
-        isOpen={isAddHabilidadeDrawerOpen}
-        onClose={() => {
-          setIsAddHabilidadeDrawerOpen(false);
-          setCargoSelecionadoParaHabilidades(null);
-        }}
-        title="Adicionar habilidades"
-        description="Selecione as habilidades e defina o nível esperado"
-        items={habilidadesParaAdicionar}
-        onConfirm={handleAdicionarHabilidades}
-        searchPlaceholder="Buscar habilidade..."
-        emptyMessage="Todas as habilidades já foram adicionadas"
-        confirmLabel="Adicionar selecionadas"
-      >
-        {/* Seletor de nível padrão */}
-        <div className="p-4 bg-white rounded-lg border border-gray-200">
-          <label className="block text-sm font-medium text-gray-900 mb-3">
-            Nível padrão para todas
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {niveisDisponiveis.map((nivel) => (
-              <button
-                key={nivel}
-                type="button"
-                onClick={() => setNivelPadraoHabilidade(nivel)}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  nivelPadraoHabilidade === nivel
-                    ? 'bg-[var(--brand-600)] text-white'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {nivel}
-              </button>
-            ))}
-          </div>
-        </div>
-      </HabilidadesDrawer>
 
       {/* Drawer de habilidades da matriz */}
       <HabilidadesSelectionModal

@@ -22,6 +22,7 @@ export default function Layout() {
     if (pathname.startsWith('/meu-perfil')) return 'meu-perfil';
     if (pathname.startsWith('/minhas-avaliacoes')) return 'minhas-avaliacoes';
     if (pathname.startsWith('/minha-carreira')) return 'minha-carreira';
+    if (pathname.startsWith('/testes/')) return pathname.slice(1); // 'testes/radar', etc.
     return 'habilidades';
   };
 

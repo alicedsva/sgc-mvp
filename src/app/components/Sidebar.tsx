@@ -10,6 +10,11 @@ import {
   Layers,
   UserCircle,
   TrendingUp,
+  FlaskConical,
+  Target,
+  BarChart2,
+  ClipboardList,
+  GitCompare,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -45,6 +50,13 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     { id: 'meu-perfil', label: 'Meu Perfil', icon: UserCircle },
     { id: 'minhas-avaliacoes', label: 'Minhas Avaliações', icon: ClipboardCheck },
     { id: 'minha-carreira', label: 'Minha Carreira', icon: TrendingUp },
+  ];
+
+  const menuItemsTestes = [
+    { id: 'testes/radar',     label: 'Radar de Competências', icon: Target       },
+    { id: 'testes/barras',    label: 'Barras por Habilidade', icon: BarChart2     },
+    { id: 'testes/screening', label: 'Screening Report',      icon: ClipboardList },
+    { id: 'testes/benchmark', label: 'Benchmark Mode',        icon: GitCompare    },
   ];
 
   const menuItems = viewMode === 'admin' ? menuItemsAdmin : menuItemsColaborador;
@@ -99,9 +111,12 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     };
   }, []);
 
-  // Encontrar o label do item hover
-  const hoveredItemLabel = hoveredItem 
-    ? menuItems.find(item => item.id === hoveredItem)?.label 
+  // Encontrar o label do item hover (inclui itens de teste no modo colaborador)
+  const allCurrentItems = viewMode === 'colaborador'
+    ? [...menuItemsColaborador, ...menuItemsTestes]
+    : menuItemsAdmin;
+  const hoveredItemLabel = hoveredItem
+    ? allCurrentItems.find(item => item.id === hoveredItem)?.label
     : null;
 
   return (
@@ -169,6 +184,57 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
               );
             })}
           </ul>
+
+          {/* Grupo "Testes" — apenas no modo colaborador */}
+          {viewMode === 'colaborador' && (
+            <>
+              <div className={`${isCollapsed ? 'px-4' : 'px-3'} pt-4 pb-2`}>
+                {!isCollapsed ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="flex items-center gap-1 text-xs font-medium text-gray-400 whitespace-nowrap">
+                      <FlaskConical className="w-3 h-3" />
+                      Testes
+                    </span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                ) : (
+                  <div className="h-px bg-gray-200" />
+                )}
+              </div>
+              <ul className={`space-y-1 ${isCollapsed ? 'px-4' : 'px-3'}`}>
+                {menuItemsTestes.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = selectedItem === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => handleMenuItemClick(item.id)}
+                        onMouseEnter={(e) => handleMouseEnter(item.id, e)}
+                        onMouseLeave={handleMouseLeave}
+                        className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
+                          isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'
+                        } ${
+                          isActive
+                            ? 'bg-[var(--brand-50)]'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        aria-label={item.label}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : ''}`} />
+                        {!isCollapsed && (
+                          <span className={isActive ? 'text-[var(--brand-700)] font-medium' : ''}>
+                            {item.label}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </nav>
       </aside>
 
