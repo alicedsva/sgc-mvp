@@ -3,7 +3,7 @@ import {
   Info, Palette, Layout, BookOpen, Briefcase, User, ChevronRight,
   Settings, LayoutDashboard, Award, UserCircle, ClipboardList, ClipboardCheck,
   TrendingUp, Users, CheckCircle2, Clock, CalendarClock, AlertCircle, XCircle,
-  Eye, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
+  Eye, EyeOff, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
   Plus, Download, Search, X, AlertTriangle, ArrowLeft,
   Layers, Target, BarChart2, Calendar, Wrench,
   Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
@@ -4850,11 +4850,21 @@ function SecaoMinhaCarreira() {
 // ─── Seção: Matriz de Habilidades — Edição (Admin / RH) ──────────────────────
 
 function SecaoMatrizHabilidadesAdmin() {
+  const [tabMatriz, setTabMatriz] = useState(0);
+  const TABS_MATRIZ = [
+    'Visão geral',
+    'Gerenciar habilidades',
+    'Configurar níveis',
+    'Gerenciar cargos',
+    'Toolbar',
+    'Salvar',
+  ];
+
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Matriz de Habilidades — Edição</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Matriz de Habilidades</h1>
       <p className="text-sm text-gray-600 mb-4">
-        Especificação da tela de edição da matriz de habilidades por cargo.
+        Especificação completa da tela de edição da matriz de habilidades por cargo.
         Para as regras de negócio conceituais, consulte Regras de negócio → Jornadas e Matriz.
         Fonte: <code className="bg-gray-100 px-1 rounded text-xs">JornadaDetalhePage.tsx</code>,{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">MatrizCell.tsx</code>,{' '}
@@ -4862,392 +4872,669 @@ function SecaoMatrizHabilidadesAdmin() {
       </p>
       <SectionMeta status="documentado" ultimaAtualizacao="15/06/2026" debitosTecnicos={0} alertas={0} />
 
-      {/* Bloco 1 — Estrutura visual da tabela */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Estrutura visual da tabela</h2>
-        <ul className="space-y-1.5 mb-5">
-          {[
-            'Eixo das linhas: habilidades agrupadas por competência.',
-            'Eixo das colunas: cargos da jornada (mínimo 160px por coluna, scroll horizontal).',
-            'Coluna fixa (sticky left-0 z-10, w-[220px]): nome da habilidade com botão MoreVertical aparece no hover.',
-            'Cabeçalho de cargo: nome truncado + barra de progresso configuradas/total. Verde (#16A34A) quando 100%, âmbar (#F59E0B) quando parcial, cinza (#E5E7EB) quando zero.',
-            'Agrupador de competência: linha de cabeçalho bg-[#F3F4F6] separando grupos — text-xs font-medium text-gray-500 uppercase tracking-wider.',
-            'Alternância de fundo: bg-white (par) / bg-[#F9FAFB] (ímpar) por índice da habilidade filtrada.',
-            'Botão MoreVertical por linha: opacity-0 → opacity-100 no hover do grupo, remove a habilidade via ConfirmationModal.',
-          ].map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-              {r}
-            </li>
-          ))}
-        </ul>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
+        {TABS_MATRIZ.map((label, idx) => (
+          <button
+            key={label}
+            onClick={() => setTabMatriz(idx)}
+            className={`pb-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+              tabMatriz === idx
+                ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-        {/* Mockup estático da tabela */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="sticky left-0 bg-gray-50 w-[200px] px-4 py-3 text-left">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</span>
-                </th>
-                {/* Cargo 1 — completo */}
-                <th className="px-4 py-3 text-center min-w-[160px]">
+      {/* TAB 1 — Visão geral */}
+      {tabMatriz === 0 && (
+        <div>
+          {/* Estrutura visual da tabela */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Estrutura visual da tabela</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Eixo das linhas: habilidades agrupadas por competência.',
+                'Eixo das colunas: cargos da jornada (mínimo 160px por coluna, scroll horizontal).',
+                'Coluna fixa (sticky left-0 z-10, w-[220px]): nome da habilidade com botão MoreVertical aparece no hover.',
+                'Cabeçalho de cargo: nome truncado + barra de progresso configuradas/total. Verde (#16A34A) quando 100%, âmbar (#F59E0B) quando parcial, cinza (#E5E7EB) quando zero.',
+                'Agrupador de competência: linha de cabeçalho bg-[#F3F4F6] separando grupos — text-xs font-medium text-gray-500 uppercase tracking-wider.',
+                'Alternância de fundo: bg-white (par) / bg-[#F9FAFB] (ímpar) por índice da habilidade filtrada.',
+                'Botão MoreVertical por linha: opacity-0 → opacity-100 no hover do grupo, remove a habilidade via ConfirmationModal.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático da tabela */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="sticky left-0 bg-gray-50 w-[200px] px-4 py-3 text-left">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</span>
+                    </th>
+                    {/* Cargo 1 — completo */}
+                    <th className="px-4 py-3 text-center min-w-[160px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Júnior</span>
+                        <div className="w-full flex items-center gap-1.5">
+                          <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: '100%', backgroundColor: '#16A34A' }} />
+                          </div>
+                          <span className="text-[10px] font-medium" style={{ color: '#16A34A' }}>3/3</span>
+                        </div>
+                      </div>
+                    </th>
+                    {/* Cargo 2 — parcial */}
+                    <th className="px-4 py-3 text-center min-w-[160px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Pleno</span>
+                        <div className="w-full flex items-center gap-1.5">
+                          <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: '67%', backgroundColor: '#F59E0B' }} />
+                          </div>
+                          <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>2/3</span>
+                        </div>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Agrupador de competência */}
+                  <tr>
+                    <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Técnica</span>
+                    </td>
+                  </tr>
+                  {/* Linha par — bg-white */}
+                  <tr className="bg-white group">
+                    <td className="sticky left-0 bg-white px-4 py-3 z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-900 flex-1">React</span>
+                        <span className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-300 rounded">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#2563EB' }}>
+                        <div className="px-2.5 py-2 space-y-0.5">
+                          <span className="block text-xs font-semibold leading-tight" style={{ color: '#2563EB' }}>Básico</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 1</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
+                        <div className="px-2.5 py-2 space-y-0.5">
+                          <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Avançado</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 4</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Agrupador segunda competência */}
+                  <tr>
+                    <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Comportamental</span>
+                    </td>
+                  </tr>
+                  {/* Linha ímpar — bg-[#F9FAFB] */}
+                  <tr className="bg-[#F9FAFB]">
+                    <td className="sticky left-0 bg-[#F9FAFB] px-4 py-3 z-10">
+                      <span className="text-sm text-gray-900">Comunicação</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-dashed border-amber-300 text-amber-500">
+                        –
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                        +
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Linha par */}
+                  <tr className="bg-white">
+                    <td className="sticky left-0 bg-white px-4 py-3 z-10">
+                      <span className="text-sm text-gray-900">Trabalho em equipe</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
+                        <div className="px-2.5 py-2 space-y-0.5">
+                          <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Intermediário</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 2</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                        +
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Barra de progresso por cargo */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Barra de progresso por cargo</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Aparece no cabeçalho de cada coluna, abaixo do nome do cargo.',
+                'Mostra configuradas/total de habilidades na forma "N/M".',
+                '"Configuradas" = células com nível definido OU com valor \'not_required\'.',
+                'Cor da barra: #16A34A (verde) quando 100%, #F59E0B (âmbar) quando parcial, #E5E7EB (cinza) quando zero.',
+                'Cor do texto: #16A34A quando 100%, #6B7280 nos demais casos.',
+                'Altura da barra: h-1.5, track bg-[#E5E7EB], borda arredondada.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Dev Júnior', config: 3, total: 3, pct: 100, barColor: '#16A34A', textColor: '#16A34A' },
+                { label: 'Dev Pleno', config: 2, total: 3, pct: 67, barColor: '#F59E0B', textColor: '#6B7280' },
+                { label: 'Dev Sênior', config: 0, total: 3, pct: 0, barColor: '#E5E7EB', textColor: '#6B7280' },
+              ].map(({ label, config, total, pct, barColor, textColor }) => (
+                <div key={label} className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-semibold text-gray-900 mb-3 text-center">{label}</p>
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Júnior</span>
                     <div className="w-full flex items-center gap-1.5">
                       <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: '100%', backgroundColor: '#16A34A' }} />
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                       </div>
-                      <span className="text-[10px] font-medium" style={{ color: '#16A34A' }}>3/3</span>
+                      <span className="text-[10px] font-medium" style={{ color: textColor }}>{config}/{total}</span>
                     </div>
                   </div>
-                </th>
-                {/* Cargo 2 — parcial */}
-                <th className="px-4 py-3 text-center min-w-[160px]">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-sm font-medium text-gray-900 truncate max-w-[130px]">Dev Pleno</span>
-                    <div className="w-full flex items-center gap-1.5">
-                      <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: '67%', backgroundColor: '#F59E0B' }} />
-                      </div>
-                      <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>2/3</span>
-                    </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2 — Gerenciar habilidades */}
+      {tabMatriz === 1 && (
+        <div>
+          {/* Modal Gerenciar habilidades */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Modal — Gerenciar habilidades</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Componente <code className="bg-gray-100 px-1 rounded text-xs">HabilidadesSelectionModal.tsx</code>. Modal centralizado (não drawer): 640px × 80vh, máximo 720px.
+            </p>
+            <ul className="space-y-2 mb-5">
+              {[
+                'Header: título "Gerenciar habilidades" + subtítulo "Marque as habilidades que devem estar na matriz" + botão X.',
+                'Busca: input text com ícone Search à esquerda, foco automático ao abrir.',
+                'Filtros: segmented control Todas/Técnica/Comportamental (bg-gray-100 rounded-lg p-1) + Radix Select por competência.',
+                'Lista agrupada por competência: header sticky bg-gray-50, ChevronDown/Right para collapse individual, contador N/M (brand) ou só N (gray).',
+                '"Selecionar todas" / "Desmarcar todas" por grupo (text-[var(--brand-600)]).',
+                'Item marcado para adicionar: bg-blue-50 hover:bg-blue-100 + checkbox brand preenchido.',
+                'Item marcado para remover: bg-red-50 hover:bg-red-100 + nome text-red-500 line-through + badge "Será removida".',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <div className="border border-gray-200 rounded-lg overflow-hidden mb-5">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Estado do item</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Fundo da linha</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Checkbox</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Botão confirmar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-sm text-gray-900">Desmarcado (não estava)</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">hover:bg-gray-50</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">border-gray-300 vazio</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">—</td>
+                  </tr>
+                  <tr className="bg-blue-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">Marcado para adicionar</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">bg-blue-50</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">bg-[var(--brand-600)] preenchido</td>
+                    <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-[var(--brand-600)] text-white">Adicionar N</span></td>
+                  </tr>
+                  <tr className="bg-red-50">
+                    <td className="px-4 py-3 text-sm text-red-500 line-through">Marcado para remover</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">bg-red-50</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">border-red-300 vazio</td>
+                    <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-red-600 text-white">Remover N</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ul className="space-y-2">
+              {[
+                'Rodapé esquerda: "+N a adicionar · -N a remover" quando há diff; "N habilidades na matriz" quando sem diff.',
+                'Botão confirmar: desabilitado (bg-gray-200) quando sem diff; bg-red-600 quando só remoções; bg-[var(--brand-600)] quando há adições.',
+                'Label do botão: "Adicionar N · Remover N" — exibe apenas as partes com contagem > 0.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Remover habilidade da matriz */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Remover habilidade da matriz</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Botão MoreVertical aparece no hover da linha da habilidade (opacity-0 → opacity-100).',
+                'Menu suspenso com única opção "Remover habilidade" — texto text-red-600, hover:bg-red-50.',
+                'Ao clicar: abre ConfirmationModal com variante danger.',
+                'Ao confirmar: remove o id de habilidadesNaMatriz e limpa todas as entradas da habilidade em matrizNiveis.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+            {/* Mockup do menu de habilidade */}
+            <div className="flex items-start gap-6">
+              <div className="border border-gray-200 rounded-lg overflow-hidden w-64">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr className="bg-white group border-b border-gray-100">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-900 flex-1">TypeScript</span>
+                          <span className="p-0.5 text-gray-400 rounded">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                <button className="w-full px-3 py-2 text-left text-sm text-red-600 bg-red-50 flex items-center gap-2 whitespace-nowrap">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  Remover habilidade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3 — Configurar níveis */}
+      {tabMatriz === 2 && (
+        <div>
+          {/* Estados da célula */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Estados da célula (MatrizCell)</h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-900 mb-3">Vazio (null)</p>
+                <div className="flex justify-center mb-4">
+                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
+                    +
                   </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Agrupador de competência */}
-              <tr>
-                <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Técnica</span>
-                </td>
-              </tr>
-              {/* Linha par — bg-white */}
-              <tr className="bg-white group">
-                <td className="sticky left-0 bg-white px-4 py-3 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-900 flex-1">React</span>
-                    <span className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-300 rounded">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                    </span>
-                  </div>
-                </td>
-                {/* Célula com nível */}
-                <td className="px-4 py-3 text-center">
-                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#2563EB' }}>
-                    <div className="px-2.5 py-2 space-y-0.5">
-                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#2563EB' }}>Básico</span>
-                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 1</span>
-                    </div>
-                  </div>
-                </td>
-                {/* Célula com nível avançado */}
-                <td className="px-4 py-3 text-center">
-                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
-                    <div className="px-2.5 py-2 space-y-0.5">
-                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Avançado</span>
-                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 4</span>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              {/* Agrupador segunda competência */}
-              <tr>
-                <td colSpan={3} className="bg-[#F3F4F6] px-4 py-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Comportamental</span>
-                </td>
-              </tr>
-              {/* Linha ímpar — bg-[#F9FAFB] */}
-              <tr className="bg-[#F9FAFB]">
-                <td className="sticky left-0 bg-[#F9FAFB] px-4 py-3 z-10">
-                  <span className="text-sm text-gray-900">Comunicação</span>
-                </td>
-                {/* Célula não exigida */}
-                <td className="px-4 py-3 text-center">
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    'Valor: null ou undefined',
+                    'Borda dashed #D1D5DB',
+                    'Hover: solid #3B82F6, bg #EFF6FF',
+                    'Nível não configurado',
+                  ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+                </ul>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-900 mb-3">Não exigido ('not_required')</p>
+                <div className="flex justify-center mb-4">
                   <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-dashed border-amber-300 text-amber-500">
                     –
                   </div>
-                </td>
-                {/* Célula vazia */}
-                <td className="px-4 py-3 text-center">
-                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
-                    +
-                  </div>
-                </td>
-              </tr>
-              {/* Linha par */}
-              <tr className="bg-white">
-                <td className="sticky left-0 bg-white px-4 py-3 z-10">
-                  <span className="text-sm text-gray-900">Trabalho em equipe</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    "Valor: 'not_required'",
+                    'Borda dashed amber-300',
+                    'Hover: sólido amber-400',
+                    'Decisão explícita do RH',
+                  ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+                </ul>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-900 mb-3">Com nível definido</p>
+                <div className="mb-4">
+                  <div
+                    className="rounded-lg border border-gray-200 bg-white text-left cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+                    style={{ borderLeftWidth: 3, borderLeftColor: '#5B21B6' }}
+                    title="Especialista: Usa hooks, gerencia estado local e consome APIs REST"
+                  >
                     <div className="px-2.5 py-2 space-y-0.5">
-                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Intermediário</span>
-                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 2</span>
+                      <span className="block text-xs font-semibold leading-tight" style={{ color: '#5B21B6' }}>Especialista</span>
+                      <p className="text-xs text-gray-500 leading-snug line-clamp-3">Usa hooks, gerencia estado local e consome APIs REST</p>
+                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 5</span>
                     </div>
                   </div>
-                </td>
-                {/* Célula vazia */}
-                <td className="px-4 py-3 text-center">
-                  <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
-                    +
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    'Valor: string com nome do nível',
+                    'Borda esquerda: 3px via borderLeftColor',
+                    'Cor via getCorFromPeso(peso)',
+                    'Critério: text-xs text-gray-500 line-clamp-3 (condicional — só aparece se criterio não for vazio)',
+                    'Tooltip: title="Nome do nível: criterio"',
+                    'Hover: border-gray-300 + shadow-sm',
+                  ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
+                </ul>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 italic mt-4">
+              A descrição exibida na célula é o critério específico cadastrado para aquela habilidade naquele nível no módulo Habilidades. Se não houver critério cadastrado, a célula exibe apenas o nome e a progressão.
+            </p>
+          </div>
+
+          {/* Dropdown de seleção */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Dropdown de seleção de nível</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Abre ao clicar em qualquer célula da matriz. Largura fixa 200px, posição <code className="bg-gray-100 px-1 rounded text-xs">absolute top-full mt-1</code>.
+            </p>
+            <div className="flex items-start gap-8 mb-5">
+              <div className="w-[200px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden flex-shrink-0" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+                {[
+                  { nome: 'Básico', peso: 1, cor: '#60A5FA' },
+                  { nome: 'Intermediário', peso: 2, cor: '#2563EB' },
+                  { nome: 'Avançado', peso: 4, cor: '#4338CA' },
+                  { nome: 'Especialista', peso: 5, cor: '#5B21B6' },
+                ].map((n, idx, arr) => (
+                  <div key={n.nome} className={`px-4 py-2.5 flex items-center gap-2 hover:bg-[#F3F4F6] transition-colors ${idx < arr.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap text-white" style={{ backgroundColor: n.cor }}>{n.nome}</span>
+                    <span className="text-xs text-gray-400">{n.peso}</span>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                ))}
+                <div className="border-t border-[#E5E7EB]" />
+                <div className="px-4 py-2.5 flex items-center text-[#374151] text-sm hover:bg-[#FEF9C3] hover:text-[#92400E]">
+                  <span className="whitespace-nowrap">Não exigido neste cargo</span>
+                </div>
+                <div className="border-t border-[#E5E7EB]" />
+                <div className="px-4 py-2.5 flex items-center gap-2 text-[#6B7280] text-sm hover:bg-[#F3F4F6]">
+                  <X className="w-4 h-4" />
+                  <span className="whitespace-nowrap">Remover nível</span>
+                </div>
+              </div>
+
+              <ul className="space-y-2 pt-1">
+                {[
+                  'Itens de nível: badge com cor via getCorFromPeso(peso) + peso em gray-400',
+                  'Separador border-t border-[#E5E7EB] antes de "Não exigido" e antes de "Remover nível"',
+                  '"Não exigido neste cargo": whitespace-nowrap, hover bg-[#FEF9C3] text-[#92400E]',
+                  '"Remover nível": só renderizado se já havia nível (nivel !== null), ícone X lucide',
+                  'Fechar: clique fora via useEffect mousedown no document',
+                ].map((t, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-700">
+                Os níveis disponíveis são os cadastrados para aquela habilidade no módulo Habilidades. Se nenhum nível estiver vinculado, o sistema usa todos os níveis cadastrados como fallback.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Bloco 2 — Estados da célula */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Estados da célula (MatrizCell)</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {/* Estado 1 — Vazio */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-900 mb-3">Vazio (null)</p>
-            <div className="flex justify-center mb-4">
-              <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border border-dashed border-[#D1D5DB] bg-transparent text-[#9CA3AF]">
-                +
+      {/* TAB 4 — Gerenciar cargos */}
+      {tabMatriz === 3 && (
+        <div>
+          {/* Remover cargo da matriz */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Remover cargo da matriz</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Botão MoreVertical no cabeçalho da coluna do cargo (th), sempre visível.',
+                'Menu suspenso com única opção "Remover cargo" — texto text-red-600, ícone Trash2, hover:bg-red-50.',
+                'Posição do dropdown: absolute top-full left-1/2 -translate-x-1/2 mt-1, w-40, z-[200].',
+                'Ao clicar: abre ConfirmationModal antes de remover.',
+                'Ao confirmar: remove o cargo da lista de cargos e limpa todas as entradas do cargo em matrizNiveis.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup do cabeçalho com menu de cargo */}
+            <div className="border border-gray-200 rounded-lg overflow-visible mb-5">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="sticky left-0 bg-gray-50 w-[200px] px-4 py-3 text-left">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</span>
+                    </th>
+                    <th className="px-4 py-3 text-center min-w-[160px] relative">
+                      <div className="flex flex-col items-center">
+                        <div className="flex items-center justify-center gap-0.5 w-full">
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <span className="block text-sm font-medium text-gray-900 truncate">Dev Pleno</span>
+                          </div>
+                          <div className="relative flex-shrink-0 w-5">
+                            <button className="p-0.5 text-gray-500 hover:text-gray-700 rounded transition-colors" title="Opções do cargo">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <div className="absolute top-full right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[200]">
+                              <button className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 whitespace-nowrap">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                Remover cargo
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="w-full mt-2 flex items-center gap-1.5">
+                          <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: '67%', backgroundColor: '#F59E0B' }} />
+                          </div>
+                          <span className="text-[10px] font-medium text-gray-500">2/3</span>
+                        </div>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-700">
+                Adicionar cargos à jornada é feito via "Editar jornada" no menu de 3 pontos do header da página. O MoreVertical no cabeçalho da coluna remove o cargo apenas da visualização da matriz.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5 — Toolbar */}
+      {tabMatriz === 4 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Elementos da toolbar</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Barra de controles acima da matriz (<code className="bg-gray-100 px-1 rounded text-xs">flex items-center gap-3 px-4 py-3 border-b border-gray-200</code>).
+              Busca e filtro à esquerda, gerenciar à direita.
+            </p>
+            <ul className="space-y-2 mb-6">
+              {[
+                'Campo de busca (w-56, flex-shrink-0): ícone Search à esquerda, placeholder "Filtrar habilidades…". Filtra as linhas da matriz por nome da habilidade em tempo real.',
+                'Botão "Habilidades incompletas": toggle (modoCompletude). Ícone Eye/EyeOff. Badge circular (w-5 h-5) com o contador de habilidades que possuem ao menos 1 cargo sem definição. Ao ativar: destaca visualmente as habilidades incompletas.',
+                'flex-1 separador: empurra o botão "Gerenciar habilidades" para a direita.',
+                'Botão "Gerenciar habilidades" (flex-shrink-0): ícone Plus, abre o modal HabilidadesSelectionModal. bg-white border border-gray-300 text-gray-700, hover:bg-gray-50.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup da toolbar */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white">
+                {/* Campo de busca */}
+                <div className="w-56 flex-shrink-0 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    readOnly
+                    placeholder="Filtrar habilidades…"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none bg-white"
+                  />
+                </div>
+
+                {/* Botão modoCompletude — ativo */}
+                <button className="flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border bg-[var(--brand-50)] border-[var(--brand-200)] text-[var(--brand-700)]">
+                  <Eye className="w-4 h-4" />
+                  Habilidades incompletas
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold bg-[var(--brand-100)] text-[var(--brand-700)]">4</span>
+                </button>
+
+                <div className="flex-1" />
+
+                {/* Botão gerenciar */}
+                <button className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                  <Plus className="w-4 h-4" />
+                  Gerenciar habilidades
+                </button>
+              </div>
+              <div className="px-4 py-3 bg-gray-50 text-xs text-gray-400 italic">
+                Tabela da matriz abaixo da toolbar...
               </div>
             </div>
-            <ul className="space-y-1">
-              {[
-                'Valor: null ou undefined',
-                'Borda dashed #D1D5DB',
-                'Hover: solid #3B82F6, bg #EFF6FF',
-                'Nível não configurado',
-              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
-            </ul>
-          </div>
 
-          {/* Estado 2 — Não exigido */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-900 mb-3">Não exigido ('not_required')</p>
-            <div className="flex justify-center mb-4">
-              <div className="w-full inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-dashed border-amber-300 text-amber-500">
-                –
-              </div>
-            </div>
-            <ul className="space-y-1">
-              {[
-                "Valor: 'not_required'",
-                'Borda dashed amber-300',
-                'Hover: sólido amber-400',
-                'Decisão explícita do RH',
-              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
-            </ul>
-          </div>
-
-          {/* Estado 3 — Com nível */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-900 mb-3">Com nível definido</p>
-            <div className="mb-4">
-              <div
-                className="rounded-lg border border-gray-200 bg-white text-left cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
-                style={{ borderLeftWidth: 3, borderLeftColor: '#5B21B6' }}
-                title="Especialista: Usa hooks, gerencia estado local e consome APIs REST"
-              >
-                <div className="px-2.5 py-2 space-y-0.5">
-                  <span className="block text-xs font-semibold leading-tight" style={{ color: '#5B21B6' }}>Especialista</span>
-                  <p className="text-xs text-gray-500 leading-snug line-clamp-3">Usa hooks, gerencia estado local e consome APIs REST</p>
-                  <span className="block text-[10px] text-gray-400 leading-tight">Progressão 5</span>
+            {/* Estados do botão modoCompletude */}
+            <div className="mt-5">
+              <p className="text-xs font-semibold text-gray-700 mb-3">Estados do botão "Habilidades incompletas"</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 mb-3">Inativo (modoCompletude = false)</p>
+                  <button className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border bg-white border-gray-300 text-gray-700">
+                    <Eye className="w-4 h-4" />
+                    Habilidades incompletas
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">4</span>
+                  </button>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 mb-3">Ativo (modoCompletude = true)</p>
+                  <button className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border bg-[var(--brand-50)] border-[var(--brand-200)] text-[var(--brand-700)]">
+                    <EyeOff className="w-4 h-4" />
+                    Habilidades incompletas
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold bg-[var(--brand-100)] text-[var(--brand-700)]">4</span>
+                  </button>
                 </div>
               </div>
             </div>
-            <ul className="space-y-1">
-              {[
-                'Valor: string com nome do nível',
-                'Borda esquerda: 3px via borderLeftColor',
-                'Cor via getCorFromPeso(peso)',
-                'Critério: text-xs text-gray-500 line-clamp-3 (condicional — só aparece se criterio não for vazio)',
-                'Tooltip: title="Nome do nível: criterio"',
-                'Hover: border-gray-300 + shadow-sm',
-              ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
-            </ul>
           </div>
         </div>
+      )}
 
-        <p className="text-xs text-gray-500 italic mt-4">
-          A descrição exibida na célula é o critério específico cadastrado para aquela habilidade naquele nível no módulo Habilidades. Se não houver critério cadastrado, a célula exibe apenas o nome e a progressão.
-        </p>
-      </div>
+      {/* TAB 6 — Salvar */}
+      {tabMatriz === 5 && (
+        <div>
+          {/* Salvamento */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Salvamento</h2>
 
-      {/* Bloco 3 — Dropdown de seleção */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Dropdown de seleção de nível</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Abre ao clicar em qualquer célula da matriz. Largura fixa 200px, posição <code className="bg-gray-100 px-1 rounded text-xs">absolute top-full mt-1</code>.
-        </p>
-        <div className="flex items-start gap-8 mb-5">
-          {/* Mockup do dropdown */}
-          <div className="w-[200px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden flex-shrink-0" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
-            {[
-              { nome: 'Básico', peso: 1, cor: '#60A5FA' },
-              { nome: 'Intermediário', peso: 2, cor: '#2563EB' },
-              { nome: 'Avançado', peso: 4, cor: '#4338CA' },
-              { nome: 'Especialista', peso: 5, cor: '#5B21B6' },
-            ].map((n, idx, arr) => (
-              <div key={n.nome} className={`px-4 py-2.5 flex items-center gap-2 hover:bg-[#F3F4F6] transition-colors ${idx < arr.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap text-white" style={{ backgroundColor: n.cor }}>{n.nome}</span>
-                <span className="text-xs text-gray-400">{n.peso}</span>
+            {/* Mockup visual do rodapé */}
+            <div className="relative rounded-lg overflow-hidden border border-gray-200 mb-5" style={{ height: '120px' }}>
+              <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+                <p className="text-sm text-gray-400">Conteúdo da matriz</p>
               </div>
-            ))}
-            <div className="border-t border-[#E5E7EB]" />
-            <div className="px-4 py-2.5 flex items-center text-[#374151] text-sm hover:bg-[#FEF9C3] hover:text-[#92400E]">
-              <span className="whitespace-nowrap">Não exigido neste cargo</span>
+              <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3">
+                <div className="flex items-center justify-between px-4 md:px-8">
+                  <span className="text-sm text-gray-500">Alterações não salvas</span>
+                  <button className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors">
+                    Salvar alterações
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="border-t border-[#E5E7EB]" />
-            <div className="px-4 py-2.5 flex items-center gap-2 text-[#6B7280] text-sm hover:bg-[#F3F4F6]">
-              <X className="w-4 h-4" />
-              <span>Remover nível</span>
+
+            <ul className="space-y-2 mb-5">
+              {[
+                'Rodapé fixo aparece apenas quando há alterações não salvas (max-h transition: max-h-0 ↔ max-h-20).',
+                '"Alterações não salvas" text-sm text-gray-500 à esquerda.',
+                'Botão "Salvar alterações" bg-[var(--brand-600)] text-white à direita.',
+                'Ao salvar: itera todos os cargos → monta array HabilidadeCargo por cargo → chama atualizarHabilidadesCargo(cargo.id, habilidadesDocargo) no contexto.',
+                'Células null/undefined omitidas (não persistidas).',
+                "Valores 'not_required' e nomes de nível (strings) são salvos como nivelEsperado.",
+                'Persiste em CarreirasContext via localStorage.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-700">
+                Navegar sem salvar descarta todas as alterações da sessão atual.
+              </p>
             </div>
           </div>
 
-          {/* Notas */}
-          <ul className="space-y-2 pt-1">
-            {[
-              'Itens de nível: badge com cor via getCorFromPeso(peso) + peso em gray-400',
-              'Separador border-t border-[#E5E7EB] antes de "Não exigido" e antes de "Remover nível"',
-              '"Não exigido neste cargo": whitespace-nowrap, hover bg-[#FEF9C3] text-[#92400E]',
-              '"Remover nível": só renderizado se já havia nível (nivel !== null), ícone X lucide',
-              'Fechar: clique fora via useEffect mousedown no document',
-            ].map((t, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
-          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-700">
-            Os níveis disponíveis são os cadastrados para aquela habilidade no módulo Habilidades. Se nenhum nível estiver vinculado, o sistema usa todos os níveis cadastrados como fallback.
-          </p>
-        </div>
-      </div>
-
-      {/* Bloco 4 — Modal Gerenciar habilidades */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Modal — Gerenciar habilidades</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Componente <code className="bg-gray-100 px-1 rounded text-xs">HabilidadesSelectionModal.tsx</code>. Modal centralizado (não drawer): 640px × 80vh, máximo 720px.
-        </p>
-        <ul className="space-y-2 mb-5">
-          {[
-            'Header: título "Gerenciar habilidades" + subtítulo "Marque as habilidades que devem estar na matriz" + botão X.',
-            'Busca: input text com ícone Search à esquerda, foco automático ao abrir.',
-            'Filtros: segmented control Todas/Técnica/Comportamental (bg-gray-100 rounded-lg p-1) + Radix Select por competência.',
-            'Lista agrupada por competência: header sticky bg-gray-50, ChevronDown/Right para collapse individual, contador N/M (brand) ou só N (gray).',
-            '"Selecionar todas" / "Desmarcar todas" por grupo (text-[var(--brand-600)]).',
-            'Item marcado para adicionar: bg-blue-50 hover:bg-blue-100 + checkbox brand preenchido.',
-            'Item marcado para remover: bg-red-50 hover:bg-red-100 + nome text-red-500 line-through + badge "Será removida".',
-          ].map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-              {r}
-            </li>
-          ))}
-        </ul>
-
-        <div className="border border-gray-200 rounded-lg overflow-hidden mb-5">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Estado do item</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Fundo da linha</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Checkbox</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Botão confirmar</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr className="bg-white">
-                <td className="px-4 py-3 text-sm text-gray-900">Desmarcado (não estava)</td>
-                <td className="px-4 py-3 text-xs text-gray-500">hover:bg-gray-50</td>
-                <td className="px-4 py-3 text-xs text-gray-500">border-gray-300 vazio</td>
-                <td className="px-4 py-3 text-xs text-gray-500">—</td>
-              </tr>
-              <tr className="bg-blue-50">
-                <td className="px-4 py-3 text-sm text-gray-900">Marcado para adicionar</td>
-                <td className="px-4 py-3 text-xs text-gray-500">bg-blue-50</td>
-                <td className="px-4 py-3 text-xs text-gray-500">bg-[var(--brand-600)] preenchido</td>
-                <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-[var(--brand-600)] text-white">Adicionar N</span></td>
-              </tr>
-              <tr className="bg-red-50">
-                <td className="px-4 py-3 text-sm text-red-500 line-through">Marcado para remover</td>
-                <td className="px-4 py-3 text-xs text-gray-500">bg-red-50</td>
-                <td className="px-4 py-3 text-xs text-gray-500">border-red-300 vazio</td>
-                <td className="px-4 py-3"><span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-lg bg-red-600 text-white">Remover N</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <ul className="space-y-2">
-          {[
-            'Rodapé esquerda: "+N a adicionar · -N a remover" quando há diff; "N habilidades na matriz" quando sem diff.',
-            'Botão confirmar: desabilitado (bg-gray-200) quando sem diff; bg-red-600 quando só remoções; bg-[var(--brand-600)] quando há adições.',
-            'Label do botão: "Adicionar N · Remover N" — exibe apenas as partes com contagem > 0.',
-          ].map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-              {r}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Bloco 5 — Salvamento */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Salvamento</h2>
-        <ul className="space-y-2 mb-5">
-          {[
-            'Rodapé fixo aparece apenas quando há alterações não salvas (max-h transition: max-h-0 ↔ max-h-20).',
-            '"Alterações não salvas" text-sm text-gray-500 à esquerda.',
-            'Botão "Salvar alterações" bg-[var(--brand-600)] text-white à direita.',
-            'Ao salvar: itera todos os cargos → monta array HabilidadeCargo por cargo → chama atualizarHabilidadesCargo(cargo.id, habilidadesDocargo) no contexto.',
-            'Células null/undefined omitidas (não persistidas).',
-            "Valores 'not_required' e nomes de nível (strings) são salvos como nivelEsperado.",
-            'Persiste em CarreirasContext via localStorage.',
-          ].map((r, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-              {r}
-            </li>
-          ))}
-        </ul>
-        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
-          <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-700">
-            Navegar sem salvar descarta todas as alterações da sessão atual.
-          </p>
-        </div>
-      </div>
-
-      {/* Bloco 6 — Importante */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Importante</h2>
-        <div className="space-y-3">
-          <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
-            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-gray-700">
-              Cargos são adicionados ou removidos via "Editar jornada" (menu de 3 pontos no header da página) — não pela matriz. A matriz define apenas os níveis mínimos.
-            </p>
-          </div>
-          <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
-            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-gray-700">
-              <strong>"Não exigido"</strong> e <strong>"não configurado"</strong> são estados distintos:{' '}
-              <em>Não configurado</em> = célula vazia, RH ainda não definiu.{' '}
-              <em>Não exigido</em> = decisão explícita do RH de que a habilidade não é necessária neste cargo.
-            </p>
+          {/* Avisos importantes */}
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Importante</h2>
+            <div className="space-y-3">
+              <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">
+                  Cargos são adicionados ou removidos via "Editar jornada" (menu de 3 pontos no header da página) — não pela matriz. A matriz define apenas os níveis mínimos.
+                </p>
+              </div>
+              <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">
+                  <strong>"Não exigido"</strong> e <strong>"não configurado"</strong> são estados distintos:{' '}
+                  <em>Não configurado</em> = célula vazia, RH ainda não definiu.{' '}
+                  <em>Não exigido</em> = decisão explícita do RH de que a habilidade não é necessária neste cargo.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

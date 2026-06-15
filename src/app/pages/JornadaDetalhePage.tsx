@@ -673,7 +673,7 @@ function JornadaDetalheContent() {
                                       setOpenCargoMenu(null);
                                       handleExcluirCargo(cargo);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 whitespace-nowrap"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                     Remover cargo
@@ -759,7 +759,7 @@ function JornadaDetalheContent() {
                                         setOpenHabilidadeMenu(null);
                                         setHabilidadeParaRemover({ id: hab.id, nome: hab.nome });
                                       }}
-                                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 whitespace-nowrap"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                       Remover habilidade

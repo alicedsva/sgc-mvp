@@ -162,7 +162,7 @@ export function MatrizCell({ nivel, onChange, niveisAplicaveis }: MatrizCellProp
                 className="w-full px-4 py-2.5 flex items-center gap-2 text-[#6B7280] text-sm hover:bg-[#F3F4F6] transition-colors"
               >
                 <X className="w-4 h-4" />
-                <span>Remover nível</span>
+                <span className="whitespace-nowrap">Remover nível</span>
               </button>
             </>
           )}
