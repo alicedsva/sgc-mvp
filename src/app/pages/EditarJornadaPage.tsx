@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Search, X, GripVertical, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
+import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
 import { carreirasData } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { cargosDisponiveisRM } from '@/app/data/cargosRM';
 import { toast } from 'sonner';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DraggableCargo } from '@/app/components/ui/DraggableCargo';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -20,82 +22,10 @@ interface CargoDisponivel {
 
 interface CargoSelecionadoItem {
   id: string;
+  contextId?: string; // ID real do cargo no contexto — preservado para cargos pré-existentes
   nome: string;
   categoria: string;
   ordem: number;
-}
-
-const cargosDisponiveisRM: CargoDisponivel[] = [
-  { id: 'rm1', nome: 'Desenvolvedor Junior', categoria: 'Tecnologia' },
-  { id: 'rm2', nome: 'Desenvolvedor Pleno', categoria: 'Tecnologia' },
-  { id: 'rm3', nome: 'Desenvolvedor Sênior', categoria: 'Tecnologia' },
-  { id: 'rm4', nome: 'Tech Lead', categoria: 'Tecnologia' },
-  { id: 'rm5', nome: 'Arquiteto de Software', categoria: 'Tecnologia' },
-  { id: 'rm6', nome: 'Analista de Infraestrutura Junior', categoria: 'Tecnologia' },
-  { id: 'rm7', nome: 'Analista de Infraestrutura Pleno', categoria: 'Tecnologia' },
-  { id: 'rm8', nome: 'Analista de Infraestrutura Sênior', categoria: 'Tecnologia' },
-  { id: 'rm9', nome: 'Analista de Dados Junior', categoria: 'Tecnologia' },
-  { id: 'rm10', nome: 'Analista de Dados Pleno', categoria: 'Tecnologia' },
-  { id: 'rm11', nome: 'Analista de Dados Sênior', categoria: 'Tecnologia' },
-  { id: 'rm12', nome: 'Engenheiro de Software Junior', categoria: 'Tecnologia' },
-  { id: 'rm13', nome: 'Engenheiro de Software Pleno', categoria: 'Tecnologia' },
-  { id: 'rm14', nome: 'Engenheiro de Software Sênior', categoria: 'Tecnologia' },
-  { id: 'rm15', nome: 'Product Manager Junior', categoria: 'Produto' },
-  { id: 'rm16', nome: 'Product Manager Pleno', categoria: 'Produto' },
-  { id: 'rm17', nome: 'Product Manager Sênior', categoria: 'Produto' },
-];
-
-const DRAG_TYPE = 'CARGO_SELECIONADO';
-
-interface DraggableCargoProps {
-  cargo: CargoSelecionadoItem;
-  index: number;
-  moveCargo: (fromIndex: number, toIndex: number) => void;
-  onRemove: (id: string) => void;
-}
-
-function DraggableCargo({ cargo, index, moveCargo, onRemove }: DraggableCargoProps) {
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: DRAG_TYPE,
-    item: { index },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
-
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (item: { index: number }) => {
-      if (item.index !== index) {
-        moveCargo(item.index, index);
-        item.index = index;
-      }
-    },
-  });
-
-  return (
-    <div
-      ref={(node) => preview(drop(node))}
-      className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg transition-opacity ${isDragging ? 'opacity-40' : ''}`}
-    >
-      <div ref={drag} className="cursor-move text-gray-300 hover:text-gray-500 transition-colors">
-        <GripVertical className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900 truncate">{cargo.nome}</div>
-        <div className="text-xs text-gray-400">{cargo.categoria}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded tabular-nums">
-          #{index + 1}
-        </span>
-        <button
-          onClick={() => onRemove(cargo.id)}
-          className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function EditarJornadaPageContent() {
@@ -112,6 +42,7 @@ function EditarJornadaPageContent() {
     const rmMatch = cargosDisponiveisRM.find(rm => rm.nome === cargo.cargoRM);
     return {
       id: rmMatch?.id || `existing-${cargo.id}`,
+      contextId: cargo.id,
       nome: cargo.cargoRM,
       categoria: rmMatch?.categoria || 'Tecnologia',
       ordem: index,
@@ -124,6 +55,7 @@ function EditarJornadaPageContent() {
   );
   const [buscaCargo, setBuscaCargo] = useState('');
   const [cargosSelecionados, setCargosSelecionados] = useState<CargoSelecionadoItem[]>(cargosIniciais);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const cargosFiltrados = cargosDisponiveisRM.filter(cargo =>
     cargo.nome.toLowerCase().includes(buscaCargo.toLowerCase())
@@ -133,10 +65,12 @@ function EditarJornadaPageContent() {
 
   const handleAdicionarCargo = (cargo: CargoDisponivel) => {
     setCargosSelecionados(prev => [...prev, { ...cargo, ordem: prev.length }]);
+    setHasUnsavedChanges(true);
   };
 
   const handleRemoverCargo = (cargoId: string) => {
     setCargosSelecionados(prev => prev.filter(c => c.id !== cargoId));
+    setHasUnsavedChanges(true);
   };
 
   const moveCargo = (fromIndex: number, toIndex: number) => {
@@ -144,6 +78,7 @@ function EditarJornadaPageContent() {
     const [moved] = newList.splice(fromIndex, 1);
     newList.splice(toIndex, 0, moved);
     setCargosSelecionados(newList);
+    setHasUnsavedChanges(true);
   };
 
   const handleSalvar = () => {
@@ -156,14 +91,19 @@ function EditarJornadaPageContent() {
       quantidadeCargos: cargosSelecionados.length,
     });
 
-    const novosCargos = cargosSelecionados.map((cargo, index) => ({
-      id: generateId('cargo'),
-      jornadaId: jornadaId!,
-      cargoRM: cargo.nome,
-      ordem: ['Júnior', 'Pleno', 'Sênior', 'Especialista'][index] || 'Júnior',
-      habilidadesConfiguradas: 0,
-      status: 'Pendente',
-    }));
+    const novosCargos = cargosSelecionados.map((cargo, index) => {
+      const existingCargo = cargo.contextId
+        ? cargosExistentes.find(c => c.id === cargo.contextId)
+        : null;
+      return {
+        id: cargo.contextId ?? generateId('cargo'),
+        jornadaId: jornadaId!,
+        cargoRM: cargo.nome,
+        ordem: String(index + 1),
+        habilidadesConfiguradas: existingCargo?.habilidadesConfiguradas ?? 0,
+        status: existingCargo?.status ?? 'Pendente',
+      };
+    });
 
     atualizarCargosJornada(jornadaId!, novosCargos);
     toast.success('Jornada atualizada com sucesso!');
@@ -222,7 +162,7 @@ function EditarJornadaPageContent() {
                 <input
                   type="text"
                   value={nomeJornada}
-                  onChange={(e) => setNomeJornada(e.target.value)}
+                  onChange={(e) => { setNomeJornada(e.target.value); setHasUnsavedChanges(true); }}
                   placeholder="Ex: Desenvolvedor"
                   className="w-full max-w-md px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[var(--brand-500)] focus:border-[var(--brand-500)] outline-none"
                 />
@@ -256,7 +196,7 @@ function EditarJornadaPageContent() {
                         name="tipoJornada"
                         value={value}
                         checked={tipoJornada === value}
-                        onChange={(e) => setTipoJornada(e.target.value as 'Contribuidor Individual' | 'Gestão')}
+                        onChange={(e) => { setTipoJornada(e.target.value as 'Contribuidor Individual' | 'Gestão'); setHasUnsavedChanges(true); }}
                         className="w-4 h-4 mt-0.5 text-[var(--brand-600)] focus:ring-2 focus:ring-[var(--brand-500)]"
                       />
                       <div>
@@ -435,8 +375,8 @@ function EditarJornadaPageContent() {
         </div>
       </div>
 
-      {/* Rodapé — fora da área de scroll */}
-      <div className="bg-white border-t border-gray-200 px-4 md:px-8 py-4">
+      {/* Rodapé — aparece ao detectar alterações não salvas */}
+      <div className={`bg-white border-t border-gray-200 px-4 md:px-8 overflow-hidden transition-all duration-300 ${hasUnsavedChanges ? 'max-h-24 py-4' : 'max-h-0 py-0'}`}>
         <div className="flex items-center justify-end gap-3">
           <button
             onClick={handleCancelar}

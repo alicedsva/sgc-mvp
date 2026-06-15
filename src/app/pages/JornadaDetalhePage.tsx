@@ -3,6 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { carreirasData, habilidadesData, niveisDefaultData, getCorFromPeso } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { cargosDisponiveisRM } from '@/app/data/cargosRM';
 import { SelectionDrawer, SelectionItem } from '../components/templates/SelectionDrawer';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
@@ -39,25 +40,6 @@ interface HabilidadeCargo {
   categoria: string;
   nivelEsperado: string;
 }
-
-// Lista mockada de cargos disponíveis
-const cargosDisponiveisRM: CargoDisponivel[] = [
-  { id: 'rm1', nome: 'Desenvolvedor Junior', categoria: 'Tecnologia' },
-  { id: 'rm2', nome: 'Desenvolvedor Pleno', categoria: 'Tecnologia' },
-  { id: 'rm3', nome: 'Desenvolvedor Sênior', categoria: 'Tecnologia' },
-  { id: 'rm4', nome: 'Tech Lead', categoria: 'Tecnologia' },
-  { id: 'rm5', nome: 'Arquiteto de Software', categoria: 'Tecnologia' },
-  { id: 'rm6', nome: 'Analista de Infraestrutura Junior', categoria: 'Tecnologia' },
-  { id: 'rm7', nome: 'Analista de Infraestrutura Pleno', categoria: 'Tecnologia' },
-  { id: 'rm8', nome: 'Analista de Infraestrutura Sênior', categoria: 'Tecnologia' },
-  { id: 'rm9', nome: 'Analista de Dados Junior', categoria: 'Tecnologia' },
-  { id: 'rm10', nome: 'Analista de Dados Pleno', categoria: 'Tecnologia' },
-  { id: 'rm11', nome: 'Analista de Dados Sênior', categoria: 'Tecnologia' },
-  { id: 'rm12', nome: 'Product Manager Junior', categoria: 'Produto' },
-  { id: 'rm13', nome: 'Product Manager Pleno', categoria: 'Produto' },
-  { id: 'rm14', nome: 'Product Manager Sênior', categoria: 'Produto' },
-];
-
 
 function JornadaDetalheContent() {
   const { carreiraId, jornadaId } = useParams();
@@ -232,13 +214,13 @@ function JornadaDetalheContent() {
 
   // Adicionar cargos
   const handleAdicionarCargos = (selectedIds: string[]) => {
-    const novosCargos: Cargo[] = selectedIds.map((cargoRmId) => {
+    const novosCargos: Cargo[] = selectedIds.map((cargoRmId, index) => {
       const cargoRM = cargosDisponiveisRM.find(c => c.id === cargoRmId);
       return {
         id: generateId('cargo'),
         jornadaId: jornadaId!,
         cargoRM: cargoRM?.nome || '',
-        ordem: 'Júnior',
+        ordem: String(cargos.length + index + 1),
         habilidadesConfiguradas: 0,
         status: 'Pendente',
       };

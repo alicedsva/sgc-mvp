@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Search, X, GripVertical, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
+import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
 import * as amplitude from '@amplitude/unified';
 import { carreirasData } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { cargosDisponiveisRM } from '@/app/data/cargosRM';
 import { toast } from 'sonner';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DraggableCargo } from '@/app/components/ui/DraggableCargo';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -24,79 +26,6 @@ interface CargoSelecionadoItem {
   nome: string;
   categoria: string;
   ordem: number;
-}
-
-const cargosDisponiveisRM: CargoDisponivel[] = [
-  { id: 'rm1', nome: 'Desenvolvedor Junior', categoria: 'Tecnologia' },
-  { id: 'rm2', nome: 'Desenvolvedor Pleno', categoria: 'Tecnologia' },
-  { id: 'rm3', nome: 'Desenvolvedor Sênior', categoria: 'Tecnologia' },
-  { id: 'rm4', nome: 'Tech Lead', categoria: 'Tecnologia' },
-  { id: 'rm5', nome: 'Arquiteto de Software', categoria: 'Tecnologia' },
-  { id: 'rm6', nome: 'Analista de Infraestrutura Junior', categoria: 'Tecnologia' },
-  { id: 'rm7', nome: 'Analista de Infraestrutura Pleno', categoria: 'Tecnologia' },
-  { id: 'rm8', nome: 'Analista de Infraestrutura Sênior', categoria: 'Tecnologia' },
-  { id: 'rm9', nome: 'Analista de Dados Junior', categoria: 'Tecnologia' },
-  { id: 'rm10', nome: 'Analista de Dados Pleno', categoria: 'Tecnologia' },
-  { id: 'rm11', nome: 'Analista de Dados Sênior', categoria: 'Tecnologia' },
-  { id: 'rm12', nome: 'Engenheiro de Software Junior', categoria: 'Tecnologia' },
-  { id: 'rm13', nome: 'Engenheiro de Software Pleno', categoria: 'Tecnologia' },
-  { id: 'rm14', nome: 'Engenheiro de Software Sênior', categoria: 'Tecnologia' },
-  { id: 'rm15', nome: 'Product Manager Junior', categoria: 'Produto' },
-  { id: 'rm16', nome: 'Product Manager Pleno', categoria: 'Produto' },
-  { id: 'rm17', nome: 'Product Manager Sênior', categoria: 'Produto' },
-];
-
-const DRAG_TYPE = 'CARGO_SELECIONADO';
-
-interface DraggableCargoProps {
-  cargo: CargoSelecionadoItem;
-  index: number;
-  moveCargo: (fromIndex: number, toIndex: number) => void;
-  onRemove: (id: string) => void;
-}
-
-function DraggableCargo({ cargo, index, moveCargo, onRemove }: DraggableCargoProps) {
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: DRAG_TYPE,
-    item: { index },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
-
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (item: { index: number }) => {
-      if (item.index !== index) {
-        moveCargo(item.index, index);
-        item.index = index;
-      }
-    },
-  });
-
-  return (
-    <div
-      ref={(node) => preview(drop(node))}
-      className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg transition-opacity ${isDragging ? 'opacity-40' : ''}`}
-    >
-      <div ref={drag} className="cursor-move text-gray-300 hover:text-gray-500 transition-colors">
-        <GripVertical className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900 truncate">{cargo.nome}</div>
-        <div className="text-xs text-gray-400">{cargo.categoria}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded tabular-nums">
-          #{index + 1}
-        </span>
-        <button
-          onClick={() => onRemove(cargo.id)}
-          className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function CriarJornadaPageContent() {
@@ -162,7 +91,7 @@ function CriarJornadaPageContent() {
       id: generateId('cargo'),
       jornadaId: novaJornada.id,
       cargoRM: cargo.nome,
-      ordem: ['Júnior', 'Pleno', 'Sênior', 'Especialista'][index] || 'Júnior',
+      ordem: String(index + 1),
       habilidadesConfiguradas: 0,
       status: 'Pendente',
     }));

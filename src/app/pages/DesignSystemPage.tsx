@@ -37,6 +37,7 @@ type SectionId =
   | 'regras/badges-status'
   | 'regras/jornadas-e-matriz'
   | 'telas-admin/matriz-habilidades'
+  | 'telas-admin/criar-editar-jornada'
   | 'colaborador/meu-perfil'
   | 'colaborador/minhas-avaliacoes'
   | 'colaborador/minha-carreira';
@@ -103,6 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
         id: 'telas-admin',
         items: [
           { id: 'telas-admin/matriz-habilidades', label: 'Matriz de Habilidades' },
+          { id: 'telas-admin/criar-editar-jornada', label: 'Criar / Editar Jornada' },
         ],
       },
       {
@@ -4847,6 +4849,411 @@ function SecaoMinhaCarreira() {
     </div>
   );
 }
+// ─── Seção: Criar e Editar Jornada (Admin / RH) ───────────────────────────────
+
+function SecaoCriarEditarJornada() {
+  const [tabJornada, setTabJornada] = useState(0);
+  const TABS_JORNADA = [
+    'Visão geral',
+    'Nome e modelo',
+    'Seleção de cargos',
+    'Progressão',
+    'Diferenças Criar vs Editar',
+  ];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Criar e Editar Jornada</h1>
+      <p className="text-sm text-gray-600 mb-4">
+        Especificação das telas de criação e edição de jornada de carreira.
+        Fonte:{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">CriarJornadaPage.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">EditarJornadaPage.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">DraggableCargo.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">cargosRM.ts</code>.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="15/06/2026" debitosTecnicos={0} alertas={0} />
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
+        {TABS_JORNADA.map((label, idx) => (
+          <button
+            key={label}
+            onClick={() => setTabJornada(idx)}
+            className={`pb-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+              tabJornada === idx
+                ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB 1 — Visão geral */}
+      {tabJornada === 0 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Estrutura da página</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Página única com scroll vertical — não é wizard.',
+                'Todos os blocos são renderizados simultaneamente, não há etapas.',
+                'Bloco 1 — Nome da jornada + Modelo de evolução.',
+                'Bloco 2 — Seleção de cargos: grid 2 colunas (lista disponível + lista selecionada).',
+                'Bloco 3 — Progressão da jornada: preview read-only dos cargos na ordem definida.',
+                'Rodapé condicional: aparece via transição max-h apenas quando há alterações não salvas.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--brand-700)]">
+                A tela de Editar Jornada é uma página separada — não um drawer. O usuário navega para{' '}
+                <code className="bg-[var(--brand-100)] px-1 rounded text-xs">/carreiras/:id/jornadas/:id/editar</code>{' '}
+                ao clicar em "Editar jornada" no menu de 3 pontos do header da página de detalhe.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2 — Nome e modelo */}
+      {tabJornada === 1 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Bloco 1 — Nome e modelo de evolução</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Campo "Nome da jornada": input text, max-w-md, placeholder "Ex: Desenvolvedor", obrigatório.',
+                'Validação: toast.error ao submeter com campo vazio.',
+                'Campo "Modelo de evolução": radio cards com 2 opções — Contribuidor Individual (default) e Gestão.',
+                'Tooltip via HelpCircle no hover: "O modelo define a natureza da progressão: técnica, de liderança ou especialização estratégica."',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático do bloco */}
+            <div className="border border-gray-200 rounded-lg p-6 bg-white">
+              <h3 className="text-base font-medium text-gray-900 mb-1">Modelo de evolução</h3>
+              <p className="text-sm text-gray-500 mb-6">Defina o nome da jornada e seu modelo de evolução</p>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome da jornada
+                  </label>
+                  <input
+                    readOnly
+                    value="Desenvolvedor"
+                    className="w-full max-w-md px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <label className="text-sm font-medium text-gray-700">Modelo de evolução</label>
+                    <div className="relative group/tip">
+                      <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                      <div className="absolute left-5 top-0 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 hidden group-hover/tip:block z-10 shadow-lg">
+                        O modelo define a natureza da progressão: técnica, de liderança ou especialização estratégica.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    <div className="flex items-start gap-3 p-4 border-2 border-[var(--brand-500)] bg-[var(--brand-50)] rounded-lg cursor-pointer flex-1 max-w-xs">
+                      <div className="w-4 h-4 mt-0.5 rounded-full border-2 border-[var(--brand-600)] flex items-center justify-center flex-shrink-0">
+                        <div className="w-2 h-2 rounded-full bg-[var(--brand-600)]" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Contribuidor Individual</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Atuação técnica com foco em especialização</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer flex-1 max-w-xs hover:border-gray-300">
+                      <div className="w-4 h-4 mt-0.5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Gestão</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Liderança de pessoas e desenvolvimento de times</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3 — Seleção de cargos */}
+      {tabJornada === 2 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Bloco 2 — Seleção de cargos</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Layout: grid 2 colunas — cargos disponíveis (esquerda) e cargos selecionados (direita).',
+                'Lista esquerda: campo de busca filtra em tempo real os 17 cargos de cargosRM.ts.',
+                'Cargo já selecionado: desabilitado (bg-gray-50, cursor-default) com ícone Check.',
+                'Clique em cargo disponível: move para a lista direita imediatamente.',
+                'Lista direita: cada item é um DraggableCargo — grip handle + nome + categoria + badge #N + botão X.',
+                'Drag-and-drop via react-dnd (HTML5Backend) para reordenar a lista selecionada.',
+                '"Arraste para reordenar" aparece ao lado do contador quando há ≥1 cargo selecionado.',
+                'Validação: toast.error ao submeter sem nenhum cargo selecionado.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático do grid */}
+            <div className="border border-gray-200 rounded-lg p-6 bg-white">
+              <h3 className="text-base font-medium text-gray-900 mb-1">Seleção de cargos</h3>
+              <p className="text-sm text-gray-500 mb-6">Selecione os cargos e defina a ordem de progressão de carreira</p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Coluna esquerda */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Cargos disponíveis</h4>
+                    <span className="text-xs text-gray-400">14 cargos</span>
+                  </div>
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input readOnly value="" placeholder="Buscar cargo…" className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-white outline-none" />
+                  </div>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="divide-y divide-gray-100">
+                      {[
+                        { nome: 'Desenvolvedor Junior', cat: 'Tecnologia', selecionado: true },
+                        { nome: 'Desenvolvedor Pleno', cat: 'Tecnologia', selecionado: true },
+                        { nome: 'Desenvolvedor Sênior', cat: 'Tecnologia', selecionado: true },
+                        { nome: 'Tech Lead', cat: 'Tecnologia', selecionado: false },
+                        { nome: 'Arquiteto de Software', cat: 'Tecnologia', selecionado: false },
+                      ].map(({ nome, cat, selecionado }) => (
+                        <div
+                          key={nome}
+                          className={`flex items-center justify-between px-4 py-3 ${selecionado ? 'bg-gray-50' : 'bg-white'}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-sm truncate ${selecionado ? 'text-gray-400' : 'text-gray-900'}`}>{nome}</div>
+                            <div className="text-xs text-gray-400">{cat}</div>
+                          </div>
+                          {selecionado
+                            ? <svg className="w-4 h-4 text-[var(--brand-500)] flex-shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            : <Plus className="w-4 h-4 text-green-600 flex-shrink-0 ml-2 opacity-50" />
+                          }
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coluna direita */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Cargos selecionados</h4>
+                    <span className="text-xs font-medium text-[var(--brand-700)] bg-[var(--brand-50)] px-2 py-0.5 rounded">3 cargos</span>
+                    <span className="text-xs text-gray-400">· Arraste para reordenar</span>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg bg-gray-50 p-3 space-y-2">
+                    {[
+                      { nome: 'Desenvolvedor Junior', cat: 'Tecnologia', n: 1 },
+                      { nome: 'Desenvolvedor Pleno', cat: 'Tecnologia', n: 2 },
+                      { nome: 'Desenvolvedor Sênior', cat: 'Tecnologia', n: 3 },
+                    ].map(({ nome, cat, n }) => (
+                      <div key={nome} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                        <div className="cursor-move text-gray-300">
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/></svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{nome}</div>
+                          <div className="text-xs text-gray-400">{cat}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">#{n}</span>
+                          <button className="p-1 text-gray-300 hover:text-red-500 rounded">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4 — Progressão */}
+      {tabJornada === 3 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Bloco 3 — Progressão da jornada</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Preview visual read-only dos cargos selecionados na ordem definida.',
+                'Renderizado como nós conectados em sequência horizontal com overflow-x-auto.',
+                'Atualiza em tempo real conforme cargos são adicionados ou reordenados.',
+                'Somente leitura — o usuário não interage diretamente com este bloco.',
+                'Nó inicial: preenchido bg-[var(--brand-600)] com badge "Início". Nó final: borda brand com badge "Topo".',
+                'Nós intermediários: borda cinza (border-gray-300) com número central.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático com 3 cargos */}
+            <div className="border border-gray-200 rounded-lg p-6 bg-white">
+              <h3 className="text-base font-medium text-gray-900 mb-1">Progressão da jornada</h3>
+              <p className="text-sm text-gray-500 mb-6">Como a trilha ficará visível para os colaboradores</p>
+
+              <div className="overflow-x-auto">
+                <div className="flex items-start gap-0 pb-2 min-w-max">
+                  {[
+                    { nome: 'Dev Junior', cat: 'Tecnologia', isFirst: true, isLast: false },
+                    { nome: 'Dev Pleno', cat: 'Tecnologia', isFirst: false, isLast: false },
+                    { nome: 'Dev Sênior', cat: 'Tecnologia', isFirst: false, isLast: true },
+                  ].map(({ nome, cat, isFirst, isLast }, index) => (
+                    <div key={nome} className="flex items-start">
+                      <div className="flex flex-col items-center w-28">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 ${
+                          isFirst
+                            ? 'bg-[var(--brand-600)] border-[var(--brand-600)] text-white'
+                            : isLast
+                            ? 'bg-white border-[var(--brand-600)] text-[var(--brand-600)]'
+                            : 'bg-white border-gray-300 text-gray-500'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="mt-2 text-center px-1">
+                          <div className="text-xs font-medium text-gray-900 leading-tight">{nome}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">{cat}</div>
+                        </div>
+                        {isFirst && (
+                          <span className="mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--brand-100)] text-[var(--brand-700)]">
+                            Início
+                          </span>
+                        )}
+                        {isLast && (
+                          <span className="mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500">
+                            Topo
+                          </span>
+                        )}
+                      </div>
+                      {!isLast && (
+                        <div className="flex items-center mt-4 flex-shrink-0">
+                          <div className="w-6 h-px bg-gray-300" />
+                          <ChevronRight className="w-3 h-3 text-gray-300 -ml-1" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5 — Diferenças Criar vs Editar */}
+      {tabJornada === 4 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Diferenças entre Criar e Editar</h2>
+
+            <div className="border border-gray-200 rounded-lg overflow-hidden mb-6">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Aspecto</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Criar</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Editar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {[
+                    {
+                      aspecto: 'Rota',
+                      criar: '/carreiras/:id/jornadas/criar',
+                      editar: '/carreiras/:id/jornadas/:id/editar',
+                      mono: true,
+                    },
+                    {
+                      aspecto: 'Rodapé',
+                      criar: 'Aparece ao selecionar ≥1 cargo',
+                      editar: 'Aparece ao alterar qualquer campo',
+                      mono: false,
+                    },
+                    {
+                      aspecto: 'Botão de ação',
+                      criar: '"Criar jornada"',
+                      editar: '"Salvar alterações"',
+                      mono: false,
+                    },
+                    {
+                      aspecto: 'Pré-preenchimento',
+                      criar: 'Campos vazios',
+                      editar: 'Dados da jornada existente',
+                      mono: false,
+                    },
+                    {
+                      aspecto: 'IDs dos cargos',
+                      criar: 'Sempre novos (generateId)',
+                      editar: 'Mantém IDs existentes, gera só para novos',
+                      mono: false,
+                    },
+                    {
+                      aspecto: 'Cancelar',
+                      criar: 'Volta para a carreira',
+                      editar: 'Volta para o detalhe da jornada',
+                      mono: false,
+                    },
+                  ].map(({ aspecto, criar, editar, mono }) => (
+                    <tr key={aspecto} className="bg-white">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{aspecto}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {mono ? <code className="bg-gray-100 px-1 rounded text-xs">{criar}</code> : criar}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {mono ? <code className="bg-gray-100 px-1 rounded text-xs">{editar}</code> : editar}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--brand-700)]">
+                Ao editar e salvar, os IDs dos cargos existentes são preservados — a configuração da matriz de habilidades não é perdida.
+                Apenas cargos novos adicionados durante a edição recebem novos IDs.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Seção: Matriz de Habilidades — Edição (Admin / RH) ──────────────────────
 
 function SecaoMatrizHabilidadesAdmin() {
@@ -5560,6 +5967,7 @@ const IMPLEMENTED: SectionId[] = [
   'regras/badges-status',
   'regras/jornadas-e-matriz',
   'telas-admin/matriz-habilidades',
+  'telas-admin/criar-editar-jornada',
   'padroes/navegacao',
   'padroes/mensagens-orientacao',
   'padroes/estados-vazios',
@@ -5669,7 +6077,7 @@ export default function DesignSystemPage() {
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
-                  <p className="text-sm font-semibold leading-tight">22</p>
+                  <p className="text-sm font-semibold leading-tight">23</p>
                 </div>
               </div>
               <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
@@ -5746,6 +6154,34 @@ export default function DesignSystemPage() {
               </table>
             </div>
 
+            <p className="text-sm font-medium text-gray-700 mb-3">Especificação de Telas — Admin / RH</p>
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Tela</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {([
+                    { tela: 'Matriz de Habilidades',  sectionId: 'telas-admin/matriz-habilidades'    as SectionId },
+                    { tela: 'Criar / Editar Jornada', sectionId: 'telas-admin/criar-editar-jornada'  as SectionId },
+                  ] as const).map(({ tela, sectionId }) => (
+                    <tr key={tela} className="bg-white hover:bg-gray-50 cursor-pointer" onClick={() => setActiveSection(sectionId)}>
+                      <td className="px-4 py-3 text-sm text-[var(--brand-600)] font-medium">{tela}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Documentado
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               {QUICK_ACCESS.map((card) => {
                 const Icon = card.icon;
@@ -5789,6 +6225,7 @@ export default function DesignSystemPage() {
         {activeSection === 'regras/badges-status' && <SecaoBadgesStatus />}
         {activeSection === 'regras/jornadas-e-matriz' && <SecaoJornadasEMatriz />}
         {activeSection === 'telas-admin/matriz-habilidades' && <SecaoMatrizHabilidadesAdmin />}
+        {activeSection === 'telas-admin/criar-editar-jornada' && <SecaoCriarEditarJornada />}
         {activeSection === 'padroes/navegacao' && <SecaoNavegacao />}
         {activeSection === 'padroes/mensagens-orientacao' && <SecaoMensagensOrientacao />}
         {activeSection === 'padroes/estados-vazios' && <SecaoEstadosVazios />}
