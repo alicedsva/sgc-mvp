@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import {
   habilidadesData,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   niveisDefaultData,
   benchmarkCargosData,
   habilidadesCargoDataBenchmark,
@@ -82,11 +82,10 @@ export default function TesterBenchmarkPage() {
     setSelectedSenioridade('');
   }
 
-  const joaoAvs = useMemo(
-    () => avaliacoesColaboradoresData.filter(a => a.colaboradorId === JOAO_ID),
+  const mapaJoao = useMemo(
+    () => getHabilidadesAvaliadasColaborador(JOAO_ID),
     [],
   );
-  const mapaJoao = useMemo(() => new Map(joaoAvs.map(a => [a.habilidadeId, a.nivelAtual])), [joaoAvs]);
 
   const cargoSelecionado = useMemo(
     () => cargoId ? benchmarkCargosData.find(c => c.id === cargoId) ?? null : null,

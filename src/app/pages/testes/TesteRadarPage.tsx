@@ -19,7 +19,7 @@ import {
 } from '../../components/ui/select';
 import {
   habilidadesData,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   niveisDefaultData,
   benchmarkCargosData,
   habilidadesCargoDataBenchmark,
@@ -172,8 +172,8 @@ export default function TesteRadarPage() {
     setSelectedSenioridade('');
   }
 
-  const joaoAvs = useMemo(
-    () => avaliacoesColaboradoresData.filter(a => a.colaboradorId === JOAO_ID),
+  const mapaJoao = useMemo(
+    () => getHabilidadesAvaliadasColaborador(JOAO_ID),
     [],
   );
 
@@ -190,16 +190,15 @@ export default function TesteRadarPage() {
 
   // Cálculo central: mapas de João, cargo e dados para tooltip
   const computedMaps = useMemo(() => {
-    const mapaAv = new Map(joaoAvs.map(a => [a.habilidadeId, a.nivelAtual]));
     const mapCargoAll   = new Map<string, { soma: number; count: number }>();
     const mapJoaoAll    = new Map<string, { soma: number; count: number }>();
     const tooltipAbaixo = new Map<string, number>();
 
     // Pass 1: todas as avaliações de João (tipo filtrado)
-    for (const av of joaoAvs) {
-      const hab = habilidadesData.find(h => h.id === av.habilidadeId);
+    for (const [habilidadeId, nivelAtual] of mapaJoao) {
+      const hab = habilidadesData.find(h => h.id === habilidadeId);
       if (!hab || hab.tipo !== tipoFiltro) continue;
-      const peso = pesoNivel(av.nivelAtual);
+      const peso = pesoNivel(nivelAtual);
       if (peso === 0) continue;
       const comp = hab.competencia;
       if (!mapJoaoAll.has(comp)) mapJoaoAll.set(comp, { soma: 0, count: 0 });
@@ -218,7 +217,7 @@ export default function TesteRadarPage() {
       mapCargoAll.get(comp)!.soma += pesoEsperado;
       mapCargoAll.get(comp)!.count++;
 
-      const nivelAtual = mapaAv.get(req.habilidadeId);
+      const nivelAtual = mapaJoao.get(req.habilidadeId);
       if (nivelAtual) {
         const peso = pesoNivel(nivelAtual);
         if (peso > 0 && peso < pesoEsperado) {
@@ -228,7 +227,7 @@ export default function TesteRadarPage() {
     }
 
     return { mapCargoAll, mapJoaoAll, tooltipAbaixo };
-  }, [joaoAvs, activeMatrix, tipoFiltro]);
+  }, [mapaJoao, activeMatrix, tipoFiltro]);
 
   // Lista de competências ordenada por gap para o painel lateral
   const listaCompetencias = useMemo<CompetenciaItem[]>(() => {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Search, Filter } from 'lucide-react';
-import { habilidadesData, niveisDefaultData, getCorFromPeso } from '../../data/mockData';
+import { habilidadesData, niveisDefaultData, getCorFromPeso, getPesoFromNome, getCompetenciaNome } from '../../data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface Cargo {
@@ -27,18 +27,16 @@ interface HabilidadeMatriz {
   niveis: Record<string, string | null>; // cargoId -> nivel
 }
 
-const nivelPesoMap: Record<string, number> = Object.fromEntries(
-  niveisDefaultData.map(n => [n.nome, n.peso])
-);
-
 export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoProps) {
   const [buscaHabilidade, setBuscaHabilidade] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas');
 
-  // Obter todas as categorias únicas
+  // Obter todas as categorias únicas (IDs)
   const categorias = useMemo(() => {
-    const cats = new Set(habilidadesData.map(h => h.competencia));
-    return Array.from(cats).sort();
+    const cats = new Set(habilidadesData.map(h => h.competenciaId).filter(Boolean));
+    return Array.from(cats).sort((a, b) =>
+      getCompetenciaNome(a).localeCompare(getCompetenciaNome(b))
+    );
   }, []);
 
   // Construir matriz de habilidades
@@ -66,16 +64,16 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
       matriz.push({
         id: habId,
         nome: hab.nome,
-        categoria: hab.competencia,
+        categoria: hab.competenciaId ?? '',
         niveis,
       });
     });
 
-    // Ordenar por categoria e depois por nome
+    // Ordenar por categoria (nome) e depois por habilidade
     return matriz.sort((a, b) => {
-      if (a.categoria !== b.categoria) {
-        return a.categoria.localeCompare(b.categoria);
-      }
+      const catA = getCompetenciaNome(a.categoria);
+      const catB = getCompetenciaNome(b.categoria);
+      if (catA !== catB) return catA.localeCompare(catB);
       return a.nome.localeCompare(b.nome);
     });
   }, [cargos, habilidadesCargo]);
@@ -89,7 +87,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
       const busca = buscaHabilidade.toLowerCase();
       filtradas = filtradas.filter(h =>
         h.nome.toLowerCase().includes(busca) ||
-        h.categoria.toLowerCase().includes(busca)
+        getCompetenciaNome(h.categoria).toLowerCase().includes(busca)
       );
     }
 
@@ -187,8 +185,8 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as categorias</SelectItem>
-              {categorias.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              {categorias.map(id => (
+                <SelectItem key={id} value={id}>{getCompetenciaNome(id)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -228,7 +226,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
                       <div className="text-sm font-medium text-gray-900">{habilidade.nome}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-gray-600">{habilidade.categoria}</span>
+                      <span className="text-xs text-gray-600">{getCompetenciaNome(habilidade.categoria)}</span>
                     </td>
                     {cargos.map(cargo => {
                       const nivel = habilidade.niveis[cargo.id];
@@ -238,7 +236,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
                             className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-medium rounded-full min-w-[48px]"
                             style={
                               nivel
-                                ? { backgroundColor: getCorFromPeso(nivelPesoMap[nivel] ?? 1), color: 'white' }
+                                ? { backgroundColor: getCorFromPeso(getPesoFromNome(nivel)), color: 'white' }
                                 : { backgroundColor: '#E5E7EB', color: '#9CA3AF' }
                             }
                             title={nivel || 'Não configurado'}

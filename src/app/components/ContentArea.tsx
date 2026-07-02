@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useHabilidades } from '../context/HabilidadesContext';
+import { useCompetencias } from '../context/CompetenciasContext';
 import { useCarreiras } from '../context/CarreirasContext';
 import { useNavigate, useLocation } from 'react-router';
-import { niveisDefaultData, getCorFromPeso } from '../data/mockData';
+import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData } from '../data/mockData';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
 import { ConfirmationModal } from './templates/ConfirmationModal';
@@ -18,7 +19,7 @@ import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { NovaAvaliacaoDrawer, NovaAvaliacaoFormData } from './avaliacoes/NovaAvaliacaoDrawer';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Users, Edit, Trash2, Award, Layers, Search, RefreshCw, AlertCircle, Plus, Briefcase, ClipboardCheck, Eye, ArrowLeft, Settings, AlertTriangle, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
+import { Edit, Award, Layers, Search, RefreshCw, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
@@ -63,10 +64,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     column: 'nome' | 'jornadas' | 'status' | 'id';
     direction: 'asc' | 'desc';
   }>({ column: 'id', direction: 'desc' });
-  const [jornadasContentSortConfig, setJornadasContentSortConfig] = useState<{
-    column: 'nome' | 'tipo' | 'quantidadeCargos' | 'status' | 'id';
-    direction: 'asc' | 'desc';
-  }>({ column: 'id', direction: 'desc' });
   const [avaliacoesSortConfig, setAvaliacoesSortConfig] = useState<{
     column: 'nome' | 'tipo' | 'periodo' | 'status' | 'id';
     direction: 'asc' | 'desc';
@@ -85,13 +82,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     nome: '',
     status: 'Ativa',
   });
-  
-  // Estados para Detalhamento de Jornada
-  const [selectedCarreiraId, setSelectedCarreiraId] = useState<string | null>(null);
-  const [selectedJornadaId, setSelectedJornadaId] = useState<string | null>(null);
-  
-  // Estado para controlar se está vendo detalhamento de carreira (lista de jornadas)
-  const [selectedCarreiraDetalhe, setSelectedCarreiraDetalhe] = useState<string | null>(null);
   
   // Estados para Avaliações
   const [statusFilterAvaliacoes, setStatusFilterAvaliacoes] = useState('ativa');
@@ -170,219 +160,63 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
   // Estado e dados para Habilidades (gerenciados via contexto compartilhado)
   const { habilidades: habilidadesData, addHabilidade, updateHabilidade } = useHabilidades();
+
+  // emUso calculado a partir das habilidades reais (não do campo armazenado em mockData)
+  const niveisComContagem = useMemo(() =>
+    niveisData.map(nivel => ({
+      ...nivel,
+      emUso: habilidadesData.filter(h => h.niveis.some(n => n.nivelId === nivel.id)).length,
+    })),
+    [niveisData, habilidadesData]
+  );
+  const { competencias, addCompetencia, updateCompetencia } = useCompetencias();
   const { jornadas: jornadasDoContexto } = useCarreiras();
   const [habilidadeFormData, setHabilidadeFormData] = useState({
     nome: '',
     descricao: '',
     competencia: '',
+    competenciaId: '',
     tipo: 'Técnica',
     status: 'Ativa',
     niveis: [] as Array<{ nivelId: string; criterio: string }>,
   });
 
-  // Dados de exemplo para Perfis (somente leitura - vindos do RM)
-  const [profilesData, setProfilesData] = useState([
-    {
-      id: '1',
-      nome: 'Ana Silva',
-      cargo: 'Desenvolvedora Senior',
-      gerencia: 'Tecnologia',
-      ultimoAcesso: '02 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: true,
-    },
-    {
-      id: '2',
-      nome: 'Carlos Santos',
-      cargo: 'Analista de RH',
-      gerencia: 'Recursos Humanos',
-      ultimoAcesso: '01 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '3',
-      nome: 'Mariana Costa',
-      cargo: 'Gerente de Projetos',
-      gerencia: 'Operações',
-      ultimoAcesso: '03 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '4',
-      nome: 'João Pereira',
-      cargo: 'Desenvolvedor Pleno',
-      gerencia: 'Tecnologia',
-      ultimoAcesso: '31 de janeiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: true,
-    },
-    {
-      id: '5',
-      nome: 'Fernanda Lima',
-      cargo: 'Analista de Dados',
-      gerencia: 'Tecnologia',
-      ultimoAcesso: '02 de fevereiro de 2026',
-      status: 'Desativado' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '6',
-      nome: 'Rafael Souza',
-      cargo: 'Coordenador de Vendas',
-      gerencia: 'Vendas',
-      ultimoAcesso: '01 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '7',
-      nome: 'Juliana Rocha',
-      cargo: 'Gerente de RH',
-      gerencia: 'Recursos Humanos',
-      ultimoAcesso: '03 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: true,
-    },
-    {
-      id: '8',
-      nome: 'Bruno Oliveira',
-      cargo: 'Analista Financeiro',
-      gerencia: 'Financeiro',
-      ultimoAcesso: '30 de janeiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '9',
-      nome: 'Camila Mendes',
-      cargo: 'Desenvolvedora Junior',
-      gerencia: 'Tecnologia',
-      ultimoAcesso: '02 de fevereiro de 2026',
-      status: 'Ativo' as const,
-      atualizacaoDisponivel: false,
-    },
-    {
-      id: '10',
-      nome: 'Lucas Almeida',
-      cargo: 'Analista de Operações',
-      gerencia: 'Operações',
-      ultimoAcesso: '01 de fevereiro de 2026',
-      status: 'Desativado' as const,
-      atualizacaoDisponivel: false,
-    },
-  ]);
+  // Perfis derivados de colaboradoresData — fonte única de verdade
+  const [syncedProfileIds, setSyncedProfileIds] = useState<Set<string>>(new Set());
 
-  // Dados de exemplo para Competências
-  const [competenciasData, setCompetenciasData] = useState([
-    { id: '1', nome: 'Design de Produto', descricao: 'Competências relacionadas ao design e experiência do usuário', habilidades: 12, status: 'Ativa' },
-    { id: '2', nome: 'Segurança da Informação', descricao: 'Práticas e conhecimentos em segurança cibernética', habilidades: 8, status: 'Ativa' },
-    { id: '3', nome: 'Comunicação Corporativa', descricao: 'Habilidades de comunicação verbal e escrita no ambiente profissional', habilidades: 15, status: 'Ativa' },
-    { id: '4', nome: 'Gestão de Projetos', descricao: 'Metodologias e ferramentas para gestão eficaz de projetos', habilidades: 10, status: 'Ativa' },
-    { id: '5', nome: 'Análise de Dados', descricao: 'Análise, visualização e interpretação de dados', habilidades: 7, status: 'Ativa' },
-    { id: '6', nome: 'Desenvolvimento Backend', descricao: 'Tecnologias e práticas de desenvolvimento do lado servidor', habilidades: 18, status: 'Desativada' },
-    { id: '7', nome: 'Desenvolvimento Frontend', descricao: 'Tecnologias e práticas de interface e experiência do usuário', habilidades: 16, status: 'Ativa' },
-    { id: '8', nome: 'DevOps e Infraestrutura', descricao: 'Automação, CI/CD e gestão de infraestrutura', habilidades: 11, status: 'Ativa' },
-    { id: '9', nome: 'Arquitetura de Software', descricao: 'Design e padrões de arquitetura de sistemas', habilidades: 9, status: 'Ativa' },
-    { id: '10', nome: 'Testes e Qualidade', descricao: 'Estratégias e práticas de testes de software', habilidades: 13, status: 'Ativa' },
-    { id: '11', nome: 'Metodologias Ágeis', descricao: 'Scrum, Kanban e frameworks ágeis', habilidades: 6, status: 'Ativa' },
-    { id: '12', nome: 'Liderança', descricao: 'Habilidades de liderança e gestão de equipes', habilidades: 14, status: 'Ativa' },
-    { id: '13', nome: 'Resolução de Problemas', descricao: 'Pensamento analítico e resolução criativa de problemas', habilidades: 5, status: 'Ativa' },
-    { id: '14', nome: 'Inteligência Emocional', descricao: 'Autoconhecimento e gestão de relacionamentos interpessoais', habilidades: 8, status: 'Ativa' },
-    { id: '15', nome: 'Gestão de Pessoas', descricao: 'Recrutamento, desenvolvimento e retenção de talentos', habilidades: 12, status: 'Ativa' },
-    { id: '16', nome: 'Marketing Digital', descricao: 'Estratégias e ferramentas de marketing online', habilidades: 10, status: 'Ativa' },
-    { id: '17', nome: 'Vendas e Negociação', descricao: 'Técnicas de vendas e negociação comercial', habilidades: 9, status: 'Ativa' },
-    { id: '18', nome: 'Atendimento ao Cliente', descricao: 'Excelência no relacionamento com clientes', habilidades: 7, status: 'Ativa' },
-    { id: '19', nome: 'Gestão Financeira', descricao: 'Planejamento e controle financeiro', habilidades: 11, status: 'Ativa' },
-    { id: '20', nome: 'Compliance e Governança', descricao: 'Conformidade legal e governança corporativa', habilidades: 6, status: 'Ativa' },
-    { id: '21', nome: 'Business Intelligence', descricao: 'Análise de negócios e inteligência empresarial', habilidades: 8, status: 'Ativa' },
-    { id: '22', nome: 'Machine Learning', descricao: 'Algoritmos e modelos de aprendizado de máquina', habilidades: 15, status: 'Ativa' },
-    { id: '23', nome: 'Cloud Computing', descricao: 'Serviços e arquitetura em nuvem', habilidades: 13, status: 'Ativa' },
-    { id: '24', nome: 'Mobile Development', descricao: 'Desenvolvimento de aplicativos móveis', habilidades: 12, status: 'Desativada' },
-    { id: '25', nome: 'Blockchain', descricao: 'Tecnologias de blockchain e criptomoedas', habilidades: 4, status: 'Ativa' },
-    { id: '26', nome: 'IoT', descricao: 'Internet das Coisas e dispositivos conectados', habilidades: 5, status: 'Ativa' },
-    { id: '27', nome: 'Inteligência Artificial', descricao: 'IA, processamento de linguagem natural e visão computacional', habilidades: 14, status: 'Ativa' },
-    { id: '28', nome: 'Gestão de Mudanças', descricao: 'Condução e facilitação de processos de mudança organizacional', habilidades: 7, status: 'Ativa' },
-    { id: '29', nome: 'Planejamento Estratégico', descricao: 'Definição e execução de estratégias empresariais', habilidades: 9, status: 'Ativa' },
-    { id: '30', nome: 'Gestão de Riscos', descricao: 'Identificação, análise e mitigaço de riscos', habilidades: 8, status: 'Ativa' },
-    { id: '31', nome: 'Inovação', descricao: 'Fomento e gestão da inovação organizacional', habilidades: 6, status: 'Ativa' },
-    { id: '32', nome: 'Sustentabilidade', descricao: 'Práticas sustentáveis e responsabilidade socioambiental', habilidades: 5, status: 'Ativa' },
-    { id: '33', nome: 'E-commerce', descricao: 'Gestão e operação de comércio eletrônico', habilidades: 10, status: 'Ativa' },
-    { id: '34', nome: 'Supply Chain', descricao: 'Gestão da cadeia de suprimentos e logística', habilidades: 11, status: 'Ativa' },
-    { id: '35', nome: 'Product Management', descricao: 'Gestão de produtos digitais e roadmap', habilidades: 13, status: 'Ativa' },
-    { id: '36', nome: 'Pesquisa de Mercado', descricao: 'Metodologias de pesquisa e análise de mercado', habilidades: 7, status: 'Desativada' },
-    { id: '37', nome: 'Redação Técnica', descricao: 'Documentação técnica e especificações', habilidades: 4, status: 'Ativa' },
-    { id: '38', nome: 'Apresentações Executivas', descricao: 'Criação e entrega de apresentações de alto impacto', habilidades: 6, status: 'Ativa' },
-    { id: '39', nome: 'Mentoring e Coaching', descricao: 'Desenvolvimento de pessoas através de mentoria', habilidades: 8, status: 'Ativa' },
-    { id: '40', nome: 'Design Thinking', descricao: 'Metodologia centrada no usuário para solução de problemas', habilidades: 9, status: 'Ativa' },
-    { id: '41', nome: 'Acessibilidade Digital', descricao: 'Desenvolvimento de soluções acessíveis e inclusivas', habilidades: 5, status: 'Ativa' },
-    { id: '42', nome: 'SEO e SEM', descricao: 'Otimização para mecanismos de busca e marketing', habilidades: 7, status: 'Ativa' },
-    { id: '43', nome: 'Content Marketing', descricao: 'Estratégia e produção de conteúdo', habilidades: 8, status: 'Ativa' },
-    { id: '44', nome: 'Analytics', descricao: 'Análise de métricas e indicadores de desempenho', habilidades: 12, status: 'Ativa' },
-    { id: '45', nome: 'Automação de Processos', descricao: 'RPA e automação de workflows', habilidades: 10, status: 'Ativa' },
-    { id: '46', nome: 'Gestão de Contratos', descricao: 'Elaboração e gestão de contratos empresariais', habilidades: 6, status: 'Desativada' },
-    { id: '47', nome: 'Propriedade Intelectual', descricao: 'Proteção e gestão de ativos intelectuais', habilidades: 4, status: 'Ativa' },
-    { id: '48', nome: 'Relações Públicas', descricao: 'Gestão de imagem e relacionamento com stakeholders', habilidades: 7, status: 'Ativa' },
-  ]);
+  const profilesData = useMemo(
+    () => colaboradoresData.map(c => ({
+      id: c.id,
+      nome: c.nome,
+      cargo: cargosData.find(cg => cg.id === c.cargoId)?.cargoRM ?? c.cargo,
+      gerencia: c.gerencia,
+      ultimoAcesso: c.ultimoAcesso ?? '',
+      status: c.status,
+      atualizacaoDisponivel: c.atualizacaoDisponivel && !syncedProfileIds.has(c.id),
+    })),
+    [syncedProfileIds]
+  );
 
   // Dados de exemplo para Carreiras
   const [carreirasData, setCarreirasData] = useState([
-    { id: '1', nome: 'Tecnologia da Informação', jornadas: 8, jornadasConfiguradas: 6, status: 'Ativa' },
-    { id: '2', nome: 'Recursos Humanos', jornadas: 5, jornadasConfiguradas: 5, status: 'Ativa' },
-    { id: '3', nome: 'Financeiro', jornadas: 6, jornadasConfiguradas: 4, status: 'Ativa' },
-    { id: '4', nome: 'Marketing', jornadas: 7, jornadasConfiguradas: 5, status: 'Ativa' },
-    { id: '5', nome: 'Vendas', jornadas: 9, jornadasConfiguradas: 7, status: 'Ativa' },
-    { id: '6', nome: 'Operações', jornadas: 4, jornadasConfiguradas: 4, status: 'Ativa' },
-    { id: '7', nome: 'Jurídico', jornadas: 3, jornadasConfiguradas: 2, status: 'Ativa' },
-    { id: '8', nome: 'Atendimento ao Cliente', jornadas: 5, jornadasConfiguradas: 3, status: 'Ativa' },
-    { id: '9', nome: 'Produto', jornadas: 6, jornadasConfiguradas: 6, status: 'Ativa' },
-    { id: '10', nome: 'Design', jornadas: 4, jornadasConfiguradas: 3, status: 'Ativa' },
-    { id: '11', nome: 'Engenharia', jornadas: 7, jornadasConfiguradas: 5, status: 'Ativa' },
-    { id: '12', nome: 'Qualidade', jornadas: 3, jornadasConfiguradas: 3, status: 'Ativa' },
-    { id: '13', nome: 'Projetos', jornadas: 0, jornadasConfiguradas: 0, status: 'Desativada' },
-    { id: '14', nome: 'Inovação', jornadas: 5, jornadasConfiguradas: 4, status: 'Ativa' },
-    { id: '15', nome: 'Suprimentos', jornadas: 4, jornadasConfiguradas: 2, status: 'Ativa' },
-    { id: '16', nome: 'Logística', jornadas: 0, jornadasConfiguradas: 0, status: 'Desativada' },
-    { id: '17', nome: 'Compliance', jornadas: 2, jornadasConfiguradas: 2, status: 'Ativa' },
-    { id: '18', nome: 'Comunicação', jornadas: 3, jornadasConfiguradas: 1, status: 'Ativa' },
-  ]);
-
-  // Dados de exemplo para Jornadas
-  const jornadasData = [
-    { id: 'j1', carreiraId: '1', nome: 'Desenvolvedor', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 4, cargosConfigurados: 3, status: 'Ativa' },
-    { id: 'j2', carreiraId: '1', nome: 'Analista de Infraestrutura', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 2, status: 'Ativa' },
-    { id: 'j3', carreiraId: '1', nome: 'Analista de Dados', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 3, status: 'Ativa' },
-    { id: 'j4', carreiraId: '1', nome: 'Engenheiro de Software', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 5, cargosConfigurados: 4, status: 'Ativa' },
-    { id: 'j5', carreiraId: '1', nome: 'Gerente de Tecnologia', carreira: 'Tecnologia da Informação', tipo: 'Gestão', quantidadeCargos: 4, cargosConfigurados: 2, status: 'Ativa' },
-    { id: 'j6', carreiraId: '1', nome: 'Product Manager', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 1, status: 'Ativa' },
-    { id: 'j7', carreiraId: '1', nome: 'Arquiteto de Software', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 0, status: 'Ativa' },
-    { id: 'j8', carreiraId: '1', nome: 'DevOps', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 0, cargosConfigurados: 0, status: 'Desativada' },
-    { id: 'j9', carreiraId: '2', nome: 'Analista de RH', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 3, cargosConfigurados: 2, status: 'Ativa' },
-    { id: 'j10', carreiraId: '2', nome: 'Recrutador', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 2, cargosConfigurados: 2, status: 'Ativa' },
-    { id: 'j11', carreiraId: '2', nome: 'Business Partner', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 4, cargosConfigurados: 3, status: 'Ativa' },
-    { id: 'j12', carreiraId: '2', nome: 'Gerente de RH', carreira: 'Recursos Humanos', tipo: 'Gestão', quantidadeCargos: 3, cargosConfigurados: 1, status: 'Ativa' },
-    { id: 'j13', carreiraId: '2', nome: 'Analista de Remuneração', carreira: 'Recursos Humanos', tipo: 'Contribuidor Individual', quantidadeCargos: 0, cargosConfigurados: 0, status: 'Desativada' },
-  ];
-
-  // Dados de exemplo para Cargos (vindos do RM)
-  const [cargosData, setCargosData] = useState([
-    { id: 'c1', jornadaId: 'j1', cargoRM: 'Desenvolvedor Junior', ordem: 'Júnior', habilidadesConfiguradas: 8, status: 'Configurado' },
-    { id: 'c2', jornadaId: 'j1', cargoRM: 'Desenvolvedor Pleno', ordem: 'Pleno', habilidadesConfiguradas: 12, status: 'Configurado' },
-    { id: 'c3', jornadaId: 'j1', cargoRM: 'Desenvolvedor Sênior', ordem: 'Sênior', habilidadesConfiguradas: 15, status: 'Configurado' },
-    { id: 'c4', jornadaId: 'j1', cargoRM: 'Tech Lead', ordem: 'Especialista', habilidadesConfiguradas: 0, status: 'Não Configurado' },
-    { id: 'c5', jornadaId: 'j2', cargoRM: 'Analista de Infraestrutura Junior', ordem: 'Júnior', habilidadesConfiguradas: 5, status: 'Configurado' },
-    { id: 'c6', jornadaId: 'j2', cargoRM: 'Analista de Infraestrutura Pleno', ordem: 'Pleno', habilidadesConfiguradas: 9, status: 'Configurado' },
-  ]);
-
-  // Dados de exemplo para Habilidades do Cargo (relacionamento cargo x habilidade)
-  const [habilidadesCargoData, setHabilidadesCargoData] = useState([
-    { cargoId: 'c1', habilidadeId: '1', nivelEsperado: 'Básico', obrigatoria: true },
-    { cargoId: 'c1', habilidadeId: '2', nivelEsperado: 'Básico', obrigatoria: true },
-    { cargoId: 'c1', habilidadeId: '18', nivelEsperado: 'Básico', obrigatoria: true },
-    { cargoId: 'c2', habilidadeId: '1', nivelEsperado: 'Intermediário', obrigatoria: true },
-    { cargoId: 'c2', habilidadeId: '2', nivelEsperado: 'Intermediário', obrigatoria: true },
-    { cargoId: 'c2', habilidadeId: '3', nivelEsperado: 'Intermediário', obrigatoria: false },
+    { id: '1',  nome: 'Tecnologia da Informação', status: 'Ativa' },
+    { id: '2',  nome: 'Recursos Humanos',          status: 'Ativa' },
+    { id: '3',  nome: 'Financeiro',                status: 'Ativa' },
+    { id: '4',  nome: 'Marketing',                 status: 'Ativa' },
+    { id: '5',  nome: 'Vendas',                    status: 'Ativa' },
+    { id: '6',  nome: 'Operações',                 status: 'Ativa' },
+    { id: '7',  nome: 'Jurídico',                  status: 'Ativa' },
+    { id: '8',  nome: 'Atendimento ao Cliente',    status: 'Ativa' },
+    { id: '9',  nome: 'Produto',                   status: 'Ativa' },
+    { id: '10', nome: 'Design',                    status: 'Ativa' },
+    { id: '11', nome: 'Engenharia',                status: 'Ativa' },
+    { id: '12', nome: 'Qualidade',                 status: 'Ativa' },
+    { id: '13', nome: 'Projetos',                  status: 'Desativada' },
+    { id: '14', nome: 'Inovação',                  status: 'Ativa' },
+    { id: '15', nome: 'Suprimentos',               status: 'Ativa' },
+    { id: '16', nome: 'Logística',                 status: 'Desativada' },
+    { id: '17', nome: 'Compliance',                status: 'Ativa' },
+    { id: '18', nome: 'Comunicação',               status: 'Ativa' },
   ]);
 
   // Dados de exemplo para Avaliações
@@ -397,139 +231,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     { id: '8', nome: 'Competências em Cloud Computing', tipo: 'Autoavaliação', periodo: '15/01 - 15/02/2026', dataInicio: '2026-01-15', dataFim: '2026-02-15', participantes: 28, concluidas: 28, status: 'Encerrada', competencias: ['Cloud Computing', 'DevOps e Infraestrutura'], publico: 'gerencias', gerencias: ['Tecnologia'] },
   ]);
 
-  // Configuração dos campos do formulário
-  const formFields: FormField[] = [
-    {
-      name: 'nome',
-      label: 'Nome Completo',
-      type: 'text',
-      placeholder: 'Digite o nome completo',
-      required: true,
-    },
-    {
-      name: 'email',
-      label: 'E-mail',
-      type: 'email',
-      placeholder: 'email@exemplo.com',
-      required: true,
-    },
-    {
-      name: 'cargo',
-      label: 'Cargo',
-      type: 'select',
-      required: true,
-      options: [
-        { value: 'dev-jr', label: 'Desenvolvedor Junior' },
-        { value: 'dev-pl', label: 'Desenvolvedor Pleno' },
-        { value: 'dev-sr', label: 'Desenvolvedor Senior' },
-        { value: 'analista', label: 'Analista' },
-        { value: 'gerente', label: 'Gerente' },
-      ],
-    },
-    {
-      name: 'gerencia',
-      label: 'Gerência',
-      type: 'select',
-      required: true,
-      options: [
-        { value: 'ti', label: 'Tecnologia' },
-        { value: 'rh', label: 'Recursos Humanos' },
-        { value: 'op', label: 'Operações' },
-        { value: 'vendas', label: 'Vendas' },
-      ],
-    },
-    {
-      name: 'descricao',
-      label: 'Descrição',
-      type: 'textarea',
-      placeholder: 'Digite uma breve descrição...',
-      rows: 4,
-    },
-    {
-      name: 'ativo',
-      label: 'Ativo',
-      type: 'checkbox',
-      placeholder: 'Este perfil está ativo',
-    },
-  ];
-
-  // Configuração das colunas da tabela
-  const columns: Column[] = [
-    { 
-      key: 'nome', 
-      label: 'Nome', 
-      width: '20%',
-    },
-    { key: 'cargo', label: 'Cargo', width: '20%' },
-    { key: 'gerencia', label: 'Gerência', width: '18%' },
-    { key: 'ultimoAcesso', label: 'Último Acesso', width: '15%' },
-    {
-      key: 'status',
-      label: 'Status',
-      width: '12%',
-      render: (value) => (
-        <span
-          className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-            value === 'Ativo'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-700'
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-  ];
-
-  // Configuração das ações da tabela (Perfis são somente leitura - vindos do RM)
-  const actions: InlineAction[] = [
-    {
-      label: 'Sincronizar',
-      icon: (row) => (
-        <div className="flex items-center gap-1">
-          <RefreshCw className="w-4 h-4" />
-          {row.atualizacaoDisponivel && (
-            <div className="relative group">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
-              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10">
-                Atualização disponível no RM
-              </div>
-            </div>
-          )}
-        </div>
-      ),
-      onClick: (row) => {
-        toast.success(`Perfil de ${row.nome} sincronizado com sucesso!`);
-        // Aqui seria feita a sincronização com o RM
-        setProfilesData(profilesData.map(p => 
-          p.id === row.id ? { ...p, atualizacaoDisponivel: false } : p
-        ));
-      },
-    },
-  ];
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Lógica de salvamento
-    console.log('Formulário enviado');
-    setIsDrawerOpen(false);
-  };
-
-  const handleDelete = () => {
-    if (selectedRow) {
-      setProfilesData(profilesData.filter((item) => item.id !== selectedRow.id));
-      setIsModalOpen(false);
-      setSelectedRow(null);
-    }
-  };
-
   const handleDeleteCompetencia = () => {
     if (selectedRow) {
-      setCompetenciasData(
-        competenciasData.map((item) =>
-          item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
-        )
-      );
+      updateCompetencia(selectedRow.id, { status: 'Desativada' });
       toast.success(`Competência "${selectedRow.nome}" desativada com sucesso!`);
       setIsModalOpen(false);
       setSelectedRow(null);
@@ -571,7 +275,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     return (
       <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
         <div className="p-4 md:p-8">
-          <Perfis profilesData={profilesData} onUpdateProfiles={setProfilesData} />
+          <Perfis
+            profilesData={profilesData}
+            onUpdateProfiles={(updated) => {
+              const newlySynced = updated.filter(p => !p.atualizacaoDisponivel).map(p => p.id);
+              setSyncedProfileIds(prev => new Set([...prev, ...newlySynced]));
+            }}
+          />
         </div>
       </main>
     );
@@ -580,7 +290,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   // Módulo Habilidades com Tabs
   if (selectedItem === 'habilidades') {
     // Contar totais para as badges
-    const totalCompetencias = competenciasData.length;
+    const totalCompetencias = competencias.length;
     const totalHabilidades = habilidadesData.length;
 
     const tabs = [
@@ -704,11 +414,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             setSelectedRow(row);
             setIsModalOpen(true);
           } else {
-            setCompetenciasData(
-              competenciasData.map((item) =>
-                item.id === row.id ? { ...item, status: 'Ativa' } : item
-              )
-            );
+            updateCompetencia(row.id, { status: 'Ativa' });
             toast.success(`Competência "${row.nome}" reativada com sucesso!`);
           }
         },
@@ -761,47 +467,31 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       e.preventDefault();
 
       if (selectedRow) {
-        // Editar competência existente
-        setCompetenciasData(
-          competenciasData.map((item) =>
-            item.id === selectedRow.id
-              ? {
-                  ...item,
-                  nome: competenciaFormData.nome,
-                  descricao: competenciaFormData.descricao,
-                  status: competenciaFormData.status,
-                }
-              : item
-          )
-        );
-        toast.success('Competência atualizada com sucesso!');
-      } else {
-        // Criar nova competência
-        const newCompetencia = {
-          id: String(competenciasData.length + 1),
+        updateCompetencia(selectedRow.id, {
           nome: competenciaFormData.nome,
           descricao: competenciaFormData.descricao,
-          habilidades: 0,
-          status: competenciaFormData.status,
-        };
+          status: competenciaFormData.status as 'Ativa' | 'Desativada',
+        });
+        toast.success('Competência atualizada com sucesso!');
+      } else {
+        addCompetencia({
+          nome: competenciaFormData.nome,
+          descricao: competenciaFormData.descricao,
+          status: competenciaFormData.status as 'Ativa' | 'Desativada',
+        });
         setCompetenciasSortConfig({ column: 'id', direction: 'desc' });
         setCurrentPage(1);
-        setCompetenciasData([newCompetencia, ...competenciasData]);
         toast.success('Competência criada com sucesso!');
       }
 
       setIsDrawerOpen(false);
       setSelectedRow(null);
-      setCompetenciaFormData({ nome: '', descricao: '' });
+      setCompetenciaFormData({ nome: '', descricao: '', status: 'Ativa' });
     };
 
     const handleDesativar = () => {
       if (selectedRow) {
-        setCompetenciasData(
-          competenciasData.map((item) =>
-            item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
-          )
-        );
+        updateCompetencia(selectedRow.id, { status: 'Desativada' });
         toast.success(`Competência "${selectedRow.nome}" desativada com sucesso!`);
         setIsModalOpen(false);
         setSelectedRow(null);
@@ -811,8 +501,14 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     // Renderizar conteúdo baseado na tab ativa
     const renderTabContent = () => {
       if (activeTab === 'competencias') {
+        // Derivar contagem de habilidades por competência a partir do Context
+        const competenciasComCount = competencias.map(c => ({
+          ...c,
+          habilidades: habilidadesData.filter(h => h.competenciaId === c.id).length,
+        }));
+
         // Aplicar filtros aos dados
-        const dadosFiltrados = competenciasData.filter(item => {
+        const dadosFiltrados = competenciasComCount.filter(item => {
           // Filtro de busca (nome e descrição)
           const matchBusca = buscaCompetencia === '' || 
             item.nome.toLowerCase().includes(buscaCompetencia.toLowerCase()) ||
@@ -827,7 +523,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
         const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
           if (competenciasSortConfig.column === 'id') {
-            return Number(b.id) - Number(a.id);
+            return 0; // manter ordem do array (novas competências inseridas no início)
           }
           const dir = competenciasSortConfig.direction === 'asc' ? 1 : -1;
           if (competenciasSortConfig.column === 'habilidades') {
@@ -933,26 +629,23 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       if (activeTab === 'niveis') {
         return (
           <NiveisProficiencia
-            niveisData={niveisData}
+            niveisData={niveisComContagem}
             onUpdateNiveis={setNiveisData}
           />
         );
       }
 
       if (activeTab === 'habilidades-list') {
-        // Gerar lista de competências únicas para o filtro
-        const competenciasUnicas = Array.from(new Set(competenciasData.map(c => c.nome))).sort();
-
         // Aplicar filtros aos dados
         const dadosFiltrados = habilidadesData.filter(item => {
           // Filtro de busca (nome e descrição)
-          const matchBusca = buscaHabilidade === '' || 
+          const matchBusca = buscaHabilidade === '' ||
             item.nome.toLowerCase().includes(buscaHabilidade.toLowerCase()) ||
             item.descricao.toLowerCase().includes(buscaHabilidade.toLowerCase());
-          
+
           // Filtro de competência
-          const matchCompetencia = filtroCompetencia === 'todas' || 
-            item.competencia === filtroCompetencia;
+          const matchCompetencia = filtroCompetencia === 'todas' ||
+            item.competenciaId === filtroCompetencia;
           
           // Filtro de tipo
           const matchTipo = filtroTipo === 'todas' || 
@@ -1101,6 +794,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                 nome: row.nome,
                 descricao: row.descricao,
                 competencia: row.competencia,
+                competenciaId: row.competenciaId ?? '',
                 tipo: row.tipo,
                 status: row.status,
                 niveis: row.niveis || [],
@@ -1131,7 +825,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
         const handleOpenCreateHabilidadeDrawer = () => {
           setSelectedRow(null);
-          setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+          setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
           setIsDrawerOpen(true);
         };
 
@@ -1157,14 +851,18 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               setHabilidadeFormData({ ...habilidadeFormData, descricao: value }),
           },
           {
-            name: 'competencia',
+            name: 'competenciaId',
             label: 'Competência',
             type: 'select',
             required: true,
-            value: habilidadeFormData.competencia,
-            onChange: (value) =>
-              setHabilidadeFormData({ ...habilidadeFormData, competencia: value }),
-            options: competenciasUnicas.map(comp => ({ value: comp, label: comp })),
+            value: habilidadeFormData.competenciaId,
+            onChange: (value) => {
+              const comp = competencias.find((c) => c.id === value);
+              setHabilidadeFormData({ ...habilidadeFormData, competenciaId: value, competencia: comp?.nome ?? '' });
+            },
+            options: competencias
+              .filter((c) => c.status === 'Ativa')
+              .map((c) => ({ value: c.id, label: c.nome })),
           },
           {
             name: 'tipo',
@@ -1207,6 +905,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               nome: habilidadeFormData.nome,
               descricao: habilidadeFormData.descricao,
               competencia: habilidadeFormData.competencia,
+              competenciaId: habilidadeFormData.competenciaId,
               tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
               status: habilidadeFormData.status as 'Ativa' | 'Desativada',
               niveis: habilidadeFormData.niveis,
@@ -1214,12 +913,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             toast.success('Habilidade atualizada com sucesso!');
             setIsDrawerOpen(false);
             setSelectedRow(null);
-            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
           } else {
             addHabilidade({
               nome: habilidadeFormData.nome,
               descricao: habilidadeFormData.descricao,
               competencia: habilidadeFormData.competencia,
+              competenciaId: habilidadeFormData.competenciaId,
               tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
               status: habilidadeFormData.status as 'Ativa' | 'Desativada',
               niveis: habilidadeFormData.niveis,
@@ -1227,7 +927,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             toast.success('Habilidade criada com sucesso!');
             setIsDrawerOpen(false);
             setSelectedRow(null);
-            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
             setHabilidadesSortConfig({ column: 'id', direction: 'desc' });
             setCurrentPageHabilidades(1);
           }
@@ -1277,8 +977,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas as competências</SelectItem>
-                      {competenciasUnicas.map(comp => (
-                        <SelectItem key={comp} value={comp}>{comp}</SelectItem>
+                      {competencias.filter(c => c.status === 'Ativa').map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1377,8 +1077,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas as competências</SelectItem>
-                      {competenciasUnicas.map(comp => (
-                        <SelectItem key={comp} value={comp}>{comp}</SelectItem>
+                      {competencias.filter(c => c.status === 'Ativa').map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1457,7 +1157,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                   {/* Botão de ação primária - apenas desktop */}
                   <button
                     onClick={handleOpenCreateHabilidadeDrawer}
-                    className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
                   >
                     + Criar habilidade
                   </button>
@@ -1467,23 +1167,14 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               {/* Tabela */}
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 {totalItemsHabilidades === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <Award className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <h3 className="text-base font-medium text-gray-900 mb-2">
-                      {habilidadesData.length === 0 
-                        ? 'Nenhuma habilidade cadastrada'
-                        : 'Nenhum resultado encontrado'
-                      }
-                    </h3>
-                    <p className="text-sm text-gray-500 max-w-md">
-                      {habilidadesData.length === 0 
-                        ? 'Comece criando a primeira habilidade para estruturar o sistema de gestão de competências.'
-                        : 'Não encontramos habilidades que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.'
-                      }
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={<Award className="w-8 h-8" />}
+                    title={habilidadesData.length === 0 ? 'Nenhuma habilidade cadastrada' : 'Nenhum resultado encontrado'}
+                    description={habilidadesData.length === 0
+                      ? 'Comece criando a primeira habilidade para estruturar o sistema de gestão de competências.'
+                      : 'Não encontramos habilidades que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.'
+                    }
+                  />
                 ) : (
                   <Table
                     columns={habilidadesColumns}
@@ -1593,7 +1284,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                                   }}
                                   placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
                                   rows={3}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] resize-none text-gray-700 placeholder-gray-400"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
                                 />
                                 {nivel.descricao && (
                                   <p className="text-xs text-gray-400 leading-relaxed">
@@ -1627,7 +1318,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             {/* FAB - Floating Action Button (apenas mobile) */}
             <button
               onClick={handleOpenCreateHabilidadeDrawer}
-              className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-[var(--brand-600)] text-white rounded-full shadow-lg hover:bg-[var(--brand-700)] active:scale-95 transition-all flex items-center justify-center z-40"
+              className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-[var(--brand-600)] text-white rounded-lg hover:bg-[var(--brand-700)] active:scale-95 transition-all flex items-center justify-center z-40"
               aria-label="Criar habilidade"
             >
               <Plus className="w-6 h-6" />
@@ -1908,8 +1599,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         const newCarreira = {
           id: String(carreirasData.length + 1),
           nome: carreiraFormData.nome,
-          jornadas: 0,
-          jornadasConfiguradas: 0,
           status: carreiraFormData.status,
         };
         setCarreirasSortConfig({ column: 'id', direction: 'desc' });
@@ -1937,380 +1626,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       }
     };
 
-    // Se uma carreira foi selecionada para visualizar jornadas, renderizar página de detalhamento de carreira
-    if (selectedCarreiraDetalhe) {
-      const carreira = carreirasData.find(c => c.id === selectedCarreiraDetalhe);
-      const jornadasDaCarreira = jornadasData.filter(j => j.carreiraId === selectedCarreiraDetalhe);
-
-      const handleJornadasContentSort = (column: 'nome' | 'tipo' | 'quantidadeCargos' | 'status') => {
-        setJornadasContentSortConfig(prev =>
-          prev.column === column
-            ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-            : { column, direction: 'asc' }
-        );
-      };
-
-      const jornadasOrdenadas = [...jornadasDaCarreira].sort((a, b) => {
-        if (jornadasContentSortConfig.column === 'id') {
-          return Number(b.id.replace(/\D/g, '')) - Number(a.id.replace(/\D/g, ''));
-        }
-        const dir = jornadasContentSortConfig.direction === 'asc' ? 1 : -1;
-        if (jornadasContentSortConfig.column === 'quantidadeCargos') {
-          return (a.quantidadeCargos - b.quantidadeCargos) * dir;
-        }
-        return (a[jornadasContentSortConfig.column] as string).localeCompare(b[jornadasContentSortConfig.column] as string) * dir;
-      });
-
-      // Handler para voltar à listagem de carreiras
-      const handleVoltarCarreiras = () => {
-        setSelectedCarreiraDetalhe(null);
-      };
-
-      // Handler para navegar para detalhamento de jornada (cargos)
-      const handleVerCargos = (jornadaId: string) => {
-        navigate(`/carreiras/${selectedCarreiraDetalhe}/jornadas/${jornadaId}`);
-      };
-
-      // Colunas da tabela de jornadas
-      const jornadasColumns: Column[] = [
-        {
-          key: 'nome',
-          label: 'Nome da Jornada',
-          width: '35%',
-          renderHeader: () => (
-            <button
-              onClick={() => handleJornadasContentSort('nome')}
-              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-            >
-              Nome da Jornada
-              {jornadasContentSortConfig.column === 'nome' ? (
-                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-              ) : (
-                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-              )}
-            </button>
-          ),
-          render: (value) => (
-            <span className="text-sm text-gray-900">{value}</span>
-          ),
-        },
-        {
-          key: 'tipo',
-          label: 'Tipo',
-          width: '25%',
-          renderHeader: () => (
-            <button
-              onClick={() => handleJornadasContentSort('tipo')}
-              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-            >
-              Tipo
-              {jornadasContentSortConfig.column === 'tipo' ? (
-                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-              ) : (
-                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-              )}
-            </button>
-          ),
-          render: (value) => (
-            <span
-              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-                value === 'Contribuidor Individual'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-purple-100 text-purple-800'
-              }`}
-            >
-              {value}
-            </span>
-          ),
-        },
-        {
-          key: 'quantidadeCargos',
-          label: 'Cargos',
-          width: '20%',
-          renderHeader: () => (
-            <button
-              onClick={() => handleJornadasContentSort('quantidadeCargos')}
-              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-            >
-              Cargos
-              {jornadasContentSortConfig.column === 'quantidadeCargos' ? (
-                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-              ) : (
-                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-              )}
-            </button>
-          ),
-          render: (value, row) => (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm text-gray-900 font-medium">
-                {value} {value === 1 ? 'cargo' : 'cargos'}
-              </span>
-              {value > 0 && row.cargosConfigurados === value ? (
-                <span className="text-xs text-green-600">
-                  todos configurados
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500">
-                  {row.cargosConfigurados} {row.cargosConfigurados === 1 ? 'configurado' : 'configurados'}
-                </span>
-              )}
-            </div>
-          ),
-        },
-        {
-          key: 'status',
-          label: 'Status',
-          width: '15%',
-          renderHeader: () => (
-            <button
-              onClick={() => handleJornadasContentSort('status')}
-              className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-            >
-              Status
-              {jornadasContentSortConfig.column === 'status' ? (
-                jornadasContentSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-              ) : (
-                <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-              )}
-            </button>
-          ),
-          render: (value) => (
-            <span
-              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-                value === 'Ativa'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-700'
-              }`}
-            >
-              {value}
-            </span>
-          ),
-        },
-      ];
-
-      // Ações da tabela de jornadas
-      const jornadasActions: InlineAction[] = [
-        {
-          label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
-          icon: (row) => (
-            <ToggleSwitch
-              checked={row.status === 'Ativa'}
-              onChange={() => {}}
-            />
-          ),
-          variant: 'toggle',
-          onClick: (row) => {
-            // Lógica de toggle - implementação simplificada
-            toast.info('Funcionalidade em desenvolvimento');
-          },
-        },
-        {
-          label: 'Editar',
-          icon: <Edit className="w-4 h-4" />,
-          onClick: (row) => {
-            toast.info('Funcionalidade em desenvolvimento');
-          },
-        },
-        {
-          label: 'Excluir',
-          icon: <Trash2 className="w-4 h-4" />,
-          variant: 'danger',
-          onClick: (row) => {
-            toast.info('Funcionalidade em desenvolvimento');
-          },
-        },
-      ];
-
-      return (
-        <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
-          <div className="p-4 md:p-8">
-            {/* Botão Voltar */}
-            <button
-              onClick={handleVoltarCarreiras}
-              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar para Carreiras
-            </button>
-
-            {/* Cabeçalho */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-gray-900">{carreira?.nome}</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Gerencie as jornadas e trilhas de progressão desta carreira
-              </p>
-            </div>
-
-            {/* Tabela de Jornadas */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-4 md:p-6 border-b border-gray-200 flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-gray-900">Jornadas da Carreira</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Cargos e trilhas de desenvolvimento desta carreira
-                  </p>
-                </div>
-                <button
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
-                  onClick={() => {
-                    toast.info('Funcionalidade em desenvolvimento');
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  Criar jornada
-                </button>
-              </div>
-              
-              {jornadasDaCarreira.length > 0 ? (
-                <Table
-                  columns={jornadasColumns}
-                  data={jornadasOrdenadas}
-                  actions={jornadasActions}
-                  onRowClick={(row) => handleVerCargos(row.id)}
-                />
-              ) : (
-                <div className="p-8 md:p-12">
-                  <EmptyState
-                    icon={<Briefcase className="w-8 h-8" />}
-                    title="Nenhuma jornada cadastrada nesta carreira"
-                    description="Comece criando a primeira jornada para estruturar os cargos e competências."
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
-      );
-    }
-
-    // Se uma jornada foi selecionada, renderizar página de detalhamento
-    if (selectedJornadaId && selectedCarreiraId) {
-      const jornada = jornadasData.find(j => j.id === selectedJornadaId);
-      const carreira = carreirasData.find(c => c.id === selectedCarreiraId);
-      const cargosDaJornada = cargosData.filter(c => c.jornadaId === selectedJornadaId);
-
-      // Handler para voltar à listagem de jornadas da carreira
-      const handleVoltarJornadas = () => {
-        setSelectedJornadaId(null);
-        setSelectedCarreiraDetalhe(selectedCarreiraId);
-        setSelectedCarreiraId(null);
-      };
-
-      // Handler para navegar para configuração de cargo
-      const handleConfigurarCargo = (cargo: any) => {
-        navigate(`/carreiras/${selectedCarreiraId}/jornadas/${selectedJornadaId}/cargos/${cargo.id}`);
-      };
-
-      // Colunas da tabela de cargos
-      const cargosColumns: Column[] = [
-        { 
-          key: 'ordem', 
-          label: '#', 
-          width: '8%',
-          render: (value, row, index) => (
-            <span className="text-sm text-gray-500 font-medium">
-              {(index || 0) + 1}
-            </span>
-          ),
-        },
-        { 
-          key: 'cargoRM', 
-          label: 'Nome do Cargo', 
-          width: '35%',
-          render: (value) => (
-            <span className="text-sm text-gray-900 font-medium">{value}</span>
-          ),
-        },
-        {
-          key: 'habilidadesConfiguradas',
-          label: 'Habilidades',
-          width: '25%',
-          render: (value, row) => {
-            if (value === 0) {
-              return (
-                <span className="text-sm text-gray-500">
-                  Não configurado
-                </span>
-              );
-            }
-            return (
-              <span className="text-sm text-gray-900">
-                {value} {value === 1 ? 'habilidade' : 'habilidades'}
-              </span>
-            );
-          },
-        },
-        {
-          key: 'status',
-          label: 'Status',
-          width: '20%',
-          render: (value) => (
-            <span
-              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-                value === 'Configurado'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}
-            >
-              {value}
-            </span>
-          ),
-        },
-      ];
-
-      // Ações da tabela de cargos
-      const cargosActions: InlineAction[] = [
-        {
-          label: 'Configurar habilidades',
-          variant: 'text',
-          onClick: handleConfigurarCargo,
-        },
-      ];
-
-
-
-      return (
-        <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
-          <div className="p-4 md:p-8">
-            {/* Botão Voltar */}
-            <button
-              onClick={handleVoltarJornadas}
-              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar para {carreira?.nome}
-            </button>
-
-            {/* Cabeçalho */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-gray-900">{jornada?.nome}</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Carreira: {carreira?.nome}
-              </p>
-            </div>
-
-            {/* Tabela de Cargos */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-4 md:p-6 border-b border-gray-200">
-                <h2 className="text-base font-semibold text-gray-900">Estrutura de Evolução</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Configure as habilidades esperadas para cada cargo desta jornada. A ordem representa a progressão de carreira.
-                </p>
-              </div>
-              
-              <Table
-                columns={cargosColumns}
-                data={cargosDaJornada}
-                actions={cargosActions}
-                onRowClick={handleConfigurarCargo}
-              />
-            </div>
-
-
-          </div>
-        </main>
-      );
-    }
+    const totalJornadasSelecionada = selectedRow
+      ? jornadasDoContexto.filter(j => j.carreiraId === selectedRow.id).length
+      : 0;
 
     return (
       <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
@@ -2370,13 +1688,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             onSubmit={handleCarreiraFormSubmit}
             submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
             alertBanner={
-              selectedRow && selectedRow.jornadas > 0
+              selectedRow && totalJornadasSelecionada > 0
                 ? {
                     title: 'Carreira vinculada',
-                    description: `Esta carreira está vinculada a ${selectedRow.jornadas} ${
-                      selectedRow.jornadas === 1 ? 'jornada' : 'jornadas'
+                    description: `Esta carreira está vinculada a ${totalJornadasSelecionada} ${
+                      totalJornadasSelecionada === 1 ? 'jornada' : 'jornadas'
                     }. Alterações no nome serão refletidas automaticamente ${
-                      selectedRow.jornadas === 1 ? 'nessa jornada' : 'nessas jornadas'
+                      totalJornadasSelecionada === 1 ? 'nessa jornada' : 'nessas jornadas'
                     }.`,
                     variant: 'info',
                   }
@@ -2393,9 +1711,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             onConfirm={handleDesativarCarreira}
             title="Desativar Carreira"
             message={
-              selectedRow && selectedRow.jornadas > 0
-                ? `Esta carreira está vinculada a ${selectedRow.jornadas} ${
-                    selectedRow.jornadas === 1 ? 'jornada' : 'jornadas'
+              selectedRow && totalJornadasSelecionada > 0
+                ? `Esta carreira está vinculada a ${totalJornadasSelecionada} ${
+                    totalJornadasSelecionada === 1 ? 'jornada' : 'jornadas'
                   }. Ao desativá-la, ela não poderá ser utilizada em novas estruturas de carreira.`
                 : `Ao desativar a carreira "${selectedRow?.nome}", ela não será mais exibida nas listas ativas. Você poderá reativá-la posteriormente se necessário.`
             }
@@ -2778,7 +2096,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             onSalvarRascunho={handleEditRascunho}
             onAtivar={handleEditAtivar}
             initialData={avaliacaoFormData}
-            competencias={competenciasData}
+            competencias={competencias}
           />
 
           <NovaAvaliacaoDrawer
@@ -2786,7 +2104,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             onClose={() => setIsNovaAvaliacaoOpen(false)}
             onSalvarRascunho={handleNovaAvaliacaoRascunho}
             onAtivar={handleNovaAvaliacaoAtivar}
-            competencias={competenciasData}
+            competencias={competencias}
             habilidades={habilidadesData}
           />
 
@@ -2850,7 +2168,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           <h1 className="text-2xl font-semibold text-gray-900">
             {getTitle()}
           </h1>
-          <p className="text-sm text-gray-600 mt-2 text-[16px]">{getDescription()}</p>
+          <p className="text-sm text-gray-600 mt-2">{getDescription()}</p>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">

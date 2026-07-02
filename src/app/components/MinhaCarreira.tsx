@@ -13,8 +13,9 @@ import {
   niveisDefaultData,
   habilidadesCargoData,
   habilidadesData,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   cargosData,
+  getCompetenciaNome,
 } from '../data/mockData';
 import type { MatrizCargo } from '../utils/cobertura';
 
@@ -101,34 +102,33 @@ const cargosJornada: CargoJornada[] = [
 const MAX_PESO = Math.max(...niveisDefaultData.map(n => n.peso));
 
 function calcularRadarSemCargo() {
-  const avs = avaliacoesColaboradoresData.filter(a => a.colaboradorId === COLABORADOR_ID);
+  const nivelMap = getHabilidadesAvaliadasColaborador(COLABORADOR_ID);
   const map = new Map<string, { somaAtual: number; total: number }>();
-  for (const av of avs) {
-    const hab = habilidadesData.find(h => h.id === av.habilidadeId);
+  for (const [habilidadeId, nivelAtual] of nivelMap) {
+    const hab = habilidadesData.find(h => h.id === habilidadeId);
     if (!hab) continue;
-    const peso = niveisDefaultData.find(n => n.nome === av.nivelAtual)?.peso ?? 0;
-    const comp = hab.competencia;
+    const peso = niveisDefaultData.find(n => n.nome === nivelAtual)?.peso ?? 0;
+    const comp = hab.competenciaId ?? hab.competencia;
     if (!map.has(comp)) map.set(comp, { somaAtual: 0, total: 0 });
     const e = map.get(comp)!;
     e.somaAtual += peso;
     e.total += MAX_PESO;
   }
-  return Array.from(map.entries()).map(([competencia, { somaAtual, total }]) => ({
-    competencia,
+  return Array.from(map.entries()).map(([id, { somaAtual, total }]) => ({
+    competencia: getCompetenciaNome(id) || id,
     'Você': total > 0 ? Math.round((somaAtual / total) * 100) : 0,
   }));
 }
 
 function calcularRadarComCargo(cargoId: string) {
   const matrizCargo = habilidadesCargoData.filter(h => h.cargoId === cargoId);
-  const avs = avaliacoesColaboradoresData.filter(a => a.colaboradorId === COLABORADOR_ID);
-  const mapaAvaliacoes = new Map(avs.map(a => [a.habilidadeId, a.nivelAtual]));
+  const mapaAvaliacoes = getHabilidadesAvaliadasColaborador(COLABORADOR_ID);
 
   const map = new Map<string, { total: number; cobertas: number }>();
   for (const req of matrizCargo) {
     const hab = habilidadesData.find(h => h.id === req.habilidadeId);
     if (!hab) continue;
-    const comp = hab.competencia;
+    const comp = hab.competenciaId ?? hab.competencia;
     if (!map.has(comp)) map.set(comp, { total: 0, cobertas: 0 });
     const e = map.get(comp)!;
     e.total++;
@@ -139,8 +139,8 @@ function calcularRadarComCargo(cargoId: string) {
       if (pesoAtual >= pesoExigido) e.cobertas++;
     }
   }
-  return Array.from(map.entries()).map(([competencia, { total, cobertas }]) => ({
-    competencia,
+  return Array.from(map.entries()).map(([id, { total, cobertas }]) => ({
+    competencia: getCompetenciaNome(id) || id,
     'Você': total > 0 ? Math.round((cobertas / total) * 100) : 0,
     'Cargo': 100,
   }));
@@ -148,8 +148,7 @@ function calcularRadarComCargo(cargoId: string) {
 
 function calcularTop5Gaps(cargoId: string) {
   const matrizCargo = habilidadesCargoData.filter(h => h.cargoId === cargoId);
-  const avs = avaliacoesColaboradoresData.filter(a => a.colaboradorId === COLABORADOR_ID);
-  const mapaAvaliacoes = new Map(avs.map(a => [a.habilidadeId, a.nivelAtual]));
+  const mapaAvaliacoes = getHabilidadesAvaliadasColaborador(COLABORADOR_ID);
 
   return matrizCargo
     .map(req => {
@@ -162,7 +161,7 @@ function calcularTop5Gaps(cargoId: string) {
       return {
         habilidadeId: req.habilidadeId,
         habilidade: hab?.nome ?? req.habilidadeId,
-        competencia: hab?.competencia ?? 'Outras',
+        competencia: hab ? (getCompetenciaNome(hab.competenciaId ?? '') || hab.competencia) : 'Outras',
         nivelAtualNome,
         pesoAtual,
         pesoExigido,
@@ -195,7 +194,7 @@ function CheckIcon() {
 export function MinhaCarreira() {
   const [cargoComparativoId, setCargoComparativoId] = useState<string | null>(null);
 
-  const temAvaliacao = avaliacoesColaboradoresData.some(a => a.colaboradorId === COLABORADOR_ID);
+  const temAvaliacao = getHabilidadesAvaliadasColaborador(COLABORADOR_ID).size > 0;
 
   const radarData = useMemo(
     () => cargoComparativoId ? calcularRadarComCargo(cargoComparativoId) : calcularRadarSemCargo(),

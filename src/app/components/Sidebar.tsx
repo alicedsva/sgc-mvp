@@ -173,9 +173,9 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
                     aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : ''}`} />
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : 'text-gray-700'}`} />
                     {!isCollapsed && (
-                      <span className={isActive ? 'text-[var(--brand-700)] font-medium' : ''}>
+                      <span className={isActive ? 'text-[var(--brand-700)] font-medium' : 'text-gray-700'}>
                         {item.label}
                       </span>
                     )}
@@ -222,9 +222,9 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
                         aria-label={item.label}
                         aria-current={isActive ? 'page' : undefined}
                       >
-                        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : ''}`} />
+                        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : 'text-gray-700'}`} />
                         {!isCollapsed && (
-                          <span className={isActive ? 'text-[var(--brand-700)] font-medium' : ''}>
+                          <span className={isActive ? 'text-[var(--brand-700)] font-medium' : 'text-gray-700'}>
                             {item.label}
                           </span>
                         )}

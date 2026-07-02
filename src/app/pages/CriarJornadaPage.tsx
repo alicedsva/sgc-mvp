@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
-import { carreirasData } from '../data/mockData';
+import { carreirasData, cargosData, jornadasData } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
-import { cargosDisponiveisRM } from '@/app/data/cargosRM';
 import { toast } from 'sonner';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -14,6 +12,11 @@ interface OutletContext {
   isSidebarCollapsed: boolean;
   viewMode: 'admin' | 'colaborador';
 }
+
+const catalogCargos = cargosData.map(cargo => {
+  const jornada = jornadasData.find(j => j.id === cargo.jornadaId);
+  return { id: cargo.id, nome: cargo.cargoRM, categoria: jornada?.carreira || '' };
+});
 
 interface CargoDisponivel {
   id: string;
@@ -41,7 +44,7 @@ function CriarJornadaPageContent() {
   const [buscaCargo, setBuscaCargo] = useState('');
   const [cargosSelecionados, setCargosSelecionados] = useState<CargoSelecionadoItem[]>([]);
 
-  const cargosFiltrados = cargosDisponiveisRM.filter(cargo =>
+  const cargosFiltrados = catalogCargos.filter(cargo =>
     cargo.nome.toLowerCase().includes(buscaCargo.toLowerCase())
   );
   const cargosSelecionadosIds = cargosSelecionados.map(c => c.id);
@@ -50,12 +53,6 @@ function CriarJornadaPageContent() {
   const handleAdicionarCargo = (cargo: CargoDisponivel) => {
     setCargosSelecionados(prev => {
       const updated = [...prev, { ...cargo, ordem: prev.length }];
-      amplitude.track('Cargo Added To Jornada', {
-        cargo_nome: cargo.nome,
-        cargo_categoria: cargo.categoria,
-        carreira_nome: carreira?.nome,
-        total_cargos: updated.length,
-      });
       return updated;
     });
   };
@@ -88,7 +85,7 @@ function CriarJornadaPageContent() {
     adicionarJornada(novaJornada);
 
     const novosCargos = cargosSelecionados.map((cargo, index) => ({
-      id: generateId('cargo'),
+      id: cargo.id,
       jornadaId: novaJornada.id,
       cargoRM: cargo.nome,
       ordem: String(index + 1),
@@ -98,12 +95,6 @@ function CriarJornadaPageContent() {
 
     atualizarCargosJornada(novaJornada.id, novosCargos);
 
-    amplitude.track('Jornada Created', {
-      jornada_nome: nomeJornada,
-      jornada_tipo: tipoJornada,
-      carreira_nome: carreira?.nome,
-      total_cargos: cargosSelecionados.length,
-    });
 
     toast.success('Jornada criada com sucesso!');
     navigate(`/carreiras/${carreiraId}/jornadas/${novaJornada.id}`);

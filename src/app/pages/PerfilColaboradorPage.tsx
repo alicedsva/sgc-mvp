@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext, useNavigate } from 'react-router';
 import { User, Briefcase, TrendingUp, Award, ClipboardCheck, ArrowLeft } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
-import { colaboradoresData, habilidadesCargoData, avaliacoesColaboradoresData, habilidadesData, jornadasData, carreirasData, cargosData, nivelToNumber, historicoAvaliacoesData, niveisDefaultData } from '../data/mockData';
+import { colaboradoresData, habilidadesCargoData, getHabilidadesAvaliadasColaborador, habilidadesData, jornadasData, carreirasData, cargosData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Table, Column } from '../components/ui/Table';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -14,24 +15,24 @@ export default function PerfilColaboradorPage() {
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('visao-geral');
+  const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
 
   const colaborador = colaboradoresData.find(c => c.id === colaboradorId);
 
   useEffect(() => {
-    if (colaborador) {
-      amplitude.track('Colaborador Profile Viewed', {
-        colaborador_cargo: colaborador.cargo,
-        colaborador_gerencia: colaborador.gerencia,
-        colaborador_jornada: colaborador.jornada,
-      });
-    }
-  }, [colaboradorId]);
+    setCurrentPageAvaliacoes(1);
+  }, [activeTab]);
 
   if (!colaborador) {
     return (
       <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
         <div className="p-4 md:p-8">
-          <p>Colaborador não encontrado</p>
+          <EmptyState
+            icon={<User className="w-8 h-8" />}
+            title="Colaborador não encontrado"
+            description="Este colaborador não existe ou foi removido."
+            action={{ label: 'Voltar para perfis', onClick: () => navigate('/perfis') }}
+          />
         </div>
       </main>
     );
@@ -42,22 +43,23 @@ export default function PerfilColaboradorPage() {
   const carreira = carreirasData.find(c => c.id === colaborador.carreiraId);
 
   const habilidadesEsperadas = habilidadesCargoData.filter(hc => hc.cargoId === colaborador.cargoId);
-  const avaliacoes = avaliacoesColaboradoresData.filter(a => a.colaboradorId === colaborador.id);
+  const habilidadesAvaliadas = getHabilidadesAvaliadasColaborador(colaborador.id);
 
   const habilidadesComGap = habilidadesEsperadas.map(he => {
     const habilidade = habilidadesData.find(h => h.id === he.habilidadeId);
-    const avaliacao = avaliacoes.find(a => a.habilidadeId === he.habilidadeId);
-    
-    const nivelAtualNum = avaliacao ? nivelToNumber[avaliacao.nivelAtual] || 0 : 0;
-    const nivelEsperadoNum = nivelToNumber[he.nivelEsperado] || 0;
+    const nivelAtual = habilidadesAvaliadas.get(he.habilidadeId) ?? null;
+
+    const nivelAtualNum = nivelAtual ? (nivelAtual === 'Não avaliado' ? 0 : getPesoFromNome(nivelAtual)) : 0;
+    const nivelEsperadoNum = he.nivelEsperado === 'Não avaliado' ? 0 : getPesoFromNome(he.nivelEsperado);
     const gap = nivelAtualNum - nivelEsperadoNum;
 
     return {
       habilidadeId: he.habilidadeId,
       nome: habilidade?.nome || '',
       competencia: habilidade?.competencia || '',
+      competenciaId: habilidade?.competenciaId ?? '',
       tipo: habilidade?.tipo || '',
-      nivelAtual: avaliacao?.nivelAtual || 'Não avaliado',
+      nivelAtual: nivelAtual ?? 'Não avaliado',
       nivelEsperado: he.nivelEsperado,
       gap,
       obrigatoria: he.obrigatoria,
@@ -66,23 +68,24 @@ export default function PerfilColaboradorPage() {
 
   const competenciasMap = new Map<string, { atual: number, esperado: number, count: number }>();
   habilidadesComGap.forEach(h => {
-    const current = competenciasMap.get(h.competencia) || { atual: 0, esperado: 0, count: 0 };
-    competenciasMap.set(h.competencia, {
-      atual: current.atual + nivelToNumber[h.nivelAtual],
-      esperado: current.esperado + nivelToNumber[h.nivelEsperado],
+    const key = h.competenciaId || h.competencia;
+    const current = competenciasMap.get(key) || { atual: 0, esperado: 0, count: 0 };
+    competenciasMap.set(key, {
+      atual: current.atual + (h.nivelAtual === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelAtual)),
+      esperado: current.esperado + (h.nivelEsperado === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelEsperado)),
       count: current.count + 1,
     });
   });
 
-  const competenciasComMedia = Array.from(competenciasMap.entries()).map(([nome, data]) => ({
-    competencia: nome,
+  const competenciasComMedia = Array.from(competenciasMap.entries()).map(([id, data]) => ({
+    competencia: getCompetenciaNome(id) || id,
     mediaAtual: data.atual / data.count,
     mediaEsperado: data.esperado / data.count,
     percentualAderencia: Math.round((data.atual / data.esperado) * 100),
   }));
 
-  const totalAtual = habilidadesComGap.reduce((sum, h) => sum + nivelToNumber[h.nivelAtual], 0);
-  const totalEsperado = habilidadesComGap.reduce((sum, h) => sum + nivelToNumber[h.nivelEsperado], 0);
+  const totalAtual = habilidadesComGap.reduce((sum, h) => sum + (h.nivelAtual === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelAtual)), 0);
+  const totalEsperado = habilidadesComGap.reduce((sum, h) => sum + (h.nivelEsperado === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelEsperado)), 0);
   const aderenciaGeral = totalEsperado > 0 ? Math.round((totalAtual / totalEsperado) * 100) : 0;
 
   // Calcular cobertura de habilidades
@@ -120,10 +123,11 @@ export default function PerfilColaboradorPage() {
 
   // Agrupar habilidades por categoria
   const habilidadesPorCategoria = habilidadesComGap.reduce((acc, hab) => {
-    if (!acc[hab.competencia]) {
-      acc[hab.competencia] = [];
+    const key = hab.competenciaId || hab.competencia;
+    if (!acc[key]) {
+      acc[key] = [];
     }
-    acc[hab.competencia].push(hab);
+    acc[key].push(hab);
     return acc;
   }, {} as Record<string, typeof habilidadesComGap>);
 
@@ -136,6 +140,34 @@ export default function PerfilColaboradorPage() {
   const cargoAtualIndex = cargosJornada.findIndex(c => c.id === colaborador.cargoId);
 
   const historicoAvaliacoes = historicoAvaliacoesData.filter(av => av.colaboradorId === colaborador.id);
+
+  const avaliacoesColumns: Column[] = [
+    {
+      key: 'nome',
+      label: 'Nome da Avaliação',
+      render: (value) => <span className="text-xs md:text-sm font-medium text-gray-900">{value}</span>,
+    },
+    {
+      key: 'data',
+      label: 'Data',
+      render: (value) => <span className="text-xs md:text-sm text-gray-700">{value}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => (
+        <span className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full bg-green-100 text-green-800">
+          {value}
+        </span>
+      ),
+    },
+  ];
+
+  const avaliacoesItemsPerPage = 10;
+  const avaliacoesTotal = historicoAvaliacoes.length;
+  const avaliacoesStart = (currentPageAvaliacoes - 1) * avaliacoesItemsPerPage;
+  const avaliacoesEnd = avaliacoesStart + avaliacoesItemsPerPage;
+  const avaliacoesPaginadas = historicoAvaliacoes.slice(avaliacoesStart, avaliacoesEnd);
 
   const tabs = [
     { id: 'visao-geral', label: 'Visão Geral', icon: <TrendingUp className="w-4 h-4" /> },
@@ -166,7 +198,7 @@ export default function PerfilColaboradorPage() {
           Perfis
         </button>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6">
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 rounded-full bg-[var(--brand-100)] flex items-center justify-center">
               <User className="w-8 h-8 text-[var(--brand-600)]" />
@@ -224,7 +256,7 @@ export default function PerfilColaboradorPage() {
         {activeTab === 'visao-geral' && (
           <div className="space-y-6">
             {/* Bloco 2: Cobertura de habilidades */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Cobertura de habilidades do cargo</h2>
               <p className="text-sm text-gray-600 mb-6">
                 Este indicador considera apenas as habilidades mapeadas no sistema. Outros fatores como desempenho, contexto e avaliação da liderança também são considerados na evolução de carreira.
@@ -258,7 +290,7 @@ export default function PerfilColaboradorPage() {
             </div>
 
             {/* Competências por categoria */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Competências por categoria</h2>
               <div className="space-y-4">
                 {competenciasComMedia.map((comp, index) => (
@@ -289,9 +321,9 @@ export default function PerfilColaboradorPage() {
               <p>Habilidades críticas são obrigatórias e estão abaixo do nível esperado</p>
             </div>
             {Object.entries(habilidadesPorCategoria).map(([categoria, habilidades]) => (
-              <div key={categoria} className="bg-white rounded-lg border border-gray-200">
+              <div key={categoria} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-base font-semibold text-gray-900">{categoria}</h3>
+                  <h3 className="text-base font-semibold text-gray-900">{getCompetenciaNome(categoria) || categoria}</h3>
                   <p className="text-xs text-gray-600 mt-1">
                     {habilidades.length} habilidade(s) mapeada(s)
                   </p>
@@ -301,10 +333,10 @@ export default function PerfilColaboradorPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Habilidade</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Nível atual</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Nível esperado</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">GAP</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Nível atual</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Nível esperado</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">GAP</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -313,20 +345,20 @@ export default function PerfilColaboradorPage() {
                           key={index} 
                           className={hab.gap < 0 && hab.obrigatoria ? 'bg-red-50' : ''}
                         >
-                          <td className="px-6 py-4 text-sm text-gray-900">
+                          <td className="px-3 md:px-6 py-3 text-xs md:text-sm text-gray-900">
                             <div className="flex items-center gap-2">
                               {hab.nome}
                               {hab.obrigatoria && (
                                 <span className="text-xs text-red-600 font-bold">*</span>
                               )}
                               {hab.gap < 0 && hab.obrigatoria && (
-                                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-600 text-white">
+                                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
                                   Crítica
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm">
+                          <td className="px-3 md:px-6 py-3 text-xs md:text-sm">
                             <span
                               className="inline-flex px-2 py-1 text-xs font-medium rounded-full text-white"
                               style={{ backgroundColor: nivelNomeParaCor[hab.nivelAtual] ?? '#6B7280' }}
@@ -334,7 +366,7 @@ export default function PerfilColaboradorPage() {
                               {hab.nivelAtual}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm">
+                          <td className="px-3 md:px-6 py-3 text-xs md:text-sm">
                             <span
                               className="inline-flex px-2 py-1 text-xs font-medium rounded-full text-white"
                               style={{ backgroundColor: nivelNomeParaCor[hab.nivelEsperado] ?? '#6B7280' }}
@@ -342,9 +374,9 @@ export default function PerfilColaboradorPage() {
                               {hab.nivelEsperado}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm">
+                          <td className="px-3 md:px-6 py-3 text-xs md:text-sm">
                             {hab.gap < 0 ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
                                 {hab.gap} {Math.abs(hab.gap) === 1 ? 'nível' : 'níveis'}
                               </span>
                             ) : hab.gap === 0 ? (
@@ -369,7 +401,7 @@ export default function PerfilColaboradorPage() {
         )}
 
         {activeTab === 'carreira' && (
-          <div className="bg-white rounded-lg border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Progressão de Carreira</h2>
               <p className="text-sm text-gray-600 mt-1">
@@ -440,42 +472,24 @@ export default function PerfilColaboradorPage() {
         )}
 
         {activeTab === 'avaliacoes' && (
-          <div className="bg-white rounded-lg border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Histórico de Avaliações</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Registro de avaliações realizadas
               </p>
             </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Nome da Avaliação</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {historicoAvaliacoes.map(avaliacao => (
-                    <tr key={avaliacao.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                        {avaliacao.nome}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
-                        {avaliacao.data}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                          {avaliacao.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table
+              columns={avaliacoesColumns}
+              data={avaliacoesPaginadas}
+              pagination={{
+                currentPage: currentPageAvaliacoes,
+                itemsPerPage: avaliacoesItemsPerPage,
+                totalItems: avaliacoesTotal,
+                onPageChange: setCurrentPageAvaliacoes,
+                onItemsPerPageChange: () => {},
+              }}
+            />
           </div>
         )}
       </div>

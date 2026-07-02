@@ -81,7 +81,7 @@ export function SelectionDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white">
           <div className="flex-1 min-w-0 pr-4">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900 truncate">{title}</h2>
+            <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900 truncate">{title}</h2>
             {description && (
               <p className="text-xs text-gray-600 mt-1">{description}</p>
             )}
@@ -129,7 +129,7 @@ export function SelectionDrawer({
                     <label
                       key={item.id}
                       className={`flex items-center gap-3 px-4 md:px-6 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-blue-50' : ''
+                        isSelected ? 'bg-[var(--brand-50)]' : ''
                       }`}
                     >
                       <input
@@ -165,7 +165,7 @@ export function SelectionDrawer({
           )}
 
           {/* Footer Actions */}
-          <div className="px-4 md:px-6 py-4 border-t border-gray-200 bg-white flex items-center gap-3">
+          <div className="px-4 md:px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
             <button
               type="button"
               onClick={handleClose}

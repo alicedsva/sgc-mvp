@@ -1,355 +1,56 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeft, AlertCircle, Eye, X, Users, CheckCircle, Clock, TrendingUp } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
+import { Table, Column } from '../components/ui/Table';
+import {
+  avaliacoesData,
+  Avaliacao,
+  colaboradoresData,
+  cargosData,
+  habilidadesData,
+  competenciasData,
+} from '../data/mockData';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
   viewMode: 'admin' | 'colaborador';
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Display types (derived from Avaliacao at render time) ────────────────────
 
-type AvaliacaoStatus = 'Rascunho' | 'Ativa' | 'Encerrada';
-
-interface RespostaHabilidade {
-  competencia: string;
+interface RespostaDisplay {
+  habilidadeId: string;
   habilidade: string;
+  competenciaId: string;
+  competencia: string;
   nota: number;
 }
 
-interface Participante {
+interface ParticipanteDisplay {
   id: string;
   nome: string;
   cargo: string;
   gerencia: string;
-  status: 'Respondeu' | 'Pendente';
-  respostas: RespostaHabilidade[];
+  status: 'Não iniciada' | 'Em andamento' | 'Concluída' | 'Expirada';
+  respostas: RespostaDisplay[];
 }
 
-interface AvaliacaoMock {
-  id: string;
-  nome: string;
-  status: AvaliacaoStatus;
-  periodo: string;
-  tipo: string;
-  publicoLabel: string;
-  descricao?: string;
-  habilidadesPorCompetencia?: Record<string, string[]>;
-  participantes: Participante[];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const nivelToNota: Record<string, number> = {
+  'Básico': 1,
+  'Intermediário': 2,
+  'Avançado': 3,
+  'Especialista': 4,
+  'Referência': 5,
+};
+
+function formatPeriodo(inicio: string, fim: string): string {
+  const [yi, mi, di] = inicio.split('-');
+  const [yf, mf, df] = fim.split('-');
+  if (yi === yf) return `${di}/${mi} - ${df}/${mf}/${yf}`;
+  return `${di}/${mi}/${yi} - ${df}/${mf}/${yf}`;
 }
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const AVALIACOES_MOCK: AvaliacaoMock[] = [
-  {
-    id: '1',
-    nome: 'Avaliação de Competências Técnicas Q1 2026',
-    status: 'Ativa',
-    periodo: '01/03 - 31/03/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Gerência Tecnologia',
-    participantes: [
-      { id: 'p1', nome: 'Ana Silva', cargo: 'Desenvolvedora Pleno', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 4 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 3 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 5 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 3 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 2 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 2 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 4 },
-        ] },
-      { id: 'p2', nome: 'Carlos Mendes', cargo: 'Desenvolvedor Sênior', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 5 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 5 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 4 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 4 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 3 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 5 },
-        ] },
-      { id: 'p3', nome: 'Juliana Torres', cargo: 'Desenvolvedora Junior', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 2 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 2 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 3 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 1 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 1 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 1 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 3 },
-        ] },
-      { id: 'p4', nome: 'Marcos Oliveira', cargo: 'Tech Lead', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 5 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 5 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 4 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 5 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 5 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 5 },
-        ] },
-      { id: 'p5', nome: 'Fernanda Costa', cargo: 'Desenvolvedora Pleno', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 4 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 3 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 4 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 3 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 3 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 2 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 4 },
-        ] },
-      { id: 'p6', nome: 'Ricardo Lima', cargo: 'Desenvolvedor Sênior', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'React', nota: 4 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'TypeScript', nota: 4 },
-          { competencia: 'Desenvolvimento Frontend', habilidade: 'CSS/Tailwind', nota: 3 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'Node.js', nota: 5 },
-          { competencia: 'Desenvolvimento Backend', habilidade: 'PostgreSQL', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Docker', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Git', nota: 5 },
-        ] },
-      { id: 'p7', nome: 'Beatriz Santos', cargo: 'Desenvolvedora Junior', gerencia: 'Tecnologia', status: 'Pendente', respostas: [] },
-      { id: 'p8', nome: 'Thiago Alves', cargo: 'Desenvolvedor Pleno', gerencia: 'Tecnologia', status: 'Pendente', respostas: [] },
-    ],
-  },
-  {
-    id: '2',
-    nome: 'Avaliação de Liderança 2026',
-    status: 'Encerrada',
-    periodo: '15/02 - 28/02/2026',
-    tipo: 'Gestor',
-    publicoLabel: 'Gerências Recursos Humanos e Operações',
-    participantes: [
-      { id: 'p1', nome: 'Patricia Rocha', cargo: 'Gerente de RH', gerencia: 'Recursos Humanos', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Liderança', habilidade: 'Liderança Situacional', nota: 5 },
-          { competencia: 'Liderança', habilidade: 'Feedback Construtivo', nota: 5 },
-          { competencia: 'Liderança', habilidade: 'Gestão de Conflitos', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 5 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Escuta Ativa', nota: 5 },
-        ] },
-      { id: 'p2', nome: 'Rodrigo Ferreira', cargo: 'Coordenador de Operações', gerencia: 'Operações', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Liderança', habilidade: 'Liderança Situacional', nota: 4 },
-          { competencia: 'Liderança', habilidade: 'Feedback Construtivo', nota: 3 },
-          { competencia: 'Liderança', habilidade: 'Gestão de Conflitos', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Escuta Ativa', nota: 3 },
-        ] },
-      { id: 'p3', nome: 'Camila Nunes', cargo: 'Analista de RH Sênior', gerencia: 'Recursos Humanos', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Liderança', habilidade: 'Liderança Situacional', nota: 3 },
-          { competencia: 'Liderança', habilidade: 'Feedback Construtivo', nota: 4 },
-          { competencia: 'Liderança', habilidade: 'Gestão de Conflitos', nota: 3 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Escuta Ativa', nota: 4 },
-        ] },
-      { id: 'p4', nome: 'Eduardo Pinto', cargo: 'Supervisor de Operações', gerencia: 'Operações', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Liderança', habilidade: 'Liderança Situacional', nota: 4 },
-          { competencia: 'Liderança', habilidade: 'Feedback Construtivo', nota: 4 },
-          { competencia: 'Liderança', habilidade: 'Gestão de Conflitos', nota: 5 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 3 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Escuta Ativa', nota: 4 },
-        ] },
-      { id: 'p5', nome: 'Mariana Gomes', cargo: 'Gestora de Talentos', gerencia: 'Recursos Humanos', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Liderança', habilidade: 'Liderança Situacional', nota: 5 },
-          { competencia: 'Liderança', habilidade: 'Feedback Construtivo', nota: 5 },
-          { competencia: 'Liderança', habilidade: 'Gestão de Conflitos', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 5 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Escuta Ativa', nota: 5 },
-        ] },
-    ],
-  },
-  {
-    id: '4',
-    nome: 'Avaliação de Vendas Q1',
-    status: 'Ativa',
-    periodo: '05/03 - 25/03/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Gerência Vendas',
-    participantes: [
-      { id: 'p1', nome: 'Lucas Andrade', cargo: 'Executivo de Vendas', gerencia: 'Vendas', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Vendas e Negociação', habilidade: 'Técnicas de Vendas', nota: 4 },
-          { competencia: 'Vendas e Negociação', habilidade: 'Gestão de Pipeline', nota: 3 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 4 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Apresentação', nota: 3 },
-        ] },
-      { id: 'p2', nome: 'Sabrina Vieira', cargo: 'Gerente de Vendas', gerencia: 'Vendas', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Vendas e Negociação', habilidade: 'Técnicas de Vendas', nota: 5 },
-          { competencia: 'Vendas e Negociação', habilidade: 'Gestão de Pipeline', nota: 5 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 5 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Apresentação', nota: 5 },
-        ] },
-      { id: 'p3', nome: 'Diego Souza', cargo: 'Executivo de Vendas', gerencia: 'Vendas', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Vendas e Negociação', habilidade: 'Técnicas de Vendas', nota: 3 },
-          { competencia: 'Vendas e Negociação', habilidade: 'Gestão de Pipeline', nota: 2 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Comunicação Clara', nota: 3 },
-          { competencia: 'Comunicação Corporativa', habilidade: 'Apresentação', nota: 2 },
-        ] },
-      { id: 'p4', nome: 'Tânia Medeiros', cargo: 'Analista de Vendas', gerencia: 'Vendas', status: 'Pendente', respostas: [] },
-      { id: 'p5', nome: 'Gustavo Reis', cargo: 'Executivo de Vendas', gerencia: 'Vendas', status: 'Pendente', respostas: [] },
-      { id: 'p6', nome: 'Priscila Moura', cargo: 'Analista de Vendas', gerencia: 'Vendas', status: 'Pendente', respostas: [] },
-    ],
-  },
-  {
-    id: '5',
-    nome: 'Competências Analíticas',
-    status: 'Encerrada',
-    periodo: '01/01 - 31/01/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Gerências Tecnologia e Financeiro',
-    participantes: [
-      { id: 'p1', nome: 'Rafael Costa', cargo: 'Analista de Dados Sênior', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Análise de Dados', habilidade: 'SQL Avançado', nota: 5 },
-          { competencia: 'Análise de Dados', habilidade: 'Python para Dados', nota: 4 },
-          { competencia: 'Business Intelligence', habilidade: 'Power BI', nota: 4 },
-          { competencia: 'Business Intelligence', habilidade: 'Visualização de Dados', nota: 5 },
-        ] },
-      { id: 'p2', nome: 'Vanessa Lima', cargo: 'Analista de BI', gerencia: 'Financeiro', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Análise de Dados', habilidade: 'SQL Avançado', nota: 3 },
-          { competencia: 'Análise de Dados', habilidade: 'Python para Dados', nota: 2 },
-          { competencia: 'Business Intelligence', habilidade: 'Power BI', nota: 5 },
-          { competencia: 'Business Intelligence', habilidade: 'Visualização de Dados', nota: 4 },
-        ] },
-      { id: 'p3', nome: 'Nelson Faria', cargo: 'Cientista de Dados', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Análise de Dados', habilidade: 'SQL Avançado', nota: 5 },
-          { competencia: 'Análise de Dados', habilidade: 'Python para Dados', nota: 5 },
-          { competencia: 'Business Intelligence', habilidade: 'Power BI', nota: 3 },
-          { competencia: 'Business Intelligence', habilidade: 'Visualização de Dados', nota: 4 },
-        ] },
-      { id: 'p4', nome: 'Isabela Queiroz', cargo: 'Analista Financeiro', gerencia: 'Financeiro', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Análise de Dados', habilidade: 'SQL Avançado', nota: 2 },
-          { competencia: 'Análise de Dados', habilidade: 'Python para Dados', nota: 1 },
-          { competencia: 'Business Intelligence', habilidade: 'Power BI', nota: 3 },
-          { competencia: 'Business Intelligence', habilidade: 'Visualização de Dados', nota: 3 },
-        ] },
-      { id: 'p5', nome: 'Bruno Carvalho', cargo: 'Analista de Dados Pleno', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Análise de Dados', habilidade: 'SQL Avançado', nota: 4 },
-          { competencia: 'Análise de Dados', habilidade: 'Python para Dados', nota: 3 },
-          { competencia: 'Business Intelligence', habilidade: 'Power BI', nota: 4 },
-          { competencia: 'Business Intelligence', habilidade: 'Visualização de Dados', nota: 4 },
-        ] },
-    ],
-  },
-  {
-    id: '7',
-    nome: 'Avaliação Design Q1 2026',
-    status: 'Ativa',
-    periodo: '01/03 - 20/03/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Gerências Design e Produto',
-    participantes: [
-      { id: 'p1', nome: 'Amanda Freitas', cargo: 'UX Designer Sênior', gerencia: 'Design', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Design de Produto', habilidade: 'Figma', nota: 5 },
-          { competencia: 'Design de Produto', habilidade: 'Design Systems', nota: 4 },
-          { competencia: 'UX Research', habilidade: 'Testes de Usabilidade', nota: 5 },
-          { competencia: 'UX Research', habilidade: 'Entrevistas com Usuários', nota: 4 },
-        ] },
-      { id: 'p2', nome: 'Hugo Nascimento', cargo: 'Product Designer', gerencia: 'Produto', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Design de Produto', habilidade: 'Figma', nota: 4 },
-          { competencia: 'Design de Produto', habilidade: 'Design Systems', nota: 3 },
-          { competencia: 'UX Research', habilidade: 'Testes de Usabilidade', nota: 4 },
-          { competencia: 'UX Research', habilidade: 'Entrevistas com Usuários', nota: 3 },
-        ] },
-      { id: 'p3', nome: 'Letícia Prado', cargo: 'UI Designer Pleno', gerencia: 'Design', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Design de Produto', habilidade: 'Figma', nota: 4 },
-          { competencia: 'Design de Produto', habilidade: 'Design Systems', nota: 3 },
-          { competencia: 'UX Research', habilidade: 'Testes de Usabilidade', nota: 2 },
-          { competencia: 'UX Research', habilidade: 'Entrevistas com Usuários', nota: 2 },
-        ] },
-      { id: 'p4', nome: 'Paulo Ribeiro', cargo: 'UX Researcher', gerencia: 'Design', status: 'Pendente', respostas: [] },
-    ],
-  },
-  {
-    id: '8',
-    nome: 'Competências em Cloud Computing',
-    status: 'Encerrada',
-    periodo: '15/01 - 15/02/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Gerência Tecnologia',
-    participantes: [
-      { id: 'p1', nome: 'Fábio Duarte', cargo: 'DevOps Engineer', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Cloud Computing', habilidade: 'AWS', nota: 5 },
-          { competencia: 'Cloud Computing', habilidade: 'Azure', nota: 3 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Kubernetes', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Terraform', nota: 4 },
-        ] },
-      { id: 'p2', nome: 'Cíntia Borges', cargo: 'Cloud Architect', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Cloud Computing', habilidade: 'AWS', nota: 5 },
-          { competencia: 'Cloud Computing', habilidade: 'Azure', nota: 5 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Kubernetes', nota: 5 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Terraform', nota: 5 },
-        ] },
-      { id: 'p3', nome: 'Márcio Teles', cargo: 'SRE Engineer', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Cloud Computing', habilidade: 'AWS', nota: 4 },
-          { competencia: 'Cloud Computing', habilidade: 'Azure', nota: 2 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Kubernetes', nota: 5 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Terraform', nota: 3 },
-        ] },
-      { id: 'p4', nome: 'Débora Melo', cargo: 'DevOps Engineer', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Cloud Computing', habilidade: 'AWS', nota: 3 },
-          { competencia: 'Cloud Computing', habilidade: 'Azure', nota: 3 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Kubernetes', nota: 3 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Terraform', nota: 2 },
-        ] },
-      { id: 'p5', nome: 'Cristiano Lemos', cargo: 'Engenheiro de Infraestrutura', gerencia: 'Tecnologia', status: 'Respondeu',
-        respostas: [
-          { competencia: 'Cloud Computing', habilidade: 'AWS', nota: 4 },
-          { competencia: 'Cloud Computing', habilidade: 'Azure', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Kubernetes', nota: 4 },
-          { competencia: 'DevOps e Infraestrutura', habilidade: 'Terraform', nota: 4 },
-        ] },
-    ],
-  },
-  {
-    id: '3',
-    nome: 'Soft Skills - Semestral',
-    status: 'Rascunho',
-    periodo: '10/04 - 30/04/2026',
-    tipo: 'Autoavaliação',
-    publicoLabel: 'Todos os colaboradores',
-    descricao: 'Avaliação semestral de competências comportamentais e habilidades interpessoais para todos os colaboradores da organização.',
-    habilidadesPorCompetencia: {
-      'Comunicação Corporativa': ['Comunicação Clara', 'Escuta Ativa', 'Apresentações Executivas'],
-      'Inteligência Emocional': ['Autoconhecimento', 'Gestão de Emoções', 'Empatia'],
-      'Trabalho em Equipe': ['Colaboração', 'Feedback Construtivo', 'Resolução de Conflitos'],
-    },
-    participantes: [],
-  },
-  {
-    id: '6',
-    nome: 'Metodologias Ágeis',
-    status: 'Rascunho',
-    periodo: '20/03 - 10/04/2026',
-    tipo: 'Gestor',
-    publicoLabel: 'Gerências Tecnologia e Produto',
-    descricao: 'Avaliação do nível de adoção e domínio das metodologias ágeis pelas equipes de tecnologia e produto.',
-    habilidadesPorCompetencia: {
-      'Metodologias Ágeis': ['Scrum', 'Kanban', 'OKRs', 'Retrospectivas Eficazes'],
-      'Gestão de Projetos': ['Planejamento de Sprint', 'Gestão de Backlog', 'Estimativa de Esforço'],
-    },
-    participantes: [],
-  },
-];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -358,18 +59,7 @@ export default function AvaliacaoDetalhePage() {
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
 
-  const avaliacao = AVALIACOES_MOCK.find((a) => a.id === id);
-
-  useEffect(() => {
-    if (avaliacao) {
-      amplitude.track('Avaliacao Viewed', {
-        avaliacao_nome: avaliacao.nome,
-        avaliacao_status: avaliacao.status,
-        avaliacao_tipo: avaliacao.tipo,
-        total_participantes: avaliacao.participantes.length,
-      });
-    }
-  }, [id]); // fire once per avaliacao ID change
+  const avaliacao = avaliacoesData.find((a) => a.id === id);
 
   const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${
     !isSidebarCollapsed ? 'lg:ml-64' : ''
@@ -422,10 +112,23 @@ export default function AvaliacaoDetalhePage() {
 
 // ─── Rascunho view (prévia somente-leitura) ───────────────────────────────────
 
-function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
-  const competencias = avaliacao.habilidadesPorCompetencia
-    ? Object.keys(avaliacao.habilidadesPorCompetencia)
-    : [];
+function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
+  const periodo = formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim);
+
+  const grupos = useMemo(() => {
+    if (!avaliacao.habilidades?.length) return [];
+    const map = new Map<string, { competencia: string; habilidades: string[] }>();
+    avaliacao.habilidades.forEach((hId) => {
+      const h = habilidadesData.find((x) => x.id === hId);
+      if (!h) return;
+      if (!map.has(h.competenciaId)) {
+        const comp = competenciasData.find((c) => c.id === h.competenciaId);
+        map.set(h.competenciaId, { competencia: comp?.nome ?? h.competenciaId, habilidades: [] });
+      }
+      map.get(h.competenciaId)!.habilidades.push(h.nome);
+    });
+    return Array.from(map.values());
+  }, [avaliacao.habilidades]);
 
   return (
     <>
@@ -439,12 +142,8 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <span>{avaliacao.tipo}</span>
-          {avaliacao.periodo && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span>{avaliacao.periodo}</span>
-            </>
-          )}
+          <span className="text-gray-300">·</span>
+          <span>{periodo}</span>
           <span className="text-gray-300">·</span>
           <span>{avaliacao.publicoLabel}</span>
         </div>
@@ -459,15 +158,15 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
       </div>
 
       {/* Habilidades agrupadas por competência */}
-      {competencias.length > 0 ? (
+      {grupos.length > 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-          {competencias.map((comp) => (
-            <div key={comp} className="p-6">
+          {grupos.map((g) => (
+            <div key={g.competencia} className="p-6">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                {comp}
+                {g.competencia}
               </p>
               <div className="space-y-4">
-                {avaliacao.habilidadesPorCompetencia![comp].map((hab) => (
+                {g.habilidades.map((hab) => (
                   <div key={hab} className="flex items-center justify-between gap-4">
                     <span className="text-sm text-gray-800">{hab}</span>
                     <EscalaLeitura />
@@ -505,13 +204,103 @@ function EscalaLeitura() {
 
 // ─── Detalhe completo ─────────────────────────────────────────────────────────
 
-function AvaliacaoDetalheView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
-  const [drawerParticipante, setDrawerParticipante] = useState<Participante | null>(null);
+function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
+  const [drawerParticipante, setDrawerParticipante] = useState<ParticipanteDisplay | null>(null);
+  const [currentPageParticipantes, setCurrentPageParticipantes] = useState(1);
 
-  const total = avaliacao.participantes.length;
-  const responderam = avaliacao.participantes.filter((p) => p.status === 'Respondeu').length;
+  const periodo = formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim);
+
+  const participantesDisplay = useMemo((): ParticipanteDisplay[] => {
+    return avaliacao.participantes.map((p) => {
+      const colaborador = colaboradoresData.find((c) => c.id === p.colaboradorId);
+      const respostas: RespostaDisplay[] = p.respostas.map((r) => {
+        const hab = habilidadesData.find((h) => h.id === r.habilidadeId);
+        const comp = hab ? competenciasData.find((c) => c.id === hab.competenciaId) : undefined;
+        return {
+          habilidadeId: r.habilidadeId,
+          habilidade: hab?.nome ?? r.habilidadeId,
+          competenciaId: hab?.competenciaId ?? '',
+          competencia: comp?.nome ?? '',
+          nota: nivelToNota[r.nivelRespondido] ?? 1,
+        };
+      });
+      return {
+        id: p.colaboradorId,
+        nome: colaborador?.nome ?? p.colaboradorId,
+        cargo: cargosData.find(cg => cg.id === colaborador?.cargoId)?.cargoRM ?? colaborador?.cargo ?? '',
+        gerencia: colaborador?.gerencia ?? '',
+        status: p.status,
+        respostas,
+      };
+    });
+  }, [avaliacao]);
+
+  const total = participantesDisplay.length;
+  const responderam = participantesDisplay.filter((p) => p.status === 'Concluída').length;
   const pendentes = total - responderam;
   const percentual = total > 0 ? Math.round((responderam / total) * 100) : 0;
+
+  const participantesItemsPerPage = 10;
+  const participantesStart = (currentPageParticipantes - 1) * participantesItemsPerPage;
+  const participantesPaginados = participantesDisplay.slice(
+    participantesStart,
+    participantesStart + participantesItemsPerPage
+  );
+
+  const statusBadgeClass: Record<string, string> = {
+    'Não iniciada': 'bg-orange-100 text-orange-800',
+    'Em andamento': 'bg-blue-100 text-blue-800',
+    'Concluída': 'bg-green-100 text-green-800',
+    'Expirada': 'bg-gray-100 text-gray-700',
+  };
+
+  const participantesColumns: Column[] = [
+    {
+      key: 'nome',
+      label: 'Nome',
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>,
+    },
+    {
+      key: 'cargo',
+      label: 'Cargo',
+      render: (value) => <span className="text-gray-600">{value}</span>,
+    },
+    {
+      key: 'gerencia',
+      label: 'Gerência',
+      render: (value) => <span className="text-gray-600">{value}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => (
+        <span className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+          statusBadgeClass[value as string] ?? 'bg-gray-100 text-gray-700'
+        }`}>
+          {value as string}
+        </span>
+      ),
+    },
+    {
+      key: '_actions',
+      label: 'Ações',
+      render: (_, row) => (
+        row.status === 'Concluída' ? (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setDrawerParticipante(row as unknown as ParticipanteDisplay)}
+              title="Visualizar respostas"
+              className="p-1.5 md:p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <span className="inline-block w-8" />
+        )
+      ),
+    },
+  ];
 
   const statusClass =
     avaliacao.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700';
@@ -529,7 +318,7 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <span>{avaliacao.tipo}</span>
           <span className="text-gray-300">·</span>
-          <span>{avaliacao.periodo}</span>
+          <span>{periodo}</span>
           <span className="text-gray-300">·</span>
           <span>{avaliacao.publicoLabel}</span>
         </div>
@@ -541,25 +330,21 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
           icon={<Users className="w-5 h-5 text-[var(--brand-600)]" />}
           label="Total de participantes"
           value={total}
-          iconBg="bg-[var(--brand-50)]"
         />
         <SummaryCard
           icon={<CheckCircle className="w-5 h-5 text-green-600" />}
           label="Responderam"
           value={responderam}
-          iconBg="bg-green-50"
         />
         <SummaryCard
           icon={<Clock className="w-5 h-5 text-yellow-600" />}
           label="Pendentes"
           value={pendentes}
-          iconBg="bg-yellow-50"
         />
         <SummaryCard
           icon={<TrendingUp className="w-5 h-5 text-[var(--brand-600)]" />}
           label="Conclusão"
           value={`${percentual}%`}
-          iconBg="bg-[var(--brand-50)]"
           highlight={
             percentual >= 80
               ? 'text-green-700'
@@ -571,64 +356,21 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: AvaliacaoMock }) {
       </div>
 
       {/* Tabela de participantes */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">Participantes</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Cargo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Gerência</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {avaliacao.participantes.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{p.nome}</td>
-                  <td className="px-6 py-4 text-gray-600">{p.cargo}</td>
-                  <td className="px-6 py-4 text-gray-600">{p.gerencia}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                        p.status === 'Respondeu'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {p.status === 'Respondeu' ? (
-                      <button
-                        onClick={() => {
-                          setDrawerParticipante(p);
-                          amplitude.track('Avaliacao Responses Viewed', {
-                            avaliacao_nome: avaliacao.nome,
-                            participante_cargo: p.cargo,
-                            participante_gerencia: p.gerencia,
-                            total_respostas: p.respostas.length,
-                          });
-                        }}
-                        title="Visualizar respostas"
-                        className="p-1.5 md:p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <span className="inline-block w-8" />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={participantesColumns}
+          data={participantesPaginados}
+          pagination={{
+            currentPage: currentPageParticipantes,
+            itemsPerPage: participantesItemsPerPage,
+            totalItems: total,
+            onPageChange: setCurrentPageParticipantes,
+            onItemsPerPageChange: () => {},
+          }}
+        />
       </div>
 
       {/* Drawer de respostas */}
@@ -648,24 +390,22 @@ function SummaryCard({
   icon,
   label,
   value,
-  iconBg,
   highlight,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  iconBg: string;
   highlight?: string;
 }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-5">
-      <div className="flex items-center gap-3 mb-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-          {icon}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className={`text-3xl font-bold ${highlight ?? 'text-gray-900'}`}>{value}</p>
+          <p className="text-base font-semibold text-gray-700 mt-0.5">{label}</p>
         </div>
+        <span className="flex-shrink-0">{icon}</span>
       </div>
-      <p className={`text-2xl font-semibold ${highlight ?? 'text-gray-900'}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
     </div>
   );
 }
@@ -676,19 +416,19 @@ function RespostasDrawer({
   participante,
   onClose,
 }: {
-  participante: Participante;
+  participante: ParticipanteDisplay;
   onClose: () => void;
 }) {
   const porCompetencia = useMemo(() => {
-    const groups: Record<string, RespostaHabilidade[]> = {};
+    const groups: Record<string, RespostaDisplay[]> = {};
     participante.respostas.forEach((r) => {
-      if (!groups[r.competencia]) groups[r.competencia] = [];
-      groups[r.competencia].push(r);
+      if (!groups[r.competenciaId]) groups[r.competenciaId] = [];
+      groups[r.competenciaId].push(r);
     });
     return groups;
   }, [participante]);
 
-  const competencias = Object.keys(porCompetencia);
+  const competenciaIds = Object.keys(porCompetencia);
 
   return (
     <>
@@ -719,17 +459,20 @@ function RespostasDrawer({
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 space-y-5">
-          {competencias.length === 0 ? (
+          {competenciaIds.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">Nenhuma resposta registrada.</p>
           ) : (
-            competencias.map((comp) => (
-              <div key={comp}>
+            competenciaIds.map((compId) => (
+              <div key={compId}>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  {comp}
+                  {porCompetencia[compId][0].competencia}
                 </p>
                 <div className="space-y-3">
-                  {porCompetencia[comp].map((r) => (
-                    <div key={r.habilidade} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  {porCompetencia[compId].map((r) => (
+                    <div
+                      key={r.habilidadeId}
+                      className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+                    >
                       <span className="text-sm text-gray-800">{r.habilidade}</span>
                       <NotaVisual nota={r.nota} />
                     </div>

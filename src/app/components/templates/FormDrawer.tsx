@@ -82,7 +82,7 @@ export function FormDrawer({
               <div
                 className={`p-4 rounded-lg border flex items-start gap-3 ${
                   alertBanner.variant === 'info'
-                    ? 'bg-blue-50 border-blue-200'
+                    ? 'bg-[var(--brand-50)] border-[var(--brand-100)]'
                     : alertBanner.variant === 'warning'
                     ? 'bg-yellow-50 border-yellow-200'
                     : alertBanner.variant === 'success'
@@ -93,7 +93,7 @@ export function FormDrawer({
                 <Info
                   className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
                     alertBanner.variant === 'info'
-                      ? 'text-blue-600'
+                      ? 'text-[var(--brand-600)]'
                       : alertBanner.variant === 'warning'
                       ? 'text-yellow-600'
                       : alertBanner.variant === 'success'

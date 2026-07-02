@@ -90,7 +90,7 @@ export function EditarAvaliacaoModal({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-[200]" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/35 z-[200]" onClick={onClose} />
 
       <div className="fixed inset-0 flex items-center justify-center z-[210] p-4 pointer-events-none">
         <div className="bg-white rounded-xl shadow-2xl w-[672px] h-[720px] flex flex-col pointer-events-auto">

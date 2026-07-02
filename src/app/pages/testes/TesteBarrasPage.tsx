@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import {
   habilidadesData,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   niveisDefaultData,
   joaoHabilidadesCargoMatriz,
   benchmarkCargosData,
@@ -95,11 +95,10 @@ export default function TesteBarrasPage() {
     setSelectedSenioridade('');
   }
 
-  const joaoAvs = useMemo(
-    () => avaliacoesColaboradoresData.filter(a => a.colaboradorId === JOAO_ID),
+  const mapaJoao = useMemo(
+    () => getHabilidadesAvaliadasColaborador(JOAO_ID),
     [],
   );
-  const mapaJoao = useMemo(() => new Map(joaoAvs.map(a => [a.habilidadeId, a.nivelAtual])), [joaoAvs]);
 
   const activeMatrix = useMemo(() => {
     if (!cargoId) return joaoHabilidadesCargoMatriz;
@@ -111,13 +110,13 @@ export default function TesteBarrasPage() {
   const universo = useMemo(() => {
     const ids = new Set([
       ...activeMatrix.map(m => m.habilidadeId),
-      ...joaoAvs.map(a => a.habilidadeId),
+      ...mapaJoao.keys(),
     ]);
     return habilidadesData
       .filter(h => ids.has(h.id))
       .filter(h => tipoFiltro === 'Ambas' || h.tipo === tipoFiltro)
       .filter(h => !busca || h.nome.toLowerCase().includes(busca.toLowerCase()));
-  }, [activeMatrix, joaoAvs, tipoFiltro, busca]);
+  }, [activeMatrix, mapaJoao, tipoFiltro, busca]);
 
   const porCompetencia = useMemo(() => {
     const map = new Map<string, typeof universo>();

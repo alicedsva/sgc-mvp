@@ -11,13 +11,8 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { calcularCobertura, HabilidadeColaborador, MatrizCargo } from '../utils/cobertura';
-import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
+import { getCorFromPeso, niveisDefaultData, getPesoFromNome, habilidadesData, getCompetenciaNome } from '../data/mockData';
 import { Table, Column, PaginationConfig } from './ui/Table';
-
-function getPesoFromNome(nome: string): number {
-  const nivel = niveisDefaultData.find(n => n.nome === nome);
-  return nivel?.peso ?? 0;
-}
 
 const PESO_MAX = Math.max(...niveisDefaultData.map(n => n.peso));
 
@@ -37,20 +32,6 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | stri
     pages.push('...'); pages.push(totalPages);
   }
   return pages;
-}
-
-interface Competencia {
-  id: string;
-  nome: string;
-  tipo: 'Técnica' | 'Comportamental';
-  habilidades: Habilidade[];
-}
-
-interface Habilidade {
-  id: string;
-  nome: string;
-  nivel: string;
-  status: 'Em desenvolvimento' | 'Consolidada';
 }
 
 interface Cargo {
@@ -81,70 +62,28 @@ export function ColaboradorView() {
     jornada: 'Engenharia de Software',
   };
 
-  const competencias: Competencia[] = [
-    {
-      id: '1',
-      nome: 'Frontend',
-      tipo: 'Técnica',
-      habilidades: [
-        { id: '1', nome: 'React', nivel: 'Avançado', status: 'Consolidada' },
-        { id: '2', nome: 'TypeScript', nivel: 'Avançado', status: 'Consolidada' },
-        { id: '3', nome: 'CSS/Tailwind', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-        { id: '4', nome: 'Testes Automatizados', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-      ],
-    },
-    {
-      id: '2',
-      nome: 'Backend',
-      tipo: 'Técnica',
-      habilidades: [
-        { id: '5', nome: 'Node.js', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-        { id: '6', nome: 'APIs REST', nivel: 'Intermediário', status: 'Consolidada' },
-        { id: '7', nome: 'Banco de Dados', nivel: 'Básico', status: 'Em desenvolvimento' },
-      ],
-    },
-    {
-      id: '3',
-      nome: 'Soft Skills',
-      tipo: 'Comportamental',
-      habilidades: [
-        { id: '8', nome: 'Comunicação', nivel: 'Avançado', status: 'Consolidada' },
-        { id: '9', nome: 'Trabalho em Equipe', nivel: 'Avançado', status: 'Consolidada' },
-        { id: '10', nome: 'Liderança Técnica', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-      ],
-    },
-    {
-      id: '4',
-      nome: 'DevOps',
-      tipo: 'Técnica',
-      habilidades: [
-        { id: '11', nome: 'Docker', nivel: 'Básico', status: 'Em desenvolvimento' },
-        { id: '12', nome: 'CI/CD', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-      ],
-    },
-    {
-      id: '5',
-      nome: 'Design',
-      tipo: 'Técnica',
-      habilidades: [
-        { id: '13', nome: 'UX/UI', nivel: 'Intermediário', status: 'Consolidada' },
-        { id: '14', nome: 'Prototipagem', nivel: 'Intermediário', status: 'Em desenvolvimento' },
-      ],
-    },
-    {
-      id: '6',
-      nome: 'Ágeis',
-      tipo: 'Técnica',
-      habilidades: [
-        { id: '15', nome: 'Scrum', nivel: 'Avançado', status: 'Consolidada' },
-        { id: '16', nome: 'Kanban', nivel: 'Avançado', status: 'Consolidada' },
-      ],
-    },
+  const habilidadesNiveis: { id: string; nivel: string }[] = [
+    { id: '1',  nivel: 'Avançado' },
+    { id: '2',  nivel: 'Avançado' },
+    { id: '3',  nivel: 'Intermediário' },
+    { id: '4',  nivel: 'Intermediário' },
+    { id: '5',  nivel: 'Intermediário' },
+    { id: '6',  nivel: 'Intermediário' },
+    { id: '7',  nivel: 'Básico' },
+    { id: '8',  nivel: 'Avançado' },
+    { id: '9',  nivel: 'Avançado' },
+    { id: '10', nivel: 'Intermediário' },
+    { id: '11', nivel: 'Básico' },
+    { id: '12', nivel: 'Intermediário' },
+    { id: '13', nivel: 'Intermediário' },
+    { id: '14', nivel: 'Intermediário' },
+    { id: '15', nivel: 'Avançado' },
+    { id: '16', nivel: 'Avançado' },
   ];
 
-  const habilidadesColaborador: HabilidadeColaborador[] = competencias.flatMap(c =>
-    c.habilidades.map(h => ({ habilidadeId: h.id, nivelAtual: h.nivel }))
-  );
+  const habilidadesColaborador: HabilidadeColaborador[] = habilidadesNiveis.map(h => ({
+    habilidadeId: h.id, nivelAtual: h.nivel,
+  }));
 
   const cargos: Cargo[] = [
     {
@@ -259,33 +198,36 @@ export function ColaboradorView() {
   const primeiroNome = colaborador.nome.split(' ')[0];
 
   // Lista plana de habilidades com status calculado
-  const todasHabilidades = competencias.flatMap(comp =>
-    comp.habilidades.map(h => {
-      const nivelEsperado = nivelEsperadoMap.get(h.id);
-      const nivelAtualNum = getPesoFromNome(h.nivel);
-      const nivelEsperadoNum = nivelEsperado != null ? getPesoFromNome(nivelEsperado) : null;
+  const todasHabilidades = habilidadesNiveis.map(item => {
+    const hab = habilidadesData.find(h => h.id === item.id);
+    const nivelEsperado = nivelEsperadoMap.get(item.id);
+    const nivelAtualNum = getPesoFromNome(item.nivel);
+    const nivelEsperadoNum = nivelEsperado != null ? getPesoFromNome(nivelEsperado) : null;
 
-      let statusIndicador: 'Acima do esperado' | 'No esperado' | 'Abaixo do esperado' | null = null;
-      if (nivelEsperadoNum !== null) {
-        if (nivelAtualNum > nivelEsperadoNum) statusIndicador = 'Acima do esperado';
-        else if (nivelAtualNum === nivelEsperadoNum) statusIndicador = 'No esperado';
-        else statusIndicador = 'Abaixo do esperado';
-      }
+    let statusIndicador: 'Acima do esperado' | 'No esperado' | 'Abaixo do esperado' | null = null;
+    if (nivelEsperadoNum !== null) {
+      if (nivelAtualNum > nivelEsperadoNum) statusIndicador = 'Acima do esperado';
+      else if (nivelAtualNum === nivelEsperadoNum) statusIndicador = 'No esperado';
+      else statusIndicador = 'Abaixo do esperado';
+    }
 
-      return {
-        id: h.id,
-        nome: h.nome,
-        nivel: h.nivel,
-        competenciaId: comp.id,
-        competenciaNome: comp.nome,
-        tipo: comp.tipo,
-        statusIndicador,
-        pesoAtual: nivelAtualNum,
-        pesoEsperado: nivelEsperadoNum,
-        nivelEsperadoNome: nivelEsperado ?? null,
-      };
-    })
-  );
+    return {
+      id: item.id,
+      nome: hab?.nome ?? item.id,
+      nivel: item.nivel,
+      competenciaId: hab?.competenciaId ?? '',
+      competenciaNome: getCompetenciaNome(hab?.competenciaId ?? ''),
+      tipo: (hab?.tipo ?? 'Técnica') as 'Técnica' | 'Comportamental',
+      statusIndicador,
+      pesoAtual: nivelAtualNum,
+      pesoEsperado: nivelEsperadoNum,
+      nivelEsperadoNome: nivelEsperado ?? null,
+    };
+  });
+
+  const competenciasNoView = Array.from(
+    new Set(todasHabilidades.map(h => h.competenciaId).filter(Boolean))
+  ).sort((a, b) => getCompetenciaNome(a).localeCompare(getCompetenciaNome(b)));
 
   // Filtragem combinada
   const habilidadesFiltradas = todasHabilidades.filter(h => {
@@ -426,8 +368,8 @@ export function ColaboradorView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as competências</SelectItem>
-                {competencias.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                {competenciasNoView.map(id => (
+                  <SelectItem key={id} value={id}>{getCompetenciaNome(id)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

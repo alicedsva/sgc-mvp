@@ -1,10 +1,5 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate, useOutletContext } from 'react-router';
-
-interface OutletContext {
-  isSidebarCollapsed: boolean;
-  viewMode: 'admin' | 'colaborador';
-}
+import { useParams, useNavigate } from 'react-router';
 
 export default function ConfigurarCargoPage() {
   const { carreiraId, jornadaId, cargoId } = useParams();

@@ -1,14 +1,15 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { carreirasData, habilidadesData, niveisDefaultData, getCorFromPeso } from '../data/mockData';
+import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus } from 'lucide-react';
+import { carreirasData, habilidadesData, niveisDefaultData, getCorFromPeso, colaboradoresData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
-import { cargosDisponiveisRM } from '@/app/data/cargosRM';
-import { SelectionDrawer, SelectionItem } from '../components/templates/SelectionDrawer';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
 import { MatrizCell } from '../components/carreiras/MatrizCell';
 import { HabilidadesSelectionModal, HabilidadeItem } from '../components/templates/HabilidadesSelectionModal';
+import { ColaboradoresSelectionModal } from '../components/templates/ColaboradoresSelectionModal';
+import { Table, Column, InlineAction } from '../components/ui/Table';
+import { EmptyState } from '../components/ui/EmptyState';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
@@ -56,6 +57,9 @@ function JornadaDetalheContent() {
     atualizarCargo,
     removerCargo,
     atualizarHabilidadesCargo,
+    vincularColaborador,
+    desvincularColaborador,
+    getColaboradoresPorJornada,
   } = useCarreiras();
 
   // Buscar dados
@@ -65,7 +69,6 @@ function JornadaDetalheContent() {
 
   const [cargos, setCargos] = useState<Cargo[]>(cargosDaJornadaIniciais);
   const [cargoExpandido, setCargoExpandido] = useState<string | null>(null);
-  const [isAddCargoDrawerOpen, setIsAddCargoDrawerOpen] = useState(false);
   const [isEditCargoDrawerOpen, setIsEditCargoDrawerOpen] = useState(false);
   const [cargoParaEditar, setCargoParaEditar] = useState<Cargo | null>(null);
   const [cargoParaExcluir, setCargoParaExcluir] = useState<Cargo | null>(null);
@@ -97,11 +100,20 @@ function JornadaDetalheContent() {
   // Estado de alterações não salvas na matriz
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Estado da tab ativa
+  const [tabAtiva, setTabAtiva] = useState<'matriz' | 'colaboradores'>('matriz');
+
+  // Estados da aba Colaboradores
+  const [isAddColabModalOpen, setIsAddColabModalOpen] = useState(false);
+  const [colaboradorParaDesvincular, setColaboradorParaDesvincular] = useState<{ id: string; nome: string } | null>(null);
+  const [paginaColabs, setPaginaColabs] = useState(1);
+
   const [habilidadesNaMatriz, setHabilidadesNaMatriz] = useState<Array<{
     id: string;
     nome: string;
     tipo: 'Técnica' | 'Comportamental';
     competencia: string;
+    competenciaId: string;
     niveis: Array<{ nivelId: string; criterio: string }>;
   }>>([]);
 
@@ -140,6 +152,50 @@ function JornadaDetalheContent() {
 
   // Estado da matriz de níveis — chaveado por [habilidadeId][cargoId]
   const [matrizNiveis, setMatrizNiveis] = useState<Record<string, Record<string, string | null>>>({});
+
+  // Hidrata habilidadesNaMatriz e matrizNiveis a partir do Context na montagem.
+  // Roda uma única vez por jornada — hydrated.current impede re-hidratação
+  // se todasHabilidadesCargo mudar durante edição ativa, evitando sobrescrever
+  // alterações não salvas do usuário.
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+
+    const cargoIds = new Set(
+      todosOsCargos.filter(c => c.jornadaId === jornadaId).map(c => c.id)
+    );
+    const habilidadesDaJornada = todasHabilidadesCargo.filter(h =>
+      cargoIds.has(h.cargoId)
+    );
+
+    if (habilidadesDaJornada.length === 0) return;
+
+    const habilidadeIdsUnicas = Array.from(
+      new Set(habilidadesDaJornada.map(h => h.habilidadeId))
+    );
+    setHabilidadesNaMatriz(
+      habilidadeIdsUnicas.flatMap(id => {
+        const hab = habilidadesData.find(h => h.id === id);
+        if (!hab) return [];
+        return [{
+          id: hab.id,
+          nome: hab.nome,
+          tipo: hab.tipo as 'Técnica' | 'Comportamental',
+          competencia: hab.competencia,
+          competenciaId: hab.competenciaId ?? '',
+          niveis: hab.niveis || [],
+        }];
+      })
+    );
+
+    const niveis: Record<string, Record<string, string | null>> = {};
+    habilidadesDaJornada.forEach(h => {
+      if (!niveis[h.habilidadeId]) niveis[h.habilidadeId] = {};
+      niveis[h.habilidadeId][h.cargoId] = h.nivelEsperado;
+    });
+    setMatrizNiveis(niveis);
+  }, [jornadaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCellChange = (habilidadeId: string, cargo: string, nivel: string | null) => {
     setMatrizNiveis(prev => ({
@@ -200,38 +256,6 @@ function JornadaDetalheContent() {
     });
   }, [jornadaId, atualizarCargosJornada]);
 
-  // Cargos já adicionados na jornada
-  const cargosJaAdicionadosNomes = cargos.map(c => c.cargoRM);
-
-  // Itens disponíveis para adicionar
-  const cargosDisponiveis: SelectionItem[] = cargosDisponiveisRM
-    .filter(cargo => !cargosJaAdicionadosNomes.includes(cargo.nome))
-    .map(cargo => ({
-      id: cargo.id,
-      label: cargo.nome,
-      sublabel: cargo.categoria,
-    }));
-
-  // Adicionar cargos
-  const handleAdicionarCargos = (selectedIds: string[]) => {
-    const novosCargos: Cargo[] = selectedIds.map((cargoRmId, index) => {
-      const cargoRM = cargosDisponiveisRM.find(c => c.id === cargoRmId);
-      return {
-        id: generateId('cargo'),
-        jornadaId: jornadaId!,
-        cargoRM: cargoRM?.nome || '',
-        ordem: String(cargos.length + index + 1),
-        habilidadesConfiguradas: 0,
-        status: 'Pendente',
-      };
-    });
-
-    novosCargos.forEach(cargo => adicionarCargo(cargo));
-    setCargos([...cargos, ...novosCargos]);
-    
-    toast.success(`${novosCargos.length} ${novosCargos.length === 1 ? 'cargo adicionado' : 'cargos adicionados'}`);
-  };
-
   // Editar cargo
   const handleEditarCargo = (cargo: Cargo) => {
     setCargoParaEditar(cargo);
@@ -280,21 +304,6 @@ function JornadaDetalheContent() {
     }
   };
 
-  // Remover habilidade
-  const handleRemoverHabilidade = (cargoId: string, habilidadeCargoId: string) => {
-    const habilidadesAtualizadas = todasHabilidadesCargo
-      .filter(h => h.cargoId === cargoId && h.id !== habilidadeCargoId)
-      .map(h => ({
-        id: h.id,
-        cargoId: h.cargoId,
-        habilidadeId: h.habilidadeId,
-        nivelEsperado: h.nivelEsperado,
-      }));
-
-    atualizarHabilidadesCargo(cargoId, habilidadesAtualizadas);
-    toast.success('Habilidade removida');
-  };
-
   // Alterar nível de habilidade
   const handleAlterarNivel = (cargoId: string, habilidadeCargoId: string, novoNivel: string) => {
     const habilidadesAtualizadas = todasHabilidadesCargo
@@ -327,7 +336,7 @@ function JornadaDetalheContent() {
 
   // Toggle status da jornada
   const handleToggleStatus = () => {
-    const novoStatus = jornada!.status === 'Ativa' ? 'Inativa' : 'Ativa';
+    const novoStatus = jornada!.status === 'Ativa' ? 'Desativada' : 'Ativa';
     atualizarJornada(jornadaId!, { status: novoStatus });
     toast.success(`Jornada ${novoStatus === 'Ativa' ? 'ativada' : 'desativada'}`);
   };
@@ -355,6 +364,7 @@ function JornadaDetalheContent() {
           nome: hab.nome,
           tipo: hab.tipo as 'Técnica' | 'Comportamental',
           competencia: hab.competencia,
+          competenciaId: hab.competenciaId ?? '',
           niveis: hab.niveis || [],
         };
       });
@@ -386,6 +396,7 @@ function JornadaDetalheContent() {
       nome: h.nome,
       tipo: h.tipo as 'Técnica' | 'Comportamental',
       competencia: h.competencia,
+      competenciaId: h.competenciaId ?? '',
     }));
   }, []);
 
@@ -405,7 +416,7 @@ function JornadaDetalheContent() {
     }
 
     return result;
-  }, [searchText, habilidadesNaMatriz, cargos, matrizNiveis]);
+  }, [searchText, habilidadesNaMatriz]);
 
   // Enriquece os niveis de cada habilidade com nome, peso e critério — para passar ao MatrizCell
   const niveisEnriquecidosPorHabilidade = useMemo(() => {
@@ -434,6 +445,68 @@ function JornadaDetalheContent() {
       ).length,
     [habilidadesNaMatriz, cargos, matrizNiveis]
   );
+
+  // Dados da aba Colaboradores
+  const colaboradoresVinculadosIds = getColaboradoresPorJornada(jornadaId ?? '');
+  const colaboradoresVinculados = (colaboradoresData as any[]).filter(c => colaboradoresVinculadosIds.includes(c.id));
+  const colaboradoresDisponiveisParaModal = (colaboradoresData as any[])
+    .filter(c => !colaboradoresVinculadosIds.includes(c.id))
+    .map((c: any) => ({ id: c.id, nome: c.nome, cargoId: c.cargoId, gerencia: c.gerencia }));
+
+  const COLABS_PER_PAGE = 10;
+  const colaboradoresPaginados = colaboradoresVinculados.slice(
+    (paginaColabs - 1) * COLABS_PER_PAGE,
+    paginaColabs * COLABS_PER_PAGE
+  );
+
+  const colaboradoresColumns: Column[] = [
+    {
+      key: 'nome',
+      label: 'Nome',
+      width: '30%',
+      render: (value) => <span className="text-sm font-medium text-gray-900">{value}</span>,
+    },
+    {
+      key: 'cargo',
+      label: 'Cargo',
+      width: '25%',
+      render: (_value, row) => {
+        const cargo = cargos.find(c => c.id === row.cargoId);
+        return <span className="text-sm text-gray-500">{cargo?.cargoRM ?? '—'}</span>;
+      },
+    },
+    {
+      key: 'gerencia',
+      label: 'Gerência',
+      width: '20%',
+      render: (value) => <span className="text-sm text-gray-500">{value}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '15%',
+      render: () => (
+        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+          Ativo
+        </span>
+      ),
+    },
+  ];
+
+  const colaboradoresActions: InlineAction[] = [
+    {
+      label: 'Desvincular',
+      icon: <UserMinus className="w-4 h-4" />,
+      variant: 'danger',
+      onClick: (row) => setColaboradorParaDesvincular({ id: row.id, nome: row.nome }),
+    },
+  ];
+
+  const handleConfirmarAdicionarColabs = (ids: string[]) => {
+    ids.forEach(id => vincularColaborador(jornadaId!, id));
+    toast.success(`${ids.length} colaborador${ids.length > 1 ? 'es vinculados' : ' vinculado'}`);
+    setPaginaColabs(1);
+  };
 
   if (!carreira || !jornada) {
     return (
@@ -566,8 +639,35 @@ function JornadaDetalheContent() {
           </div>
         </div>
 
-        {/* Matriz de Configuração */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden relative">
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <div className="flex gap-8">
+            <button
+              onClick={() => setTabAtiva('matriz')}
+              className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                tabAtiva === 'matriz'
+                  ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Matriz de Habilidades
+            </button>
+            <button
+              onClick={() => setTabAtiva('colaboradores')}
+              className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                tabAtiva === 'colaboradores'
+                  ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Colaboradores
+            </button>
+          </div>
+        </div>
+
+        {/* Matriz de Habilidades */}
+        {tabAtiva === 'matriz' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {/* Linha de busca, filtros e ação */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
             <div className="w-56 flex-shrink-0 relative">
@@ -603,12 +703,13 @@ function JornadaDetalheContent() {
             </button>
 
             <div className="flex-1" />
-            <button onClick={() => setIsHabilidadesMatrizDrawerOpen(true)} className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-              <Plus className="w-4 h-4" />
+            <button onClick={() => setIsHabilidadesMatrizDrawerOpen(true)} className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors">
+              <Settings2 className="w-4 h-4" />
               Gerenciar habilidades
             </button>
           </div>
 
+          <div className="relative">
           <div className="overflow-x-auto">
             <table className="w-full">
               {/* Cabeçalho */}
@@ -702,16 +803,16 @@ function JornadaDetalheContent() {
                   (() => {
                     const renderedCompetencias = new Set<string>();
                     return habilidadesFiltradas.flatMap((hab, habIndex) => {
-                      const isFirstInGroup = !renderedCompetencias.has(hab.competencia);
-                      if (isFirstInGroup) renderedCompetencias.add(hab.competencia);
+                      const isFirstInGroup = !renderedCompetencias.has(hab.competenciaId);
+                      if (isFirstInGroup) renderedCompetencias.add(hab.competenciaId);
                       const bgClass = habIndex % 2 === 0 ? 'bg-white' : 'bg-[#F9FAFB]';
                       const rows = [];
 
                       if (isFirstInGroup) {
                         rows.push(
-                          <tr key={`group-${hab.competencia}`}>
+                          <tr key={`group-${hab.competenciaId}`}>
                             <td colSpan={cargos.length + 1} className="bg-[#F3F4F6] px-4 py-2">
-                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{hab.competencia}</span>
+                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{getCompetenciaNome(hab.competenciaId)}</span>
                             </td>
                           </tr>
                         );
@@ -780,25 +881,55 @@ function JornadaDetalheContent() {
               </tbody>
             </table>
           </div>
-          
           {/* Fade horizontal */}
           <div className="absolute top-0 right-0 bottom-0 w-10 pointer-events-none bg-gradient-to-l from-white to-transparent"></div>
+          </div>
         </div>
+        )}
+
+        {/* Aba Colaboradores */}
+        {tabAtiva === 'colaboradores' && (
+          <>
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Colaboradores nesta jornada</h2>
+                <p className="text-sm text-gray-500 mt-1">Colaboradores vinculados a esta jornada de carreira</p>
+              </div>
+              <button
+                onClick={() => setIsAddColabModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Adicionar colaboradores
+              </button>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              {colaboradoresVinculados.length === 0 ? (
+                <EmptyState
+                  icon={<Users className="w-8 h-8 text-gray-300" />}
+                  title="Nenhum colaborador vinculado"
+                  description="Adicione colaboradores para acompanhar o progresso nesta jornada."
+                />
+              ) : (
+                <Table
+                  columns={colaboradoresColumns}
+                  data={colaboradoresPaginados}
+                  actions={colaboradoresActions}
+                  pagination={{
+                    currentPage: paginaColabs,
+                    itemsPerPage: COLABS_PER_PAGE,
+                    totalItems: colaboradoresVinculados.length,
+                    onPageChange: (p) => setPaginaColabs(p),
+                    onItemsPerPageChange: () => {},
+                  }}
+                />
+              )}
+            </div>
+          </>
+        )}
 
       </div>
-
-      {/* Drawer de adicionar cargos */}
-      <SelectionDrawer
-        isOpen={isAddCargoDrawerOpen}
-        onClose={() => setIsAddCargoDrawerOpen(false)}
-        title="Adicionar cargos"
-        description="Selecione os cargos que deseja adicionar à jornada"
-        items={cargosDisponiveis}
-        onConfirm={handleAdicionarCargos}
-        searchPlaceholder="Buscar cargo..."
-        emptyMessage="Todos os cargos já foram adicionados"
-        confirmLabel="Adicionar selecionados"
-      />
 
       {/* Drawer de habilidades da matriz */}
       <HabilidadesSelectionModal
@@ -857,6 +988,33 @@ function JornadaDetalheContent() {
         title="Excluir jornada?"
         message="Esta ação não pode ser desfeita. Todos os cargos e habilidades configurados serão removidos."
         confirmLabel="Excluir"
+        variant="danger"
+      />
+
+      <ColaboradoresSelectionModal
+        isOpen={isAddColabModalOpen}
+        onClose={() => setIsAddColabModalOpen(false)}
+        cargosJornada={cargos.map(c => ({ id: c.id, nome: c.cargoRM }))}
+        colaboradoresDisponiveis={colaboradoresDisponiveisParaModal}
+        colaboradoresVinculados={colaboradoresVinculadosIds}
+        onConfirm={handleConfirmarAdicionarColabs}
+      />
+
+      {/* Modal de desvincular colaborador */}
+      <ConfirmationModal
+        isOpen={!!colaboradorParaDesvincular}
+        onClose={() => setColaboradorParaDesvincular(null)}
+        onConfirm={() => {
+          if (colaboradorParaDesvincular) {
+            desvincularColaborador(jornadaId!, colaboradorParaDesvincular.id);
+            toast.success(`${colaboradorParaDesvincular.nome} desvinculado da jornada`);
+            setColaboradorParaDesvincular(null);
+            setPaginaColabs(1);
+          }
+        }}
+        title="Desvincular colaborador"
+        message="O colaborador será removido desta jornada. O histórico de avaliações não será afetado."
+        confirmLabel="Desvincular"
         variant="danger"
       />
 

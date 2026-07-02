@@ -1,10 +1,5 @@
 import { ArrowLeft, Award, BarChart2, CheckCircle2, Info } from 'lucide-react';
-import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
-
-function getPesoFromNome(nome: string): number {
-  const nivel = niveisDefaultData.find(n => n.nome === nome);
-  return nivel?.peso ?? 0;
-}
+import { getCorFromPeso, getPesoFromNome } from '../data/mockData';
 
 interface ResultadoAvaliacaoProps {
   avaliacao: any;

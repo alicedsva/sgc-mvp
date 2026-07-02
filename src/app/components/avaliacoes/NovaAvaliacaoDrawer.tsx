@@ -1,6 +1,7 @@
 import { useState, useMemo, Fragment } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { getCompetenciaNome } from '../../data/mockData';
 
 const GERENCIAS = [
   'Tecnologia', 'Recursos Humanos', 'Financeiro', 'Marketing',
@@ -30,7 +31,7 @@ interface NovaAvaliacaoDrawerProps {
   onSalvarRascunho: (data: NovaAvaliacaoFormData) => void;
   onAtivar: (data: NovaAvaliacaoFormData) => void;
   competencias: { id: string; nome: string; status: string }[];
-  habilidades: { id: string; nome: string; competencia: string; status?: string }[];
+  habilidades: { id: string; nome: string; competencia: string; competenciaId?: string; status?: string }[];
 }
 
 const EMPTY_FORM: NovaAvaliacaoFormData = {
@@ -59,7 +60,7 @@ export function NovaAvaliacaoDrawer({
   const habilidadesVisiveis = useMemo(() => {
     const base = formData.competencias.length === 0
       ? habilidades.filter(h => !h.status || h.status === 'Ativa')
-      : habilidades.filter(h => (!h.status || h.status === 'Ativa') && formData.competencias.includes(h.competencia));
+      : habilidades.filter(h => (!h.status || h.status === 'Ativa') && formData.competencias.includes(h.competenciaId ?? ''));
     if (!buscaHabilidade.trim()) return base;
     const q = buscaHabilidade.toLowerCase();
     return base.filter(h => h.nome.toLowerCase().includes(q));
@@ -67,15 +68,15 @@ export function NovaAvaliacaoDrawer({
 
   if (!isOpen) return null;
 
-  const handleToggleCompetencia = (nomeComp: string) => {
-    const isRemoving = formData.competencias.includes(nomeComp);
+  const handleToggleCompetencia = (idComp: string) => {
+    const isRemoving = formData.competencias.includes(idComp);
     const novasCompetencias = isRemoving
-      ? formData.competencias.filter(c => c !== nomeComp)
-      : [...formData.competencias, nomeComp];
+      ? formData.competencias.filter(c => c !== idComp)
+      : [...formData.competencias, idComp];
 
     let novasHabilidades = formData.habilidades;
     if (isRemoving) {
-      const ids = new Set(habilidades.filter(h => h.competencia === nomeComp).map(h => h.id));
+      const ids = new Set(habilidades.filter(h => h.competenciaId === idComp).map(h => h.id));
       novasHabilidades = formData.habilidades.filter(id => !ids.has(id));
     }
 
@@ -146,7 +147,7 @@ export function NovaAvaliacaoDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-[200]" onClick={resetAndClose} />
+      <div className="fixed inset-0 bg-black/35 z-[200]" onClick={resetAndClose} />
 
       <div className="fixed inset-0 flex items-center justify-center z-[210] p-4 pointer-events-none">
         <div className="bg-white rounded-xl shadow-2xl w-[672px] h-[720px] flex flex-col pointer-events-auto">
@@ -258,8 +259,8 @@ export function NovaAvaliacaoDrawer({
                         >
                           <input
                             type="checkbox"
-                            checked={formData.competencias.includes(c.nome)}
-                            onChange={() => handleToggleCompetencia(c.nome)}
+                            checked={formData.competencias.includes(c.id)}
+                            onChange={() => handleToggleCompetencia(c.id)}
                             className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
                           />
                           <span className="text-sm text-gray-800">{c.nome}</span>
@@ -309,7 +310,7 @@ export function NovaAvaliacaoDrawer({
                           />
                           <div className="min-w-0">
                             <span className="text-sm text-gray-800">{h.nome}</span>
-                            <span className="ml-2 text-xs text-gray-400">{h.competencia}</span>
+                            <span className="ml-2 text-xs text-gray-400">{h.competenciaId ? getCompetenciaNome(h.competenciaId) : h.competencia}</span>
                           </div>
                         </label>
                       ))
@@ -426,7 +427,7 @@ export function NovaAvaliacaoDrawer({
                             key={c}
                             className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100"
                           >
-                            {c}
+                            {getCompetenciaNome(c) || c}
                           </span>
                         ))}
                       </div>

@@ -163,7 +163,7 @@ export function Table({ columns, data, actions, pagination, onRowClick }: TableP
                                     ? 'text-red-600 hover:bg-red-50'
                                     : action.variant === 'toggle'
                                     ? ''
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                                 }`}
                               >
                                 <div className="flex items-center gap-1">

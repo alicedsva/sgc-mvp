@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { jornadasData as jornadasIniciais, cargosData as cargosIniciais, habilidadesCargoData as habilidadesIniciais } from '../data/mockData';
+import { jornadasData as jornadasIniciais, cargosData as cargosIniciais, habilidadesCargoData as habilidadesIniciais, colaboradoresData } from '../data/mockData';
 
 interface Jornada {
   id: string;
@@ -27,6 +27,11 @@ interface HabilidadeCargo {
   nivelEsperado: string;
 }
 
+interface Vinculo {
+  colaboradorId: string;
+  jornadaId: string;
+}
+
 interface CarreirasContextType {
   jornadas: Jornada[];
   cargos: Cargo[];
@@ -39,6 +44,10 @@ interface CarreirasContextType {
   removerCargo: (cargoId: string) => void;
   atualizarCargosJornada: (jornadaId: string, novosCargos: Cargo[]) => void;
   atualizarHabilidadesCargo: (cargoId: string, novasHabilidades: HabilidadeCargo[]) => void;
+  vinculos: Vinculo[];
+  vincularColaborador: (jornadaId: string, colaboradorId: string) => void;
+  desvincularColaborador: (jornadaId: string, colaboradorId: string) => void;
+  getColaboradoresPorJornada: (jornadaId: string) => string[];
 }
 
 const CarreirasContext = createContext<CarreirasContextType | undefined>(undefined);
@@ -48,6 +57,7 @@ const STORAGE_KEYS = {
   JORNADAS: 'carreiras_jornadas',
   CARGOS: 'carreiras_cargos',
   HABILIDADES_CARGO: 'carreiras_habilidades_cargo',
+  VINCULOS: 'carreiras_vinculos',
 };
 
 // Função para gerar IDs únicos e consistentes
@@ -79,7 +89,36 @@ function saveToStorage<T>(key: string, data: T): void {
   }
 }
 
+// IMPORTANTE: sempre que mockData.ts sofrer
+// alteração estrutural (novos cargos, jornadas,
+// matriz de habilidades, vínculos), incremente
+// esta versão. Isso força o sistema a descartar
+// dados antigos salvos no navegador e recarregar
+// do mockData.ts atualizado. Sem isso, mudanças
+// no código não aparecem na interface para
+// usuários com dados antigos no localStorage.
+const MOCK_DATA_VERSION = '2026-06-24-4';
+const VERSION_KEY = 'carreiras_mock_version';
+
+function shouldResetStorage(): boolean {
+  try {
+    const storedVersion = localStorage.getItem(VERSION_KEY);
+    return storedVersion !== MOCK_DATA_VERSION;
+  } catch {
+    return false;
+  }
+}
+
 export function CarreirasProvider({ children }: { children: ReactNode }) {
+  // Verificar versão e limpar localStorage desatualizado antes de qualquer leitura
+  if (shouldResetStorage()) {
+    localStorage.removeItem(STORAGE_KEYS.JORNADAS);
+    localStorage.removeItem(STORAGE_KEYS.CARGOS);
+    localStorage.removeItem(STORAGE_KEYS.HABILIDADES_CARGO);
+    localStorage.removeItem(STORAGE_KEYS.VINCULOS);
+    localStorage.setItem(VERSION_KEY, MOCK_DATA_VERSION);
+  }
+
   // Carregar do localStorage ou usar dados iniciais
   const [jornadas, setJornadas] = useState<Jornada[]>(() =>
     loadFromStorage(STORAGE_KEYS.JORNADAS, jornadasIniciais)
@@ -89,6 +128,14 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   );
   const [habilidadesCargo, setHabilidadesCargo] = useState<HabilidadeCargo[]>(() =>
     loadFromStorage(STORAGE_KEYS.HABILIDADES_CARGO, habilidadesIniciais)
+  );
+  const [vinculos, setVinculos] = useState<Vinculo[]>(() =>
+    loadFromStorage(
+      STORAGE_KEYS.VINCULOS,
+      (colaboradoresData as Array<{ id: string; jornadaId?: string }>)
+        .filter(c => c.jornadaId !== undefined)
+        .map(c => ({ colaboradorId: c.id, jornadaId: c.jornadaId! }))
+    )
   );
 
   // Persistir jornadas no localStorage sempre que mudarem
@@ -105,6 +152,11 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.HABILIDADES_CARGO, habilidadesCargo);
   }, [habilidadesCargo]);
+
+  // Persistir vínculos no localStorage sempre que mudarem
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.VINCULOS, vinculos);
+  }, [vinculos]);
 
   const adicionarJornada = (novaJornada: Jornada) => {
     setJornadas((prev) => [...prev, novaJornada]);
@@ -185,6 +237,20 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const vincularColaborador = (jornadaId: string, colaboradorId: string) => {
+    setVinculos(prev => {
+      if (prev.some(v => v.jornadaId === jornadaId && v.colaboradorId === colaboradorId)) return prev;
+      return [...prev, { colaboradorId, jornadaId }];
+    });
+  };
+
+  const desvincularColaborador = (jornadaId: string, colaboradorId: string) => {
+    setVinculos(prev => prev.filter(v => !(v.jornadaId === jornadaId && v.colaboradorId === colaboradorId)));
+  };
+
+  const getColaboradoresPorJornada = (jornadaId: string): string[] =>
+    vinculos.filter(v => v.jornadaId === jornadaId).map(v => v.colaboradorId);
+
   return (
     <CarreirasContext.Provider
       value={{
@@ -199,6 +265,10 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
         removerCargo,
         atualizarCargosJornada,
         atualizarHabilidadesCargo,
+        vinculos,
+        vincularColaborador,
+        desvincularColaborador,
+        getColaboradoresPorJornada,
       }}
     >
       {children}

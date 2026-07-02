@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import { carreirasData } from '../data/mockData';
-import { useCarreiras, generateId } from '../context/CarreirasContext';
-import { cargosDisponiveisRM } from '@/app/data/cargosRM';
+import { carreirasData, cargosData, jornadasData } from '../data/mockData';
+import { useCarreiras } from '../context/CarreirasContext';
 import { toast } from 'sonner';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -13,6 +12,11 @@ interface OutletContext {
   isSidebarCollapsed: boolean;
   viewMode: 'admin' | 'colaborador';
 }
+
+const catalogCargos = cargosData.map(cargo => {
+  const jornada = jornadasData.find(j => j.id === cargo.jornadaId);
+  return { id: cargo.id, nome: cargo.cargoRM, categoria: jornada?.carreira || '' };
+});
 
 interface CargoDisponivel {
   id: string;
@@ -39,12 +43,12 @@ function EditarJornadaPageContent() {
   const cargosExistentes = todosCargos.filter(c => c.jornadaId === jornadaId);
 
   const cargosIniciais: CargoSelecionadoItem[] = cargosExistentes.map((cargo, index) => {
-    const rmMatch = cargosDisponiveisRM.find(rm => rm.nome === cargo.cargoRM);
+    const catalogCargo = catalogCargos.find(c => c.id === cargo.id);
     return {
-      id: rmMatch?.id || `existing-${cargo.id}`,
+      id: cargo.id,
       contextId: cargo.id,
       nome: cargo.cargoRM,
-      categoria: rmMatch?.categoria || 'Tecnologia',
+      categoria: catalogCargo?.categoria || '',
       ordem: index,
     };
   });
@@ -57,7 +61,7 @@ function EditarJornadaPageContent() {
   const [cargosSelecionados, setCargosSelecionados] = useState<CargoSelecionadoItem[]>(cargosIniciais);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const cargosFiltrados = cargosDisponiveisRM.filter(cargo =>
+  const cargosFiltrados = catalogCargos.filter(cargo =>
     cargo.nome.toLowerCase().includes(buscaCargo.toLowerCase())
   );
   const cargosSelecionadosIds = cargosSelecionados.map(c => c.id);
@@ -96,7 +100,7 @@ function EditarJornadaPageContent() {
         ? cargosExistentes.find(c => c.id === cargo.contextId)
         : null;
       return {
-        id: cargo.contextId ?? generateId('cargo'),
+        id: cargo.contextId ?? cargo.id,
         jornadaId: jornadaId!,
         cargoRM: cargo.nome,
         ordem: String(index + 1),

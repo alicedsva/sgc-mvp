@@ -4,7 +4,7 @@ import { Info, FlaskConical, AlertTriangle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
   habilidadesData,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   niveisDefaultData,
   joaoHabilidadesCargoMatriz,
   benchmarkCargosData,
@@ -34,10 +34,9 @@ interface HabilidadeReport {
 }
 
 function calcularReport(
-  avs: { colaboradorId: string; habilidadeId: string; nivelAtual: string }[],
+  mapaAv: Map<string, string>,
   matriz: { habilidadeId: string; nivelEsperado: string }[],
 ): HabilidadeReport[] {
-  const mapaAv = new Map(avs.map(a => [a.habilidadeId, a.nivelAtual]));
   return matriz.map(req => {
     const hab = habilidadesData.find(h => h.id === req.habilidadeId);
     const nivelAtual = mapaAv.get(req.habilidadeId) ?? null;
@@ -81,8 +80,8 @@ export default function TesteScreeningPage() {
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const [cargoRef, setCargoRef] = useState<string>('atual');
 
-  const joaoAvs = useMemo(
-    () => avaliacoesColaboradoresData.filter(a => a.colaboradorId === JOAO_ID),
+  const mapaJoao = useMemo(
+    () => getHabilidadesAvaliadasColaborador(JOAO_ID),
     [],
   );
 
@@ -91,7 +90,7 @@ export default function TesteScreeningPage() {
     return habilidadesCargoDataBenchmark.filter(h => h.cargoId === cargoRef);
   }, [cargoRef]);
 
-  const report = useMemo(() => calcularReport(joaoAvs, activeMatrix), [joaoAvs, activeMatrix]);
+  const report = useMemo(() => calcularReport(mapaJoao, activeMatrix), [mapaJoao, activeMatrix]);
 
   const dist = useMemo(() => {
     const d: Record<StatusDist, number> = { acima: 0, no: 0, abaixo: 0, sem: 0 };

@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, Search } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
 import { carreirasData } from '../data/mockData';
-import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { useCarreiras } from '../context/CarreirasContext';
 import { Table, Column } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
@@ -20,10 +19,15 @@ export default function CarreiraDetalhePage() {
   const { carreiraId } = useParams();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
-  const { jornadas, removerJornada, atualizarJornada } = useCarreiras();
+  const { jornadas, cargos, removerJornada, atualizarJornada } = useCarreiras();
 
   const [buscaJornada, setBuscaJornada] = useState('');
   const [filtroStatusJornada, setFiltroStatusJornada] = useState<'todas' | 'ativa' | 'inativa'>('ativa');
+  const [currentPageJornadas, setCurrentPageJornadas] = useState(1);
+
+  useEffect(() => {
+    setCurrentPageJornadas(1);
+  }, [buscaJornada, filtroStatusJornada]);
   const [jornadaParaExcluir, setJornadaParaExcluir] = useState<string | null>(null);
   const [jornadasSortConfig, setJornadasSortConfig] = useState<{
     column: 'nome' | 'tipo' | 'quantidadeCargos' | 'status' | 'id';
@@ -42,7 +46,7 @@ export default function CarreiraDetalhePage() {
     const matchStatus =
       filtroStatusJornada === 'todas' ||
       (filtroStatusJornada === 'ativa' && j.status === 'Ativa') ||
-      (filtroStatusJornada === 'inativa' && j.status === 'Inativa');
+      (filtroStatusJornada === 'inativa' && j.status === 'Desativada');
     return matchBusca && matchStatus;
   });
 
@@ -60,7 +64,9 @@ export default function CarreiraDetalhePage() {
     }
     const dir = jornadasSortConfig.direction === 'asc' ? 1 : -1;
     if (jornadasSortConfig.column === 'quantidadeCargos') {
-      return ((a.quantidadeCargos ?? 0) - (b.quantidadeCargos ?? 0)) * dir;
+      const countA = cargos.filter(c => c.jornadaId === a.id).length;
+      const countB = cargos.filter(c => c.jornadaId === b.id).length;
+      return (countA - countB) * dir;
     }
     return ((a as any)[jornadasSortConfig.column] as string).localeCompare((b as any)[jornadasSortConfig.column] as string) * dir;
   });
@@ -106,11 +112,6 @@ export default function CarreiraDetalhePage() {
     if (jornadaParaExcluir) {
       const jornada = jornadasDaCarreira.find(j => j.id === jornadaParaExcluir);
       removerJornada(jornadaParaExcluir);
-      amplitude.track('Jornada Deleted', {
-        jornada_nome: jornada?.nome,
-        jornada_tipo: jornada?.tipo,
-        carreira_nome: carreira?.nome,
-      });
       toast.success('Jornada excluída com sucesso');
       setJornadaParaExcluir(null);
     }
@@ -142,11 +143,6 @@ export default function CarreiraDetalhePage() {
       tipo: editFormData.tipo,
     });
 
-    amplitude.track('Jornada Edited', {
-      jornada_nome: editFormData.nome,
-      jornada_tipo: editFormData.tipo,
-      carreira_nome: carreira?.nome,
-    });
 
     toast.success('Jornada atualizada com sucesso');
     setIsEditDrawerOpen(false);
@@ -156,7 +152,7 @@ export default function CarreiraDetalhePage() {
   // Toggle status
   const handleToggleStatus = (jornada: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const novoStatus = jornada.status === 'Ativa' ? 'Inativa' : 'Ativa';
+    const novoStatus = jornada.status === 'Ativa' ? 'Desativada' : 'Ativa';
     
     atualizarJornada(jornada.id, {
       ...jornada,
@@ -165,6 +161,12 @@ export default function CarreiraDetalhePage() {
 
     toast.success(`Jornada ${novoStatus === 'Ativa' ? 'ativada' : 'desativada'}`);
   };
+
+  const jornadasItemsPerPage = 10;
+  const jornadasTotal = jornadasOrdenadas.length;
+  const jornadasStart = (currentPageJornadas - 1) * jornadasItemsPerPage;
+  const jornadasEnd = jornadasStart + jornadasItemsPerPage;
+  const jornadasPaginadas = jornadasOrdenadas.slice(jornadasStart, jornadasEnd);
 
   // Colunas da tabela de jornadas
   const jornadasColumns: Column[] = [
@@ -227,12 +229,12 @@ export default function CarreiraDetalhePage() {
           )}
         </button>
       ),
-      render: (value, row) => {
-        const total = value as number;
+      render: (_, row) => {
+        const total = cargos.filter(c => c.jornadaId === row.id).length;
         if (total === 0) return <span className="text-sm text-gray-500">—</span>;
         return (
           <span className="text-sm text-gray-900">
-            {value} {value === 1 ? 'cargo' : 'cargos'}
+            {total} {total === 1 ? 'cargo' : 'cargos'}
           </span>
         );
       },
@@ -259,7 +261,7 @@ export default function CarreiraDetalhePage() {
           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
             value === 'Ativa'
               ? 'bg-green-100 text-green-800'
-              : 'bg-gray-100 text-gray-800'
+              : 'bg-red-100 text-red-700'
           }`}
         >
           {value}
@@ -284,14 +286,14 @@ export default function CarreiraDetalhePage() {
           </button>
           <button
             onClick={(e) => handleEditarClick(row, e)}
-            className="p-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             title="Editar"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button
             onClick={(e) => handleExcluirClick(row.id, e)}
-            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
             title="Excluir"
           >
             <Trash2 className="w-4 h-4" />
@@ -420,7 +422,7 @@ export default function CarreiraDetalhePage() {
         </div>
 
         {/* Tabela de Jornadas */}
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {jornadasDaCarreira.length === 0 ? (
             <div className="p-12 text-center">
               <EmptyState
@@ -436,8 +438,15 @@ export default function CarreiraDetalhePage() {
           ) : (
             <Table
               columns={jornadasColumns}
-              data={jornadasOrdenadas}
+              data={jornadasPaginadas}
               onRowClick={(row) => navigate(`/carreiras/${carreiraId}/jornadas/${row.id}`)}
+              pagination={{
+                currentPage: currentPageJornadas,
+                itemsPerPage: jornadasItemsPerPage,
+                totalItems: jornadasTotal,
+                onPageChange: setCurrentPageJornadas,
+                onItemsPerPageChange: () => {},
+              }}
             />
           )}
         </div>

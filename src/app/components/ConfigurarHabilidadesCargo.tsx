@@ -1,5 +1,6 @@
 import { FormEvent, useState, useEffect } from 'react';
 import { X, Search, Plus, Trash2 } from 'lucide-react';
+import { getCompetenciaNome } from '../data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ToggleSwitch } from './ui/ToggleSwitch';
 import { Table, Column } from './ui/Table';
@@ -47,7 +48,7 @@ export function ConfigurarHabilidadesCargo({
       return {
         ...hc,
         nome: habilidade?.nome || 'Desconhecida',
-        categoria: habilidade?.competencia || 'Sem categoria',
+        categoria: habilidade ? (getCompetenciaNome(habilidade.competenciaId ?? '') || habilidade.competencia) : 'Sem categoria',
       };
     });
 
@@ -63,8 +64,8 @@ export function ConfigurarHabilidadesCargo({
     const matchBusca = buscaHabilidade === '' || 
       h.nome.toLowerCase().includes(buscaHabilidade.toLowerCase());
     
-    const matchCategoria = filtroCategoria === 'todas' || 
-      h.competencia === filtroCategoria;
+    const matchCategoria = filtroCategoria === 'todas' ||
+      h.competenciaId === filtroCategoria;
     
     return matchBusca && matchCategoria && h.status === 'Ativa';
   });
@@ -164,10 +165,10 @@ export function ConfigurarHabilidadesCargo({
     },
   ];
 
-  // Obter categorias únicas para o filtro
+  // Obter categorias únicas para o filtro (por ID)
   const categoriasUnicas = Array.from(
-    new Set(habilidadesData.map(h => h.competencia))
-  ).sort();
+    new Set(habilidadesData.map((h: any) => h.competenciaId).filter(Boolean))
+  ).sort() as string[];
 
   return (
     <>
@@ -258,9 +259,9 @@ export function ConfigurarHabilidadesCargo({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="todas">Todas</SelectItem>
-                        {categoriasUnicas.map(cat => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
+                        {categoriasUnicas.map(id => (
+                          <SelectItem key={id} value={id}>
+                            {getCompetenciaNome(id)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -282,7 +283,7 @@ export function ConfigurarHabilidadesCargo({
                           className="w-full text-left px-3 py-2 text-sm hover:bg-white rounded border border-transparent hover:border-gray-200 transition-colors"
                         >
                           <div className="font-medium text-gray-900">{h.nome}</div>
-                          <div className="text-xs text-gray-500">{h.competencia}</div>
+                          <div className="text-xs text-gray-500">{getCompetenciaNome(h.competenciaId ?? '') || h.competencia}</div>
                         </button>
                       ))
                     )}

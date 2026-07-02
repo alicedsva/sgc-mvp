@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
 import { niveisDefaultData, getCorFromPeso } from '../data/mockData';
 import { toast } from 'sonner';
 
@@ -61,13 +60,6 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
   const progresso = Math.round((respondidas / totalHabilidades) * 100);
 
   const handleSalvarRascunho = () => {
-    amplitude.track('Avaliacao Draft Saved', {
-      avaliacao_titulo: avaliacao.titulo,
-      avaliacao_tipo: avaliacao.tipo,
-      habilidades_respondidas: respondidas,
-      total_habilidades: totalHabilidades,
-      progresso_pct: progresso,
-    });
     toast.success('Respostas salvas! Você pode continuar depois.');
   };
 
@@ -76,11 +68,6 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
       toast.error('Por favor, avalie todas as habilidades antes de enviar.');
       return;
     }
-    amplitude.track('Avaliacao Submitted', {
-      avaliacao_titulo: avaliacao.titulo,
-      avaliacao_tipo: avaliacao.tipo,
-      total_habilidades: totalHabilidades,
-    });
     toast.success('Avaliação enviada com sucesso!');
     setTimeout(() => {
       onVoltar();

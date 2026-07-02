@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { X, Search, Check, ChevronDown, ChevronRight } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { X, Search, Check } from 'lucide-react';
+import { getCompetenciaNome } from '../../data/mockData';
 
 export interface HabilidadeItem {
   id: string;
   nome: string;
   tipo: 'Técnica' | 'Comportamental';
   competencia: string;
+  competenciaId: string;
 }
 
 interface HabilidadesSelectionModalProps {
@@ -24,61 +25,69 @@ export function HabilidadesSelectionModal({
   habilidadesAdicionadas = [],
   onConfirm,
 }: HabilidadesSelectionModalProps) {
-  // checked = todas que devem estar na matriz após salvar
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'Técnica' | 'Comportamental'>('todas');
-  const [competenciaFiltro, setCompetenciaFiltro] = useState('todas');
+  const [competenciaSelecionada, setCompetenciaSelecionada] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Inicializa com as já adicionadas marcadas
+  const isModosBusca = searchTerm.trim().length > 0;
+
   useEffect(() => {
     if (isOpen) {
       setChecked(new Set(habilidadesAdicionadas));
       setSearchTerm('');
       setTipoFiltro('todas');
-      setCompetenciaFiltro('todas');
-      setCollapsedGroups(new Set());
+      setCompetenciaSelecionada('');
       setTimeout(() => searchRef.current?.focus(), 50);
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Agrupar por competência
   const habilidadesPorCompetencia = useMemo(() => {
     const grupos: Record<string, HabilidadeItem[]> = {};
     habilidades.forEach((hab) => {
-      if (!grupos[hab.competencia]) grupos[hab.competencia] = [];
-      grupos[hab.competencia].push(hab);
+      if (!grupos[hab.competenciaId]) grupos[hab.competenciaId] = [];
+      grupos[hab.competenciaId].push(hab);
     });
     return grupos;
   }, [habilidades]);
 
-  // Lista de competências para o dropdown (todas, sem filtro)
-  const todasCompetencias = useMemo(() => {
-    const cats = new Set(habilidades.map((h) => h.competencia));
-    return Array.from(cats).sort();
-  }, [habilidades]);
-
-  // Filtrar pelos três critérios em conjunto
-  const gruposFiltrados = useMemo(() => {
-    const filtrados: Record<string, HabilidadeItem[]> = {};
-    Object.entries(habilidadesPorCompetencia).forEach(([comp, habs]) => {
-      if (competenciaFiltro !== 'todas' && comp !== competenciaFiltro) return;
-      let resultado = habs;
-      if (searchTerm.trim()) {
-        const termo = searchTerm.toLowerCase();
-        resultado = resultado.filter((h) => h.nome.toLowerCase().includes(termo));
-      }
-      if (tipoFiltro !== 'todas') {
-        resultado = resultado.filter((h) => h.tipo === tipoFiltro);
-      }
-      if (resultado.length > 0) filtrados[comp] = resultado;
+  const competenciasFiltradas = useMemo(() => {
+    const cats = new Set<string>();
+    habilidades.forEach((h) => {
+      if (tipoFiltro === 'todas' || h.tipo === tipoFiltro) cats.add(h.competenciaId);
     });
-    return filtrados;
-  }, [habilidadesPorCompetencia, searchTerm, tipoFiltro, competenciaFiltro]);
+    return Array.from(cats).sort();
+  }, [habilidades, tipoFiltro]);
 
-  const competencias = Object.keys(gruposFiltrados).sort();
+  // Deriva a competência efetiva sem precisar de useEffect extra
+  const competenciaEfetiva = useMemo(
+    () =>
+      competenciasFiltradas.includes(competenciaSelecionada)
+        ? competenciaSelecionada
+        : (competenciasFiltradas[0] ?? ''),
+    [competenciasFiltradas, competenciaSelecionada]
+  );
+
+  const habilidadesCompetenciaAtiva = useMemo(() => {
+    const habs = habilidadesPorCompetencia[competenciaEfetiva] || [];
+    return tipoFiltro === 'todas' ? habs : habs.filter((h) => h.tipo === tipoFiltro);
+  }, [habilidadesPorCompetencia, competenciaEfetiva, tipoFiltro]);
+
+  const resultadosBusca = useMemo(() => {
+    if (!isModosBusca) return {} as Record<string, HabilidadeItem[]>;
+    const termo = searchTerm.toLowerCase();
+    const grupos: Record<string, HabilidadeItem[]> = {};
+    habilidades.forEach((hab) => {
+      if (tipoFiltro !== 'todas' && hab.tipo !== tipoFiltro) return;
+      if (!hab.nome.toLowerCase().includes(termo)) return;
+      if (!grupos[hab.competenciaId]) grupos[hab.competenciaId] = [];
+      grupos[hab.competenciaId].push(hab);
+    });
+    return grupos;
+  }, [habilidades, searchTerm, tipoFiltro, isModosBusca]);
+
+  const competenciasComBusca = useMemo(() => Object.keys(resultadosBusca).sort(), [resultadosBusca]);
 
   const toggle = (id: string) => {
     const next = new Set(checked);
@@ -87,25 +96,16 @@ export function HabilidadesSelectionModal({
     setChecked(next);
   };
 
-  const toggleGrupo = (comp: string) => {
-    const habs = gruposFiltrados[comp] || [];
-    const todasMarcadas = habs.every((h) => checked.has(h.id));
+  const toggleGrupoAtivo = () => {
+    const todasMarcadas = habilidadesCompetenciaAtiva.every((h) => checked.has(h.id));
     const next = new Set(checked);
-    habs.forEach((h) => {
+    habilidadesCompetenciaAtiva.forEach((h) => {
       if (todasMarcadas) next.delete(h.id);
       else next.add(h.id);
     });
     setChecked(next);
   };
 
-  const toggleCollapse = (comp: string) => {
-    const next = new Set(collapsedGroups);
-    if (next.has(comp)) next.delete(comp);
-    else next.add(comp);
-    setCollapsedGroups(next);
-  };
-
-  // Calcular diff
   const toAdd = useMemo(
     () => Array.from(checked).filter((id) => !habilidadesAdicionadas.includes(id)),
     [checked, habilidadesAdicionadas]
@@ -122,24 +122,62 @@ export function HabilidadesSelectionModal({
     onClose();
   };
 
-  // Label do botão de confirmar
-  const confirmLabel = () => {
-    if (!hasChanges) return 'Salvar';
-    const parts: string[] = [];
-    if (toAdd.length > 0) parts.push(`Adicionar ${toAdd.length}`);
-    if (toRemove.length > 0) parts.push(`Remover ${toRemove.length}`);
-    return parts.join(' · ');
+  const handleSelectCompetencia = (comp: string) => {
+    setSearchTerm('');
+    setCompetenciaSelecionada(comp);
+  };
+
+  const renderHabilidade = (hab: HabilidadeItem) => {
+    const isChecked = checked.has(hab.id);
+    const eraAdicionada = habilidadesAdicionadas.includes(hab.id);
+    const marcadaParaRemover = eraAdicionada && !isChecked;
+
+    return (
+      <div
+        key={hab.id}
+        onClick={() => toggle(hab.id)}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+          marcadaParaRemover
+            ? 'bg-red-50 hover:bg-red-100'
+            : isChecked
+            ? 'bg-blue-50 hover:bg-blue-100'
+            : 'hover:bg-gray-50'
+        }`}
+      >
+        <div
+          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+            marcadaParaRemover
+              ? 'border-red-300 bg-white'
+              : isChecked
+              ? 'bg-[var(--brand-600)] border-[var(--brand-600)]'
+              : 'border-gray-300 bg-white'
+          }`}
+        >
+          {isChecked && <Check className="w-3 h-3 text-white" />}
+        </div>
+        <span className={`flex-1 text-sm ${marcadaParaRemover ? 'text-red-500 line-through' : 'text-gray-900'}`}>
+          {hab.nome}
+        </span>
+        {marcadaParaRemover && (
+          <span className="text-xs font-medium text-red-400 flex-shrink-0">Será removida</span>
+        )}
+      </div>
+    );
   };
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+  const todasMarcadasNaCompAtiva =
+    habilidadesCompetenciaAtiva.length > 0 &&
+    habilidadesCompetenciaAtiva.every((h) => checked.has(h.id));
 
+  const competenciasEsquerda = isModosBusca ? competenciasComBusca : competenciasFiltradas;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/35" onClick={onClose} />
       <div
-        className="relative bg-white rounded-xl shadow-2xl flex flex-col"
-        style={{ width: '640px', height: '80vh', maxHeight: '720px' }}
+        className="relative bg-white rounded-lg shadow-2xl flex flex-col w-full max-w-3xl h-[80vh] max-h-[720px]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -156,171 +194,124 @@ export function HabilidadesSelectionModal({
           </button>
         </div>
 
-        {/* Busca e filtros */}
-        <div className="px-6 pt-3 pb-3 border-b border-gray-100 flex flex-col gap-2">
-          <div className="relative">
+        {/* Busca + Segmented control */}
+        <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-200">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               ref={searchRef}
               type="text"
-              placeholder="Buscar habilidades…"
+              placeholder="Buscar habilidades..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[var(--brand-500)] focus:border-[var(--brand-500)] outline-none bg-gray-50"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent outline-none bg-white"
             />
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Segmented control — tipo */}
-            <div className="flex items-center bg-gray-100 rounded-lg p-1 flex-shrink-0">
-              {(['todas', 'Técnica', 'Comportamental'] as const).map((tipo) => (
-                <button
-                  key={tipo}
-                  onClick={() => setTipoFiltro(tipo)}
-                  className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                    tipoFiltro === tipo
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {tipo === 'todas' ? 'Todas' : tipo}
-                </button>
-              ))}
-            </div>
-
-            {/* Dropdown — competência */}
-            <Select value={competenciaFiltro} onValueChange={setCompetenciaFiltro}>
-              <SelectTrigger className="flex-1 min-w-0">
-                <SelectValue placeholder="Todas as competências" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as competências</SelectItem>
-                {todasCompetencias.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex-shrink-0 flex items-center bg-gray-100 rounded-lg p-1">
+            {(['todas', 'Técnica', 'Comportamental'] as const).map((tipo) => (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => setTipoFiltro(tipo)}
+                className={`px-3 py-1.5 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                  tipoFiltro === tipo
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tipo === 'todas' ? 'Todas' : tipo}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Lista */}
-        <div className="flex-1 overflow-y-auto">
-          {competencias.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <Search className="w-8 h-8 text-gray-300 mb-3" />
-              <p className="text-sm font-medium text-gray-700">Nenhuma habilidade encontrada</p>
-              <p className="text-sm text-gray-400 mt-1">Tente ajustar os filtros aplicados</p>
-            </div>
-          ) : (
-            competencias.map((comp) => {
-              const habs = gruposFiltrados[comp];
-              const todasMarcadas = habs.every((h) => checked.has(h.id));
-              const isCollapsed = collapsedGroups.has(comp);
-              const marcadasNoGrupo = habs.filter((h) => checked.has(h.id)).length;
+        {/* Corpo — duas colunas */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Coluna esquerda */}
+          <div className="w-56 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
+            {competenciasEsquerda.map((comp) => {
+                const habsNaComp = (habilidadesPorCompetencia[comp] || []).filter(
+                  (h) => tipoFiltro === 'todas' || h.tipo === tipoFiltro
+                );
+                const marcadasNoGrupo = habsNaComp.filter((h) => checked.has(h.id)).length;
+                const isActive = !isModosBusca && comp === competenciaEfetiva;
 
-              return (
-                <div key={comp} className="border-b border-gray-100 last:border-0">
-                  {/* Cabeçalho do grupo */}
-                  <div className="flex items-center px-5 py-2.5 bg-gray-50 sticky top-0 z-10">
-                    <button
-                      onClick={() => toggleCollapse(comp)}
-                      className="flex items-center gap-2 flex-1 text-left"
+                return (
+                  <div
+                    key={comp}
+                    onClick={() => handleSelectCompetencia(comp)}
+                    className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer border-l-2 transition-colors ${
+                      isActive
+                        ? 'bg-[var(--brand-50)] text-[var(--brand-700)] border-[var(--brand-600)] font-medium'
+                        : 'text-gray-700 hover:bg-gray-50 border-transparent'
+                    }`}
+                  >
+                    <span className="flex-1 truncate">{getCompetenciaNome(comp)}</span>
+                    <span
+                      className={`text-xs tabular-nums flex-shrink-0 ml-2 ${
+                        marcadasNoGrupo > 0 ? 'text-[var(--brand-600)] font-medium' : 'text-gray-400'
+                      }`}
                     >
-                      {isCollapsed
-                        ? <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      }
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        {comp}
-                      </span>
-                      <span className={`text-xs ml-1 tabular-nums ${marcadasNoGrupo > 0 ? 'text-[var(--brand-600)] font-medium' : 'text-gray-400'}`}>
-                        {marcadasNoGrupo > 0 ? `${marcadasNoGrupo}/${habs.length}` : habs.length}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => toggleGrupo(comp)}
-                      className="text-xs font-medium text-[var(--brand-600)] hover:text-[var(--brand-700)] transition-colors ml-4 flex-shrink-0"
-                    >
-                      {todasMarcadas ? 'Desmarcar todas' : 'Selecionar todas'}
-                    </button>
+                      {marcadasNoGrupo > 0 ? `${marcadasNoGrupo}/${habsNaComp.length}` : habsNaComp.length}
+                    </span>
                   </div>
+                );
+              })}
+          </div>
 
-                  {/* Habilidades */}
-                  {!isCollapsed && (
-                    <div>
-                      {habs.map((hab) => {
-                        const isChecked = checked.has(hab.id);
-                        const eraAdicionada = habilidadesAdicionadas.includes(hab.id);
-                        const marcadaParaRemover = eraAdicionada && !isChecked;
-
-                        return (
-                          <div
-                            key={hab.id}
-                            onClick={() => toggle(hab.id)}
-                            className={`flex items-center gap-3 px-5 py-3 border-b border-gray-50 last:border-0 cursor-pointer transition-colors ${
-                              marcadaParaRemover
-                                ? 'bg-red-50 hover:bg-red-100'
-                                : isChecked
-                                ? 'bg-blue-50 hover:bg-blue-100'
-                                : 'hover:bg-gray-50'
-                            }`}
-                          >
-                            {/* Checkbox */}
-                            <div
-                              className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                                marcadaParaRemover
-                                  ? 'border-red-300 bg-white'
-                                  : isChecked
-                                  ? 'bg-[var(--brand-600)] border-[var(--brand-600)]'
-                                  : 'border-gray-300 bg-white'
-                              }`}
-                            >
-                              {isChecked && <Check className="w-3 h-3 text-white" />}
-                            </div>
-
-                            {/* Nome */}
-                            <span className={`flex-1 text-sm ${marcadaParaRemover ? 'text-red-500 line-through' : 'text-gray-900'}`}>
-                              {hab.nome}
-                            </span>
-
-                            {/* Badge */}
-                            {marcadaParaRemover ? (
-                              <span className="text-xs font-medium text-red-400 flex-shrink-0">
-                                Será removida
-                              </span>
-                            ) : (
-                              <span
-                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${
-                                  hab.tipo === 'Técnica'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-purple-100 text-purple-800'
-                                }`}
-                              >
-                                {hab.tipo}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
+          {/* Coluna direita */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {isModosBusca ? (
+              competenciasComBusca.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Search className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-700">Nenhuma habilidade encontrada</p>
+                  <p className="text-sm text-gray-400 mt-1">Tente outros termos</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {competenciasComBusca.map((comp) => (
+                    <div key={comp}>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{getCompetenciaNome(comp)}</p>
+                      <div className="space-y-0.5">
+                        {resultadosBusca[comp].map(renderHabilidade)}
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )
+            ) : competenciaEfetiva ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {getCompetenciaNome(competenciaEfetiva)}
+                  </p>
+                  {habilidadesCompetenciaAtiva.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={toggleGrupoAtivo}
+                      className="text-xs font-medium text-[var(--brand-600)] hover:text-[var(--brand-700)]"
+                    >
+                      {todasMarcadasNaCompAtiva ? 'Limpar seleção' : 'Selecionar todas'}
+                    </button>
                   )}
                 </div>
-              );
-            })
-          )}
+                <div className="space-y-0.5">
+                  {habilidadesCompetenciaAtiva.map(renderHabilidade)}
+                </div>
+              </>
+            ) : null}
+          </div>
         </div>
 
-        {/* Rodapé */}
+        {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-          <span className="text-sm text-gray-500">
-            {!hasChanges
-              ? `${checked.size} ${checked.size === 1 ? 'habilidade na matriz' : 'habilidades na matriz'}`
-              : [
-                  toAdd.length > 0 && `+${toAdd.length} a adicionar`,
-                  toRemove.length > 0 && `-${toRemove.length} a remover`,
-                ].filter(Boolean).join(' · ')
-            }
+          <span className="text-sm text-gray-600">
+            {checked.size === 0
+              ? 'Nenhuma habilidade selecionada'
+              : checked.size === 1
+              ? '1 habilidade selecionada'
+              : `${checked.size} habilidades selecionadas`}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -330,17 +321,16 @@ export function HabilidadesSelectionModal({
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleConfirm}
               disabled={!hasChanges}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 !hasChanges
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : toRemove.length > 0 && toAdd.length === 0
-                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  ? 'bg-[var(--brand-600)] text-white opacity-50 cursor-not-allowed'
                   : 'bg-[var(--brand-600)] text-white hover:bg-[var(--brand-700)]'
               }`}
             >
-              {confirmLabel()}
+              {toAdd.length > 0 && toRemove.length === 0 ? 'Adicionar habilidades' : 'Salvar'}
             </button>
           </div>
         </div>

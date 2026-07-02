@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeft, Edit } from 'lucide-react';
-import * as amplitude from '@amplitude/unified';
 import { toast } from 'sonner';
 import { useHabilidades } from '../context/HabilidadesContext';
-import { niveisDefaultData, getCorFromPeso } from '../data/mockData';
+import { niveisDefaultData, getCorFromPeso, competenciasData, getCompetenciaNome } from '../data/mockData';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 
 interface OutletContext {
@@ -20,22 +19,13 @@ export default function HabilidadeDetalhePage() {
 
   const habilidade = habilidades.find((h) => h.id === id);
 
-  useEffect(() => {
-    if (habilidade) {
-      amplitude.track('Habilidade Detail Viewed', {
-        habilidade_nome: habilidade.nome,
-        habilidade_competencia: habilidade.competencia,
-        habilidade_tipo: habilidade.tipo,
-        habilidade_status: habilidade.status,
-      });
-    }
-  }, [id]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
     competencia: '',
+    competenciaId: '',
     tipo: 'Técnica',
     status: 'Ativa',
     niveis: [] as Array<{ nivelId: string; criterio: string }>,
@@ -54,8 +44,6 @@ export default function HabilidadeDetalhePage() {
     .map((n) => ({ ...n, nivel: niveisMap[n.nivelId] }))
     .filter((n) => n.nivel)
     .sort((a, b) => a.nivel.peso - b.nivel.peso);
-
-  const competenciasUnicas = Array.from(new Set(habilidades.map((h) => h.competencia))).sort();
 
   const niveisAtivos = niveisDefaultData
     .filter((n) => n.status === 'Ativo')
@@ -82,6 +70,7 @@ export default function HabilidadeDetalhePage() {
       nome: habilidade.nome,
       descricao: habilidade.descricao,
       competencia: habilidade.competencia,
+      competenciaId: habilidade.competenciaId ?? '',
       tipo: habilidade.tipo,
       status: habilidade.status,
       niveis: [...habilidade.niveis],
@@ -109,13 +98,18 @@ export default function HabilidadeDetalhePage() {
       onChange: (value) => setFormData((prev) => ({ ...prev, descricao: value })),
     },
     {
-      name: 'competencia',
+      name: 'competenciaId',
       label: 'Competência',
       type: 'select',
       required: true,
-      value: formData.competencia,
-      onChange: (value) => setFormData((prev) => ({ ...prev, competencia: value })),
-      options: competenciasUnicas.map((comp) => ({ value: comp, label: comp })),
+      value: formData.competenciaId,
+      onChange: (value) => {
+        const comp = competenciasData.find((c) => c.id === value);
+        setFormData((prev) => ({ ...prev, competenciaId: value, competencia: comp?.nome ?? '' }));
+      },
+      options: competenciasData
+        .filter((c) => c.status === 'Ativa')
+        .map((c) => ({ value: c.id, label: c.nome })),
     },
     {
       name: 'tipo',
@@ -153,6 +147,7 @@ export default function HabilidadeDetalhePage() {
       nome: formData.nome,
       descricao: formData.descricao,
       competencia: formData.competencia,
+      competenciaId: formData.competenciaId,
       tipo: formData.tipo as 'Técnica' | 'Comportamental',
       status: formData.status as 'Ativa' | 'Desativada',
       niveis: formData.niveis,
@@ -270,7 +265,7 @@ export default function HabilidadeDetalhePage() {
             }`}>
               {habilidade.tipo}
             </span>
-            <span className="text-sm text-gray-500">{habilidade.competencia}</span>
+            <span className="text-sm text-gray-500">{getCompetenciaNome(habilidade.competenciaId ?? '')}</span>
           </div>
           {habilidade.descricao && (
             <p className="text-sm text-gray-600 mt-1">{habilidade.descricao}</p>
@@ -290,13 +285,13 @@ export default function HabilidadeDetalhePage() {
         <h2 className="text-base font-semibold text-gray-900">Critérios por nível</h2>
 
         {niveisVinculados.length === 0 ? (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-8 text-center">
+          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg p-8 text-center">
             <p className="text-sm text-gray-400">Nenhum nível vinculado a esta habilidade.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {niveisVinculados.map(({ nivelId, criterio, nivel }) => (
-              <div key={nivelId} className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+              <div key={nivelId} className="bg-white rounded-lg border border-gray-200 p-5 space-y-3">
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
