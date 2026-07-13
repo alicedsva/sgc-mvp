@@ -55,6 +55,22 @@ percentual = (cobertura / total) × 100
 - 50–79%: amarelo (`text-yellow-600`, `bg-yellow-500`)
 - < 50%: vermelho (`text-red-600`, `bg-red-500`)
 
+### Exceção documentada — Dashboard (Seção 1: Cobertura por competência)
+
+O Dashboard (`DashboardPage.tsx`, funções `getBarColor` / `getCoberturaTextColor`,
+reaproveitadas também pela tabela da Seção 3 — Média por gerência) **não** usa a
+paleta verde/amarelo/vermelho acima. Usa tons de azul/brand com limiares 70/50:
+
+- ≥ 70%: `#009FC2` (brand)
+- 50–69%: `#33BFDF`
+- < 50%: `#99DFEF`
+
+Isso é decisão consciente de produto para o Dashboard, não um bug de
+inconsistência com a regra 80/50/verde-amarelo-vermelho documentada acima.
+**Nunca "corrigir" `getBarColor`/`getCoberturaTextColor` para alinhar aos
+limiares ou cores gerais** — são paletas propositalmente diferentes para
+contextos diferentes.
+
 ### Indicadores de habilidade do colaborador
 Texto apenas — sem fundo, sem badge:
 - Acima do esperado: `text-xs text-green-600`

@@ -21,6 +21,8 @@ import TesteRadarPage from "./pages/testes/TesteRadarPage";
 import TesteBarrasPage from "./pages/testes/TesteBarrasPage";
 import TesteScreeningPage from "./pages/testes/TesteScreeningPage";
 import TesterBenchmarkPage from "./pages/testes/TesterBenchmarkPage";
+import TesteCarreiraPage from "./pages/testes/TesteCarreiraPage";
+import TesteCompetenciaDetalhePage from "./pages/testes/TesteCompetenciaDetalhePage";
 
 export const router = createBrowserRouter([
   {
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
       { path: "testes/barras",    Component: TesteBarrasPage },
       { path: "testes/screening", Component: TesteScreeningPage },
       { path: "testes/benchmark", Component: TesterBenchmarkPage },
+      { path: "testes/carreira",  Component: TesteCarreiraPage },
+      { path: "testes/carreira/competencia/:id", Component: TesteCompetenciaDetalhePage },
     ],
   },
 ]);

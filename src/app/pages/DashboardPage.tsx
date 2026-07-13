@@ -17,6 +17,7 @@ import {
   jornadasData,
   getHabilidadesAvaliadasColaborador,
   getPesoFromNome,
+  HOJE_SIMULADO,
 } from '../data/mockData';
 
 interface OutletContext {
@@ -73,6 +74,10 @@ const COBERTURA_BASE = (() => {
       const compId = HAB_TO_COMP_ID.get(skill.habilidadeId);
       if (!compId) continue;
 
+      // Habilidade sem resposta do colaborador: excluída do cálculo (não entra no denominador)
+      const nivelAtual = nivelMap.get(skill.habilidadeId);
+      if (!nivelAtual) continue;
+
       if (!data.has(compId)) data.set(compId, new Map());
       const gerMap = data.get(compId)!;
 
@@ -81,8 +86,7 @@ const COBERTURA_BASE = (() => {
       const entry = gerMap.get(g)!;
       entry.total++;
 
-      const nivelAtual = nivelMap.get(skill.habilidadeId);
-      if (nivelAtual && getPesoFromNome(nivelAtual) >= getPesoFromNome(skill.nivelEsperado)) {
+      if (getPesoFromNome(nivelAtual) >= getPesoFromNome(skill.nivelEsperado)) {
         entry.covered++;
       }
     }
@@ -114,8 +118,11 @@ const GAPS_DATA = (() => {
     const jornadaNome = jornadasData.find(j => j.id === colaborador.jornadaId)?.nome ?? '';
 
     for (const skill of expectedSkills) {
+      // Habilidade sem resposta do colaborador: excluída do cálculo (não conta como gap)
       const nivelAtual = nivelMap.get(skill.habilidadeId);
-      const pesoAtual   = nivelAtual ? getPesoFromNome(nivelAtual) : 0;
+      if (!nivelAtual) continue;
+
+      const pesoAtual    = getPesoFromNome(nivelAtual);
       const pesoEsperado = getPesoFromNome(skill.nivelEsperado);
 
       if (pesoAtual < pesoEsperado) {
@@ -135,8 +142,7 @@ const GAPS_DATA = (() => {
         if (getPesoFromNome(skill.nivelEsperado) > getPesoFromNome(entry.nivelEsperadoMax)) {
           entry.nivelEsperadoMax = skill.nivelEsperado;
         }
-        const na = nivelAtual ?? 'Não avaliado';
-        entry.nivelAtualCounts.set(na, (entry.nivelAtualCounts.get(na) ?? 0) + 1);
+        entry.nivelAtualCounts.set(nivelAtual, (entry.nivelAtualCounts.get(nivelAtual) ?? 0) + 1);
       }
     }
   }
@@ -216,8 +222,10 @@ const GAPS_CRITICOS = (() =>
         h => h.cargoId === colaborador.cargoId && h.obrigatoria,
       );
       const gaps = expectedObrig.filter(skill => {
+        // Habilidade sem resposta do colaborador: excluída do cálculo (não conta como gap)
         const nivelAtual = nivelMap.get(skill.habilidadeId);
-        return (nivelAtual ? getPesoFromNome(nivelAtual) : 0) < getPesoFromNome(skill.nivelEsperado);
+        if (!nivelAtual) return false;
+        return getPesoFromNome(nivelAtual) < getPesoFromNome(skill.nivelEsperado);
       }).length;
       return {
         id: colaborador.id,
@@ -232,10 +240,36 @@ const GAPS_CRITICOS = (() =>
     .sort((a, b) => b.gaps - a.gaps)
 )();
 
-// Lacuna: dados temporais (hoje/ontem, variação 30d) não existem em mockData.ts —
-// seriam provenientes de um backend com histórico de eventos. Mantidos estáticos.
-const AVALIACOES_HOJE = 12;
-const AVALIACOES_ONTEM = 10;
+// ─── Avaliações respondidas hoje/ontem ───────────────────────────────────────
+// "Respondida em <data>" = participante com respostas registradas cuja
+// dataResposta (compartilhada por todas as respostas de um mesmo envio) é
+// igual à data-alvo. Comparado sempre contra HOJE_SIMULADO — nunca a data
+// real do navegador — para manter o cálculo determinístico.
+
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function contarAvaliacoesRespondidasEm(dataAlvo: string): number {
+  let count = 0;
+  for (const av of avaliacoesData) {
+    for (const p of av.participantes) {
+      if (p.respostas.length > 0 && p.respostas[0].dataResposta === dataAlvo) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+const ONTEM_SIMULADO = new Date(HOJE_SIMULADO);
+ONTEM_SIMULADO.setUTCDate(ONTEM_SIMULADO.getUTCDate() - 1);
+
+const AVALIACOES_HOJE = contarAvaliacoesRespondidasEm(toISODate(HOJE_SIMULADO));
+const AVALIACOES_ONTEM = contarAvaliacoesRespondidasEm(toISODate(ONTEM_SIMULADO));
+
+// Lacuna: variação de 30 dias ainda não existe em mockData.ts — seria proveniente
+// de um backend com histórico de eventos. Mantida estática (fora de escopo).
 const HABILIDADES_VARIACAO_30D = 4;
 const AVALIACOES_VARIACAO_30D = -8;
 

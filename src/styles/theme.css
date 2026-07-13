@@ -339,6 +339,30 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Chrome, Safari e Opera */
   }
+
+  /* Scrollbar fina e discreta, tom neutro — sem track escuro */
+  .scrollbar-thin {
+    scrollbar-width: thin;  /* Firefox */
+    scrollbar-color: #D1D5DB transparent;  /* Firefox: thumb gray-300, track transparente */
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #D1D5DB;  /* gray-300 */
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #9CA3AF;  /* gray-400 */
+  }
 }
 
 /* Animations */

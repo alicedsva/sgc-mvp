@@ -15,6 +15,7 @@ import {
   BarChart2,
   ClipboardList,
   GitCompare,
+  Milestone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -57,6 +58,7 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     { id: 'testes/barras',    label: 'Barras por Habilidade', icon: BarChart2     },
     { id: 'testes/screening', label: 'Screening Report',      icon: ClipboardList },
     { id: 'testes/benchmark', label: 'Benchmark Mode',        icon: GitCompare    },
+    { id: 'testes/carreira',  label: 'Minha Carreira (Exploração)', icon: Milestone },
   ];
 
   const menuItems = viewMode === 'admin' ? menuItemsAdmin : menuItemsColaborador;
