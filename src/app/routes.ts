@@ -14,6 +14,7 @@ import AvaliacaoDetalhePage from "./pages/AvaliacaoDetalhePage";
 import MeuPerfilPage from "./pages/MeuPerfilPage";
 import MinhasAvaliacoesPage from "./pages/MinhasAvaliacoesPage";
 import MinhaCarreiraPage from "./pages/MinhaCarreiraPage";
+import CompetenciaDetalhePage from "./pages/CompetenciaDetalhePage";
 import ConfigurarCargoPage from "./pages/ConfigurarCargoPage";
 import EditarJornadaPage from "./pages/EditarJornadaPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
@@ -21,8 +22,6 @@ import TesteRadarPage from "./pages/testes/TesteRadarPage";
 import TesteBarrasPage from "./pages/testes/TesteBarrasPage";
 import TesteScreeningPage from "./pages/testes/TesteScreeningPage";
 import TesterBenchmarkPage from "./pages/testes/TesterBenchmarkPage";
-import TesteCarreiraPage from "./pages/testes/TesteCarreiraPage";
-import TesteCompetenciaDetalhePage from "./pages/testes/TesteCompetenciaDetalhePage";
 
 export const router = createBrowserRouter([
   {
@@ -46,13 +45,12 @@ export const router = createBrowserRouter([
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
       { path: "minha-carreira", Component: MinhaCarreiraPage },
+      { path: "minha-carreira/competencia/:id", Component: CompetenciaDetalhePage },
       { path: "design-system", Component: DesignSystemPage },
       { path: "testes/radar",     Component: TesteRadarPage },
       { path: "testes/barras",    Component: TesteBarrasPage },
       { path: "testes/screening", Component: TesteScreeningPage },
       { path: "testes/benchmark", Component: TesterBenchmarkPage },
-      { path: "testes/carreira",  Component: TesteCarreiraPage },
-      { path: "testes/carreira/competencia/:id", Component: TesteCompetenciaDetalhePage },
     ],
   },
 ]);

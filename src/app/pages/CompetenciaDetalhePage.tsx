@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
-import { Table } from '../../components/ui/Table';
+import { Table } from '../components/ui/Table';
 import {
   JOAO_CARGO_ATUAL,
+  MAPEAMENTO_COMPETENCIAS_SECTION_ID,
   STATUS_LABEL,
   Status,
   matrizParaCargo,
   enriquecerMatriz,
   AderenciaRing,
   PesoBars,
-} from './joaoCarreiraShared';
+} from './minhaCarreiraShared';
 
 type OutletContext = { isSidebarCollapsed: boolean; viewMode: 'admin' | 'colaborador' };
 
@@ -47,14 +48,24 @@ const TABS: { key: FiltroTab; label: string }[] = [
   { key: 'sem', label: 'Não avaliadas' },
 ];
 
-export default function TesteCompetenciaDetalhePage() {
+export default function CompetenciaDetalhePage() {
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<FiltroTab>('todas');
   const [paginaAtual, setPaginaAtual] = useState(1);
 
-  // Mesma matriz/enriquecimento usados em TesteCarreiraPage — cargo ATUAL de
+  // A SPA não reseta o scroll ao navegar entre rotas — quem entra aqui vindo
+  // do fim de "Minha Carreira" (Mapeamento de competências fica no rodapé de
+  // uma página longa) chegava com o scroll herdado da página anterior, então
+  // essa página (mais curta) abria com o título e o botão "voltar" fora da
+  // área visível. Corrigido forçando o topo no mount — mesmo comportamento
+  // já esperado ao entrar em qualquer página de detalhe do sistema.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Mesma matriz/enriquecimento usados em MinhaCarreiraPage — cargo ATUAL de
   // João (c2), única fonte real (mockData.ts), nunca dado duplicado à mão.
   const habilidadesCargoAtual = useMemo(
     () => enriquecerMatriz(matrizParaCargo(JOAO_CARGO_ATUAL)),
@@ -108,8 +119,12 @@ export default function TesteCompetenciaDetalhePage() {
   return (
     <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
       <div className="p-4 md:p-8 space-y-6">
+        {/* State.scrollTarget é lido em MinhaCarreiraPage para reabrir a
+            página já rolada até a seção "Mapeamento de competências", em vez
+            de subir para o topo — pedido explícito, a seção fica no rodapé
+            de uma página longa. */}
         <button
-          onClick={() => navigate('/testes/carreira')}
+          onClick={() => navigate('/minha-carreira', { state: { scrollTarget: MAPEAMENTO_COMPETENCIAS_SECTION_ID } })}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />

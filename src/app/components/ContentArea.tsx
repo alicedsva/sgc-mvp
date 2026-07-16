@@ -14,7 +14,6 @@ import { EmptyState } from './ui/EmptyState';
 import { NiveisProficiencia } from './NiveisProficiencia';
 import { ColaboradorView } from './ColaboradorView';
 import { MinhasAvaliacoes } from './MinhasAvaliacoes';
-import { MinhaCarreira } from './MinhaCarreira';
 import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { NovaAvaliacaoDrawer, NovaAvaliacaoFormData } from './avaliacoes/NovaAvaliacaoDrawer';
@@ -248,12 +247,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         <div className="p-4 md:p-8">
           {selectedItem === 'meu-perfil' && <ColaboradorView />}
           {selectedItem === 'minhas-avaliacoes' && <MinhasAvaliacoes />}
-          {selectedItem === 'minha-carreira' && <MinhaCarreira />}
-          
-          {/* Fallback - mostra Meu Perfil por padrão */}
-          {selectedItem !== 'meu-perfil' && 
-           selectedItem !== 'minhas-avaliacoes' && 
-           selectedItem !== 'minha-carreira' && (
+
+          {/* Fallback - mostra Meu Perfil por padrão. "minha-carreira" não
+              passa mais por aqui — MinhaCarreiraPage.tsx virou uma rota
+              própria e autossuficiente (fora de ContentArea), igual ao
+              antigo TesteCarreiraPage.tsx. */}
+          {selectedItem !== 'meu-perfil' &&
+           selectedItem !== 'minhas-avaliacoes' && (
             <ColaboradorView />
           )}
         </div>

@@ -15,7 +15,8 @@ import {
   BarChart2,
   ClipboardList,
   GitCompare,
-  Milestone,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +39,8 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ top: 0, left: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<number | null>(null);
+  // Sempre inicia fechado — não precisa persistir entre reloads.
+  const [isTestesOpen, setIsTestesOpen] = useState(false);
 
   const menuItemsAdmin = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -58,7 +61,6 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     { id: 'testes/barras',    label: 'Barras por Habilidade', icon: BarChart2     },
     { id: 'testes/screening', label: 'Screening Report',      icon: ClipboardList },
     { id: 'testes/benchmark', label: 'Benchmark Mode',        icon: GitCompare    },
-    { id: 'testes/carreira',  label: 'Minha Carreira (Exploração)', icon: Milestone },
   ];
 
   const menuItems = viewMode === 'admin' ? menuItemsAdmin : menuItemsColaborador;
@@ -190,21 +192,31 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
           {/* Grupo "Testes" — apenas no modo colaborador */}
           {viewMode === 'colaborador' && (
             <>
-              <div className={`${isCollapsed ? 'px-4' : 'px-3'} pt-4 pb-2`}>
+              <div className={`${isCollapsed ? 'px-4' : 'px-3'} mt-2 pt-3 pb-1 border-t border-gray-200`}>
                 {!isCollapsed ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-gray-200" />
-                    <span className="flex items-center gap-1 text-xs font-medium text-gray-400 whitespace-nowrap">
-                      <FlaskConical className="w-3 h-3" />
+                  <button
+                    onClick={() => setIsTestesOpen((prev) => !prev)}
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors gap-3 px-3 py-2.5 ${
+                      isTestesOpen
+                        ? 'bg-[var(--brand-50)]'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    aria-expanded={isTestesOpen}
+                    aria-controls="sidebar-testes-group"
+                  >
+                    <FlaskConical className={`w-5 h-5 flex-shrink-0 ${isTestesOpen ? 'text-[var(--brand-600)]' : 'text-gray-700'}`} />
+                    <span className={`flex-1 text-left whitespace-nowrap ${isTestesOpen ? 'text-[var(--brand-700)] font-medium' : 'text-gray-700'}`}>
                       Testes
                     </span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-                ) : (
-                  <div className="h-px bg-gray-200" />
-                )}
+                    {isTestesOpen ? (
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 text-[var(--brand-600)]" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-700" />
+                    )}
+                  </button>
+                ) : null}
               </div>
-              <ul className={`space-y-1 ${isCollapsed ? 'px-4' : 'px-3'}`}>
+              <ul id="sidebar-testes-group" className={`space-y-1 ${isCollapsed ? 'px-4' : 'px-3'} ${!isCollapsed && !isTestesOpen ? 'hidden' : ''}`}>
                 {menuItemsTestes.map((item) => {
                   const Icon = item.icon;
                   const isActive = selectedItem === item.id;

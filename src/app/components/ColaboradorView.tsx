@@ -1,38 +1,11 @@
-import { useState } from 'react';
 import {
-  ChevronLeft,
-  ChevronRight,
   Clock,
   CalendarClock,
   AlertCircle,
   CheckCircle2,
-  List,
-  BarChart2,
+  Construction,
 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { calcularCobertura, HabilidadeColaborador, MatrizCargo } from '../utils/cobertura';
-import { getCorFromPeso, niveisDefaultData, getPesoFromNome, habilidadesData, getCompetenciaNome } from '../data/mockData';
-import { Table, Column, PaginationConfig } from './ui/Table';
-
-const PESO_MAX = Math.max(...niveisDefaultData.map(n => n.peso));
-
-function getPageNumbers(currentPage: number, totalPages: number): (number | string)[] {
-  const pages: (number | string)[] = [];
-  if (totalPages <= 5) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else if (currentPage <= 3) {
-    for (let i = 1; i <= 4; i++) pages.push(i);
-    pages.push('...'); pages.push(totalPages);
-  } else if (currentPage >= totalPages - 2) {
-    pages.push(1); pages.push('...');
-    for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-  } else {
-    pages.push(1); pages.push('...');
-    pages.push(currentPage - 1); pages.push(currentPage); pages.push(currentPage + 1);
-    pages.push('...'); pages.push(totalPages);
-  }
-  return pages;
-}
 
 interface Cargo {
   id: string;
@@ -43,16 +16,7 @@ interface Cargo {
   atual: boolean;
 }
 
-const ITENS_POR_PAGINA = 10;
-
 export function ColaboradorView() {
-  const [buscaHabilidade, setBuscaHabilidade] = useState('');
-  const [filtroCompetencia, setFiltroCompetencia] = useState('all');
-  const [filtroTipo, setFiltroTipo] = useState('all');
-  const [filtroStatus, setFiltroStatus] = useState('Todos');
-  const [paginaAtual, setPaginaAtual] = useState(1);
-  const [visualizacao, setVisualizacao] = useState<'tabela' | 'barras'>('tabela');
-
   // Dados mockados
   const colaborador = {
     nome: 'João Silva',
@@ -187,7 +151,6 @@ export function ColaboradorView() {
   const nivelPeso: Record<string, number> = { 'Básico': 1, 'Intermediário': 2, 'Avançado': 3, 'Especialista': 4 };
   const cargoAtual = cargos.find(c => c.atual)!;
   const mapaColaborador = new Map(habilidadesColaborador.map(h => [h.habilidadeId, h.nivelAtual]));
-  const nivelEsperadoMap = new Map(cargoAtual.matrizCargo.map(m => [m.habilidadeId, m.nivelEsperado]));
   const habilidadesComGap = cargoAtual.matrizCargo.filter(req => {
     const nivelAtual = mapaColaborador.get(req.habilidadeId) ?? '';
     return !calcularCobertura(nivelPeso[nivelAtual] ?? 0, nivelPeso[req.nivelEsperado] ?? 0);
@@ -196,100 +159,6 @@ export function ColaboradorView() {
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
   const primeiroNome = colaborador.nome.split(' ')[0];
-
-  // Lista plana de habilidades com status calculado
-  const todasHabilidades = habilidadesNiveis.map(item => {
-    const hab = habilidadesData.find(h => h.id === item.id);
-    const nivelEsperado = nivelEsperadoMap.get(item.id);
-    const nivelAtualNum = getPesoFromNome(item.nivel);
-    const nivelEsperadoNum = nivelEsperado != null ? getPesoFromNome(nivelEsperado) : null;
-
-    let statusIndicador: 'Acima do esperado' | 'No esperado' | 'Abaixo do esperado' | null = null;
-    if (nivelEsperadoNum !== null) {
-      if (nivelAtualNum > nivelEsperadoNum) statusIndicador = 'Acima do esperado';
-      else if (nivelAtualNum === nivelEsperadoNum) statusIndicador = 'No esperado';
-      else statusIndicador = 'Abaixo do esperado';
-    }
-
-    return {
-      id: item.id,
-      nome: hab?.nome ?? item.id,
-      nivel: item.nivel,
-      competenciaId: hab?.competenciaId ?? '',
-      competenciaNome: getCompetenciaNome(hab?.competenciaId ?? ''),
-      tipo: (hab?.tipo ?? 'Técnica') as 'Técnica' | 'Comportamental',
-      statusIndicador,
-      pesoAtual: nivelAtualNum,
-      pesoEsperado: nivelEsperadoNum,
-      nivelEsperadoNome: nivelEsperado ?? null,
-    };
-  });
-
-  const competenciasNoView = Array.from(
-    new Set(todasHabilidades.map(h => h.competenciaId).filter(Boolean))
-  ).sort((a, b) => getCompetenciaNome(a).localeCompare(getCompetenciaNome(b)));
-
-  // Filtragem combinada
-  const habilidadesFiltradas = todasHabilidades.filter(h => {
-    if (buscaHabilidade && !h.nome.toLowerCase().includes(buscaHabilidade.toLowerCase())) return false;
-    if (filtroCompetencia !== 'all' && h.competenciaId !== filtroCompetencia) return false;
-    if (filtroTipo !== 'all' && h.tipo !== filtroTipo) return false;
-    if (filtroStatus !== 'Todos' && h.statusIndicador !== filtroStatus) return false;
-    return true;
-  });
-
-  const totalPaginas = Math.max(1, Math.ceil(habilidadesFiltradas.length / ITENS_POR_PAGINA));
-  const habilidadesPagina = habilidadesFiltradas.slice(
-    (paginaAtual - 1) * ITENS_POR_PAGINA,
-    paginaAtual * ITENS_POR_PAGINA
-  );
-  const paginacaoInicioItem = habilidadesFiltradas.length === 0 ? 0 : (paginaAtual - 1) * ITENS_POR_PAGINA + 1;
-  const paginacaoFimItem = Math.min(paginaAtual * ITENS_POR_PAGINA, habilidadesFiltradas.length);
-
-  const columns: Column[] = [
-    { key: 'nome', label: 'Habilidade' },
-    {
-      key: 'competenciaNome',
-      label: 'Competência',
-      render: (value: any) => <span className="text-gray-500">{value}</span>,
-    },
-    {
-      key: 'nivel',
-      label: 'Nível Atual',
-      render: (_: any, row: any) => (
-        <span
-          className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
-          style={{
-            backgroundColor: getPesoFromNome(row.nivel) > 0
-              ? getCorFromPeso(getPesoFromNome(row.nivel))
-              : '#9CA3AF',
-          }}
-        >
-          {row.nivel}
-        </span>
-      ),
-    },
-    {
-      key: 'statusIndicador',
-      label: 'Status',
-      render: (_: any, row: any) =>
-        row.statusIndicador ? (
-          <span className={row.statusIndicador === 'Abaixo do esperado' ? 'text-xs text-red-500' : 'text-xs text-green-600'}>
-            {row.statusIndicador}
-          </span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        ),
-    },
-  ];
-
-  const paginationConfig: PaginationConfig = {
-    currentPage: paginaAtual,
-    itemsPerPage: ITENS_POR_PAGINA,
-    totalItems: habilidadesFiltradas.length,
-    onPageChange: (page) => setPaginaAtual(page),
-    onItemsPerPageChange: () => {},
-  };
 
   return (
     <div className="space-y-6">
@@ -343,214 +212,16 @@ export function ColaboradorView() {
         </div>
       </div>
 
-      {/* DETALHAMENTO DE HABILIDADES */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Detalhamento de Habilidades</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Suas habilidades mapeadas e posição no cargo atual
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {/* Toolbar de filtros */}
-          <div className="p-3 md:p-4 flex flex-wrap items-center gap-3 border-b border-gray-200">
-            <input
-              type="text"
-              placeholder="Buscar habilidade..."
-              value={buscaHabilidade}
-              onChange={e => { setBuscaHabilidade(e.target.value); setPaginaAtual(1); }}
-              className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
-            />
-            <Select value={filtroCompetencia} onValueChange={v => { setFiltroCompetencia(v); setPaginaAtual(1); }}>
-              <SelectTrigger className="w-auto">
-                <SelectValue placeholder="Todas as competências" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as competências</SelectItem>
-                {competenciasNoView.map(id => (
-                  <SelectItem key={id} value={id}>{getCompetenciaNome(id)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filtroTipo} onValueChange={v => { setFiltroTipo(v); setPaginaAtual(1); }}>
-              <SelectTrigger className="w-auto">
-                <SelectValue placeholder="Todos os tipos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="Técnica">Técnica</SelectItem>
-                <SelectItem value="Comportamental">Comportamental</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              {(['Todos', 'Acima do esperado', 'No esperado', 'Abaixo do esperado'] as const).map(s => (
-                <button
-                  key={s}
-                  onClick={() => { setFiltroStatus(s); setPaginaAtual(1); }}
-                  className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                    filtroStatus === s
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div className="ml-auto flex items-center gap-1">
-              <button
-                onClick={() => { setVisualizacao('tabela'); setPaginaAtual(1); }}
-                title="Visualização em tabela"
-                className={`p-2 rounded-md transition-colors ${
-                  visualizacao === 'tabela'
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => { setVisualizacao('barras'); setPaginaAtual(1); }}
-                title="Visualização em barras"
-                className={`p-2 rounded-md transition-colors ${
-                  visualizacao === 'barras'
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <BarChart2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Tabela */}
-          {visualizacao === 'tabela' && (
-            habilidadesPagina.length === 0 ? (
-              <div className="px-3 md:px-6 py-8 text-center text-sm text-gray-500">
-                Nenhuma habilidade encontrada para os filtros aplicados.
-              </div>
-            ) : (
-              <Table columns={columns} data={habilidadesPagina} pagination={paginationConfig} />
-            )
-          )}
-
-          {/* Visualização em barras */}
-          {visualizacao === 'barras' && (
-            <div>
-              <div className="px-4 md:px-6 py-2 flex justify-end items-center gap-4 border-b border-gray-100">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[var(--brand-600)]" />
-                  <span className="text-xs text-gray-500">Nível atual</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-slate-300" />
-                  <span className="text-xs text-gray-500">Nível esperado</span>
-                </div>
-              </div>
-              <div className="px-4 md:px-6">
-                {habilidadesPagina.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-gray-500">
-                    Nenhuma habilidade encontrada para os filtros aplicados.
-                  </p>
-                ) : (
-                  habilidadesPagina.map(h => {
-                    const naoAvaliado = h.pesoAtual === 0;
-                    const semEsperado = h.nivelEsperadoNome === null;
-                    const larguraAtual = naoAvaliado ? 0 : Math.round((h.pesoAtual / PESO_MAX) * 100);
-                    const larguraEsperado = semEsperado ? 0 : Math.round((h.pesoEsperado! / PESO_MAX) * 100);
-
-                    return (
-                      <div key={h.id} className="py-4 border-b border-gray-100 flex items-start gap-4">
-                        <div className="w-40 flex-shrink-0">
-                          <p className="text-sm font-medium text-gray-900">{h.nome}</p>
-                          <p className="text-xs text-gray-500">{h.competenciaNome}</p>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-2">
-                          {naoAvaliado ? (
-                            <div className="flex items-center gap-2">
-                              <span className="w-14 text-xs text-gray-400 shrink-0">Atual</span>
-                              <span className="text-xs italic text-gray-400">Não avaliado</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="w-14 text-xs text-gray-400 shrink-0">Atual</span>
-                              <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-[var(--brand-600)] transition-all duration-300"
-                                  style={{ width: `${larguraAtual}%` }}
-                                />
-                              </div>
-                              <span className="w-24 text-xs font-medium text-gray-700 shrink-0">{h.nivel}</span>
-                            </div>
-                          )}
-                          {!semEsperado && (
-                            <div className="flex items-center gap-2">
-                              <span className="w-14 text-xs text-gray-400 shrink-0">Esperado</span>
-                              <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-slate-300 transition-all duration-300"
-                                  style={{ width: `${larguraEsperado}%` }}
-                                />
-                              </div>
-                              <span className="w-24 text-xs font-medium text-gray-700 shrink-0">{h.nivelEsperadoNome}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {/* Paginação */}
-              <div className="flex flex-col md:flex-row items-center justify-between px-3 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 gap-3 md:gap-0">
-                <div className="text-xs md:text-sm text-gray-700">
-                  <span className="hidden md:inline">Exibindo </span>
-                  <span className="font-medium">{paginacaoInicioItem}</span>–
-                  <span className="font-medium">{paginacaoFimItem}</span> de{' '}
-                  <span className="font-medium">{habilidadesFiltradas.length}</span>
-                </div>
-                <div className="flex items-center gap-1 md:gap-2">
-                  <button
-                    onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
-                    disabled={paginaAtual === 1}
-                    className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                  >
-                    <ChevronLeft className="w-3 md:w-4 h-3 md:h-4" />
-                  </button>
-                  <div className="flex items-center gap-0.5 md:gap-1">
-                    {getPageNumbers(paginaAtual, totalPaginas).map((page, index) =>
-                      typeof page === 'number' ? (
-                        <button
-                          key={index}
-                          onClick={() => setPaginaAtual(page)}
-                          className={`min-w-[32px] md:min-w-[40px] px-2 md:px-3 py-1.5 md:py-2 text-xs font-normal rounded-lg transition-colors ${
-                            paginaAtual === page
-                              ? 'bg-gray-100 text-gray-900 border border-gray-200'
-                              : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ) : (
-                        <span key={index} className="px-1 md:px-2 text-xs text-gray-400">
-                          {page}
-                        </span>
-                      )
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
-                    disabled={paginaAtual === totalPaginas}
-                    className="px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                  >
-                    <ChevronRight className="w-3 md:w-4 h-3 md:h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Detalhamento de Habilidades — placeholder sem caráter oficial de
+          produto removido a pedido; substituído por aviso "Em construção"
+          (Estados vazios — B — Orientativo, 02-design-system.md) para não
+          servir de referência de desenvolvimento. */}
+      <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+        <Construction className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+        <p className="text-sm font-medium text-gray-700 mb-1">Em construção</p>
+        <p className="text-sm text-gray-500">
+          Esta seção ainda está em definição — não deve ser usada como referência para o desenvolvimento.
+        </p>
       </div>
 
     </div>
