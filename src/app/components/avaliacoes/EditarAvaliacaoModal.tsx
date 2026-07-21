@@ -1,16 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
+import { getCompetenciaNome, colaboradoresData } from '../../data/mockData';
 
-const GERENCIAS = [
-  'Tecnologia', 'Recursos Humanos', 'Financeiro', 'Marketing',
-  'Vendas', 'Operações', 'Produto', 'Design',
-];
+// Gerências reais (derivadas de colaboradoresData) — nunca lista fixa.
+// Mesmo padrão usado em DashboardPage.tsx e ContentArea.tsx.
+const GERENCIAS = Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort();
 
 export interface EditarAvaliacaoFormData {
   nome: string;
   descricao: string;
   competencias: string[];
+  habilidades: string[];
   gerencias: string[];
   dataInicio: string;
   dataFim: string;
@@ -23,18 +24,21 @@ interface EditarAvaliacaoModalProps {
   onAtivar: (data: EditarAvaliacaoFormData) => void;
   initialData: EditarAvaliacaoFormData;
   competencias: { id: string; nome: string; status: string }[];
+  habilidades: { id: string; nome: string; competencia: string; competenciaId?: string; status?: string }[];
 }
 
 export function EditarAvaliacaoModal({
-  isOpen, onClose, onSalvarRascunho, onAtivar, initialData, competencias,
+  isOpen, onClose, onSalvarRascunho, onAtivar, initialData, competencias, habilidades,
 }: EditarAvaliacaoModalProps) {
   const [formData, setFormData] = useState<EditarAvaliacaoFormData>(initialData);
   const [buscaCompetencia, setBuscaCompetencia] = useState('');
+  const [buscaHabilidade, setBuscaHabilidade] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData);
       setBuscaCompetencia('');
+      setBuscaHabilidade('');
     }
   }, [isOpen]);
 
@@ -49,14 +53,38 @@ export function EditarAvaliacaoModal({
     return competenciasAtivas.filter(c => c.nome.toLowerCase().includes(q));
   }, [competenciasAtivas, buscaCompetencia]);
 
+  const habilidadesVisiveis = useMemo(() => {
+    const base = formData.competencias.length === 0
+      ? habilidades.filter(h => !h.status || h.status === 'Ativa')
+      : habilidades.filter(h => (!h.status || h.status === 'Ativa') && formData.competencias.includes(h.competenciaId ?? ''));
+    if (!buscaHabilidade.trim()) return base;
+    const q = buscaHabilidade.toLowerCase();
+    return base.filter(h => h.nome.toLowerCase().includes(q));
+  }, [habilidades, formData.competencias, buscaHabilidade]);
+
   if (!isOpen) return null;
 
-  const handleToggleCompetencia = (nomeComp: string) => {
+  const handleToggleCompetencia = (idComp: string) => {
+    const isRemoving = formData.competencias.includes(idComp);
+    const novasCompetencias = isRemoving
+      ? formData.competencias.filter(c => c !== idComp)
+      : [...formData.competencias, idComp];
+
+    let novasHabilidades = formData.habilidades;
+    if (isRemoving) {
+      const ids = new Set(habilidades.filter(h => h.competenciaId === idComp).map(h => h.id));
+      novasHabilidades = formData.habilidades.filter(id => !ids.has(id));
+    }
+
+    setFormData({ ...formData, competencias: novasCompetencias, habilidades: novasHabilidades });
+  };
+
+  const handleToggleHabilidade = (id: string) => {
     setFormData({
       ...formData,
-      competencias: formData.competencias.includes(nomeComp)
-        ? formData.competencias.filter(c => c !== nomeComp)
-        : [...formData.competencias, nomeComp],
+      habilidades: formData.habilidades.includes(id)
+        ? formData.habilidades.filter(h => h !== id)
+        : [...formData.habilidades, id],
     });
   };
 
@@ -160,8 +188,8 @@ export function EditarAvaliacaoModal({
                     <label key={c.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
                       <input
                         type="checkbox"
-                        checked={formData.competencias.includes(c.nome)}
-                        onChange={() => handleToggleCompetencia(c.nome)}
+                        checked={formData.competencias.includes(c.id)}
+                        onChange={() => handleToggleCompetencia(c.id)}
                         className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
                       />
                       <span className="text-sm text-gray-800">{c.nome}</span>
@@ -172,6 +200,50 @@ export function EditarAvaliacaoModal({
               {formData.competencias.length > 0 && (
                 <p className="mt-1.5 text-xs text-gray-500">
                   {formData.competencias.length} competência(s) selecionada(s)
+                </p>
+              )}
+            </div>
+
+            {/* Habilidades */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Habilidades
+                <span className="ml-2 text-xs text-gray-400 font-normal">
+                  {formData.competencias.length > 0
+                    ? 'Filtradas pelas competências selecionadas'
+                    : 'Todas as habilidades'}
+                </span>
+              </label>
+              <input
+                type="text"
+                placeholder="Buscar habilidade..."
+                value={buscaHabilidade}
+                onChange={e => setBuscaHabilidade(e.target.value)}
+                className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+              />
+              <div className="max-h-44 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {habilidadesVisiveis.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-gray-400 text-center">Nenhuma habilidade encontrada</p>
+                ) : (
+                  habilidadesVisiveis.map(h => (
+                    <label key={h.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={formData.habilidades.includes(h.id)}
+                        onChange={() => handleToggleHabilidade(h.id)}
+                        className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-sm text-gray-800">{h.nome}</span>
+                        <span className="ml-2 text-xs text-gray-400">{h.competenciaId ? getCompetenciaNome(h.competenciaId) : h.competencia}</span>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+              {formData.habilidades.length > 0 && (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {formData.habilidades.length} habilidade(s) selecionada(s)
                 </p>
               )}
             </div>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext, useNavigate } from 'react-router';
 import { User, Briefcase, TrendingUp, Award, ClipboardCheck, ArrowLeft } from 'lucide-react';
-import { colaboradoresData, habilidadesCargoData, getHabilidadesAvaliadasColaborador, habilidadesData, jornadasData, carreirasData, cargosData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
+import { colaboradoresData, jornadasData, cargosData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
+import { useCarreiras } from '../context/CarreirasContext';
+import { calcularHabilidadesComGap, calcularCobertura } from '../utils/aderenciaColaborador';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Table, Column } from '../components/ui/Table';
 
@@ -14,6 +16,7 @@ export default function PerfilColaboradorPage() {
   const { colaboradorId } = useParams();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
+  const { carreiras } = useCarreiras();
   const [activeTab, setActiveTab] = useState('visao-geral');
   const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
 
@@ -40,31 +43,9 @@ export default function PerfilColaboradorPage() {
 
   const cargo = cargosData.find(c => c.id === colaborador.cargoId);
   const jornada = jornadasData.find(j => j.id === colaborador.jornadaId);
-  const carreira = carreirasData.find(c => c.id === colaborador.carreiraId);
+  const carreira = carreiras.find(c => c.id === colaborador.carreiraId);
 
-  const habilidadesEsperadas = habilidadesCargoData.filter(hc => hc.cargoId === colaborador.cargoId);
-  const habilidadesAvaliadas = getHabilidadesAvaliadasColaborador(colaborador.id);
-
-  const habilidadesComGap = habilidadesEsperadas.map(he => {
-    const habilidade = habilidadesData.find(h => h.id === he.habilidadeId);
-    const nivelAtual = habilidadesAvaliadas.get(he.habilidadeId) ?? null;
-
-    const nivelAtualNum = nivelAtual ? (nivelAtual === 'Não avaliado' ? 0 : getPesoFromNome(nivelAtual)) : 0;
-    const nivelEsperadoNum = he.nivelEsperado === 'Não avaliado' ? 0 : getPesoFromNome(he.nivelEsperado);
-    const gap = nivelAtualNum - nivelEsperadoNum;
-
-    return {
-      habilidadeId: he.habilidadeId,
-      nome: habilidade?.nome || '',
-      competencia: habilidade?.competencia || '',
-      competenciaId: habilidade?.competenciaId ?? '',
-      tipo: habilidade?.tipo || '',
-      nivelAtual: nivelAtual ?? 'Não avaliado',
-      nivelEsperado: he.nivelEsperado,
-      gap,
-      obrigatoria: he.obrigatoria,
-    };
-  });
+  const habilidadesComGap = calcularHabilidadesComGap(colaborador.cargoId, colaborador.id);
 
   const competenciasMap = new Map<string, { atual: number, esperado: number, count: number }>();
   habilidadesComGap.forEach(h => {
@@ -84,42 +65,14 @@ export default function PerfilColaboradorPage() {
     percentualAderencia: Math.round((data.atual / data.esperado) * 100),
   }));
 
-  const totalAtual = habilidadesComGap.reduce((sum, h) => sum + (h.nivelAtual === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelAtual)), 0);
-  const totalEsperado = habilidadesComGap.reduce((sum, h) => sum + (h.nivelEsperado === 'Não avaliado' ? 0 : getPesoFromNome(h.nivelEsperado)), 0);
-  const aderenciaGeral = totalEsperado > 0 ? Math.round((totalAtual / totalEsperado) * 100) : 0;
-
-  // Calcular cobertura de habilidades
+  // Cobertura de habilidades — cálculo compartilhado (ver aderenciaColaborador.ts)
+  const {
+    percentual: percentualCobertura,
+    classificacao: classificacaoCobertura,
+    mensagem: mensagemCobertura,
+  } = calcularCobertura(habilidadesComGap);
   const habilidadesAtendidas = habilidadesComGap.filter(h => h.gap >= 0).length;
   const totalHabilidades = habilidadesComGap.length;
-  const percentualCobertura = totalHabilidades > 0 ? Math.round((habilidadesAtendidas / totalHabilidades) * 100) : 0;
-
-  // Classificação qualitativa de cobertura
-  let classificacaoCobertura = '';
-  let mensagemCobertura = '';
-  if (percentualCobertura >= 91) {
-    classificacaoCobertura = 'Alta cobertura';
-    mensagemCobertura = 'O colaborador atende todas as habilidades esperadas para este cargo.';
-  } else if (percentualCobertura >= 71) {
-    classificacaoCobertura = 'Boa cobertura';
-    mensagemCobertura = 'O colaborador atende a maior parte das habilidades esperadas para este cargo.';
-  } else if (percentualCobertura >= 41) {
-    classificacaoCobertura = 'Em desenvolvimento';
-    mensagemCobertura = 'O colaborador está desenvolvendo as habilidades esperadas para este cargo.';
-  } else {
-    classificacaoCobertura = 'Baixa cobertura';
-    mensagemCobertura = 'Ainda há muitas habilidades a desenvolver para este cargo.';
-  }
-
-  // Identificar habilidades críticas (gaps negativos)
-  const habilidadesCriticas = habilidadesComGap.filter(h => h.gap < 0 && h.obrigatoria);
-  const habilidadesComGapNegativo = habilidadesComGap.filter(h => h.gap < 0);
-  
-  let mensagemCriticidade = '';
-  if (habilidadesCriticas.length > 0) {
-    mensagemCriticidade = 'Existem habilidades críticas abaixo do esperado para este colaborador.';
-  } else if (habilidadesComGapNegativo.length > 0) {
-    mensagemCriticidade = 'Algumas habilidades ainda são importantes para a evolução deste colaborador.';
-  }
 
   // Agrupar habilidades por categoria
   const habilidadesPorCategoria = habilidadesComGap.reduce((acc, hab) => {

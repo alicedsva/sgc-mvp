@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import { carreirasData, cargosData, jornadasData } from '../data/mockData';
+import { cargosData, jornadasData } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
+import type { Cargo } from '../../data/schema';
 import { toast } from 'sonner';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -36,9 +37,9 @@ function EditarJornadaPageContent() {
   const { carreiraId, jornadaId } = useParams();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
-  const { jornadas, cargos: todosCargos, atualizarJornada, atualizarCargosJornada } = useCarreiras();
+  const { carreiras, jornadas, cargos: todosCargos, atualizarJornada, atualizarCargosJornada } = useCarreiras();
 
-  const carreira = carreirasData.find(c => c.id === carreiraId);
+  const carreira = carreiras.find(c => c.id === carreiraId);
   const jornada = jornadas.find(j => j.id === jornadaId);
   const cargosExistentes = todosCargos.filter(c => c.jornadaId === jornadaId);
 
@@ -95,7 +96,7 @@ function EditarJornadaPageContent() {
       quantidadeCargos: cargosSelecionados.length,
     });
 
-    const novosCargos = cargosSelecionados.map((cargo, index) => {
+    const novosCargos: Cargo[] = cargosSelecionados.map((cargo, index) => {
       const existingCargo = cargo.contextId
         ? cargosExistentes.find(c => c.id === cargo.contextId)
         : null;
@@ -105,6 +106,7 @@ function EditarJornadaPageContent() {
         cargoRM: cargo.nome,
         ordem: String(index + 1),
         habilidadesConfiguradas: existingCargo?.habilidadesConfiguradas ?? 0,
+        totalHabilidades: existingCargo?.totalHabilidades ?? 0,
         status: existingCargo?.status ?? 'Pendente',
       };
     });

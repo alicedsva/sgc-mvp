@@ -4,6 +4,7 @@ import { ToggleSwitch } from './ui/ToggleSwitch';
 import { ConfirmationModal } from './templates/ConfirmationModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getCorFromPeso } from '../data/mockData';
+import type { Nivel, StatusNivel } from '../../data/schema';
 
 const DESCRICOES_POR_PESO: Record<number, string> = {
   1: 'Conhecimento inicial. Realiza atividades simples com supervisão constante.',
@@ -12,16 +13,6 @@ const DESCRICOES_POR_PESO: Record<number, string> = {
   4: 'Atua com autonomia em situações complexas e orienta outros profissionais.',
   5: 'Referência na área. Define padrões, resolve problemas críticos e forma outros profissionais.',
 };
-
-interface Nivel {
-  id: string;
-  nome: string;
-  descricao: string;
-  peso: number;
-  status: string;
-  emUso?: number;
-  arquivado?: boolean;
-}
 
 interface NiveisProficienciaProps {
   niveisData: Nivel[];
@@ -39,8 +30,13 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
   const [modalDesativacaoAberto, setModalDesativacaoAberto] = useState(false);
   const [nivelParaDesativar, setNivelParaDesativar] = useState<Nivel | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
+  // Form state — status começa vazio de propósito (força escolha explícita no Select)
+  const [formData, setFormData] = useState<{
+    nome: string;
+    descricao: string;
+    peso: number;
+    status: StatusNivel | '';
+  }>({
     nome: '',
     descricao: '',
     peso: 1,
@@ -120,16 +116,19 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
   const validarFormulario = () => {
     const novosErros: Record<string, string> = {};
     if (!formData.nome.trim()) novosErros.nome = 'Nome do nível é obrigatório';
+    if (!formData.status) novosErros.status = 'Status é obrigatório';
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   };
 
   const salvarNivel = () => {
     if (!validarFormulario()) return;
+    // validarFormulario garante formData.status !== '' a partir daqui
+    const status = formData.status as StatusNivel;
 
     if (nivelEditando) {
       const niveisAtualizados = niveis.map((n) =>
-        n.id === nivelEditando.id ? { ...n, ...formData } : n
+        n.id === nivelEditando.id ? { ...n, ...formData, status } : n
       );
       setNiveis(niveisAtualizados);
       onUpdateNiveis(niveisAtualizados);
@@ -139,7 +138,7 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
         nome: formData.nome,
         descricao: formData.descricao,
         peso: formData.peso,
-        status: formData.status,
+        status,
         emUso: 0,
         arquivado: false,
       };
@@ -184,7 +183,7 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
       setNivelParaDesativar(nivel);
       setModalDesativacaoAberto(true);
     } else {
-      const niveisAtualizados = niveis.map((n) =>
+      const niveisAtualizados = niveis.map((n): Nivel =>
         n.id === id ? { ...n, status: 'Ativo' } : n
       );
       setNiveis(niveisAtualizados);
@@ -195,7 +194,7 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
   const confirmarDesativacao = () => {
     if (!nivelParaDesativar) return;
 
-    const niveisAtualizados = niveis.map((n) =>
+    const niveisAtualizados = niveis.map((n): Nivel =>
       n.id === nivelParaDesativar.id ? { ...n, status: 'Desativado' } : n
     );
     setNiveis(niveisAtualizados);
@@ -211,7 +210,7 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
   };
 
   const restaurarNivel = (id: string) => {
-    const niveisAtualizados = niveis.map((n) =>
+    const niveisAtualizados = niveis.map((n): Nivel =>
       n.id === id ? { ...n, arquivado: false, status: 'Desativado' } : n
     );
     setNiveis(niveisAtualizados);
@@ -644,7 +643,7 @@ export function NiveisProficiencia({ niveisData, onUpdateNiveis }: NiveisProfici
                   </label>
                   <Select
                     value={formData.status || ''}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    onValueChange={(value) => setFormData({ ...formData, status: value as StatusNivel })}
                   >
                     <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)]">
                       <SelectValue placeholder="Selecione o status" />

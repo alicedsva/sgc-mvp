@@ -19,9 +19,8 @@ import ConfigurarCargoPage from "./pages/ConfigurarCargoPage";
 import EditarJornadaPage from "./pages/EditarJornadaPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import TesteRadarPage from "./pages/testes/TesteRadarPage";
-import TesteBarrasPage from "./pages/testes/TesteBarrasPage";
-import TesteScreeningPage from "./pages/testes/TesteScreeningPage";
-import TesterBenchmarkPage from "./pages/testes/TesterBenchmarkPage";
+import TestePerfilDoughnutPage from "./pages/testes/TestePerfilDoughnutPage";
+import TestePerfilAderenciaGeralPage from "./pages/testes/TestePerfilAderenciaGeralPage";
 
 export const router = createBrowserRouter([
   {
@@ -47,10 +46,9 @@ export const router = createBrowserRouter([
       { path: "minha-carreira", Component: MinhaCarreiraPage },
       { path: "minha-carreira/competencia/:id", Component: CompetenciaDetalhePage },
       { path: "design-system", Component: DesignSystemPage },
-      { path: "testes/radar",     Component: TesteRadarPage },
-      { path: "testes/barras",    Component: TesteBarrasPage },
-      { path: "testes/screening", Component: TesteScreeningPage },
-      { path: "testes/benchmark", Component: TesterBenchmarkPage },
+      { path: "testes/radar",                    Component: TesteRadarPage },
+      { path: "testes/perfil-doughnut",          Component: TestePerfilDoughnutPage },
+      { path: "testes/perfil-aderencia-geral",   Component: TestePerfilAderenciaGeralPage },
     ],
   },
 ]);

@@ -1,12 +1,13 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus } from 'lucide-react';
-import { carreirasData, habilidadesData, niveisDefaultData, getCorFromPeso, colaboradoresData, getCompetenciaNome } from '../data/mockData';
-import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { habilidadesData, niveisDefaultData, colaboradoresData, getCompetenciaNome } from '../data/mockData';
+import { useCarreiras } from '../context/CarreirasContext';
+import type { Cargo, HabilidadeCargo, NivelNome } from '../../data/schema';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
 import { MatrizCell } from '../components/carreiras/MatrizCell';
-import { HabilidadesSelectionModal, HabilidadeItem } from '../components/templates/HabilidadesSelectionModal';
+import { HabilidadesSelectionModal } from '../components/templates/HabilidadesSelectionModal';
 import { ColaboradoresSelectionModal } from '../components/templates/ColaboradoresSelectionModal';
 import { Table, Column, InlineAction } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -19,41 +20,17 @@ interface OutletContext {
   viewMode: 'admin' | 'colaborador';
 }
 
-interface Cargo {
-  id: string;
-  jornadaId: string;
-  cargoRM: string;
-  ordem: string;
-  habilidadesConfiguradas: number;
-  status: string;
-}
-
-interface CargoDisponivel {
-  id: string;
-  nome: string;
-  categoria: string;
-}
-
-interface HabilidadeCargo {
-  id: string;
-  habilidadeId: string;
-  habilidadeNome: string;
-  categoria: string;
-  nivelEsperado: string;
-}
-
 function JornadaDetalheContent() {
   const { carreiraId, jornadaId } = useParams();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const {
+    carreiras,
     jornadas,
     cargos: todosOsCargos,
     habilidadesCargo: todasHabilidadesCargo,
-    atualizarCargosJornada,
     atualizarJornada,
     removerJornada,
-    adicionarCargo,
     atualizarCargo,
     removerCargo,
     atualizarHabilidadesCargo,
@@ -63,7 +40,7 @@ function JornadaDetalheContent() {
   } = useCarreiras();
 
   // Buscar dados
-  const carreira = carreirasData.find(c => c.id === carreiraId);
+  const carreira = carreiras.find(c => c.id === carreiraId);
   const jornada = jornadas.find(j => j.id === jornadaId);
   const cargosDaJornadaIniciais = todosOsCargos.filter(c => c.jornadaId === jornadaId);
 
@@ -213,16 +190,22 @@ function JornadaDetalheContent() {
     if (!hasUnsavedChanges) return;
 
     cargos.forEach(cargo => {
-      const habilidadesDocargo: { id: string; cargoId: string; habilidadeId: string; nivelEsperado: string }[] = [];
+      const habilidadesDocargo: HabilidadeCargo[] = [];
 
       habilidadesNaMatriz.forEach(hab => {
         const nivel = matrizNiveis[hab.id]?.[cargo.id];
         if (nivel === null || nivel === undefined) return;
+        // obrigatoria não tem controle nesta tela ainda — preserva o valor já
+        // existente na matriz e cai para true (padrão predominante nos dados
+        // reais) só para célula nova, ver rules/06-integridade-de-dados.md.
+        const existente = todasHabilidadesCargo.find(
+          h => h.cargoId === cargo.id && h.habilidadeId === hab.id
+        );
         habilidadesDocargo.push({
-          id: generateId('hc'),
           cargoId: cargo.id,
           habilidadeId: hab.id,
-          nivelEsperado: nivel,
+          nivelEsperado: nivel as NivelNome | 'not_required',
+          obrigatoria: existente?.obrigatoria ?? true,
         });
       });
 
@@ -243,18 +226,6 @@ function JornadaDetalheContent() {
     }).length;
     return { configuradas, total, percentual: total > 0 ? (configuradas / total) * 100 : 0 };
   };
-
-  const moveCargo = useCallback((dragIndex: number, hoverIndex: number) => {
-    setCargos((prevCargos) => {
-      const newCargos = [...prevCargos];
-      const [removed] = newCargos.splice(dragIndex, 1);
-      newCargos.splice(hoverIndex, 0, removed);
-      
-      atualizarCargosJornada(jornadaId!, newCargos);
-      
-      return newCargos;
-    });
-  }, [jornadaId, atualizarCargosJornada]);
 
   // Editar cargo
   const handleEditarCargo = (cargo: Cargo) => {
@@ -302,20 +273,6 @@ function JornadaDetalheContent() {
       toast.success('Cargo removido da jornada');
       setCargoParaExcluir(null);
     }
-  };
-
-  // Alterar nível de habilidade
-  const handleAlterarNivel = (cargoId: string, habilidadeCargoId: string, novoNivel: string) => {
-    const habilidadesAtualizadas = todasHabilidadesCargo
-      .filter(h => h.cargoId === cargoId)
-      .map(h => ({
-        id: h.id,
-        cargoId: h.cargoId,
-        habilidadeId: h.habilidadeId,
-        nivelEsperado: h.id === habilidadeCargoId ? novoNivel : h.nivelEsperado,
-      }));
-
-    atualizarHabilidadesCargo(cargoId, habilidadesAtualizadas);
   };
 
   // Editar jornada
@@ -750,6 +707,17 @@ function JornadaDetalheContent() {
                               </button>
                               {openCargoMenu === cargo.id && (
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[200]">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenCargoMenu(null);
+                                      handleEditarCargo(cargo);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 whitespace-nowrap"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                    Editar cargo
+                                  </button>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();

@@ -3,13 +3,13 @@ import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeft, AlertCircle, Eye, X, Users, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 import { Table, Column } from '../components/ui/Table';
 import {
-  avaliacoesData,
   Avaliacao,
   colaboradoresData,
   cargosData,
   habilidadesData,
   competenciasData,
 } from '../data/mockData';
+import { useAvaliacoes } from '../context/AvaliacoesContext';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -58,8 +58,9 @@ export default function AvaliacaoDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
+  const { avaliacoes } = useAvaliacoes();
 
-  const avaliacao = avaliacoesData.find((a) => a.id === id);
+  const avaliacao = avaliacoes.find((a) => a.id === id);
 
   const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${
     !isSidebarCollapsed ? 'lg:ml-64' : ''

@@ -1,38 +1,59 @@
 import { ArrowLeft, Award, BarChart2, CheckCircle2, Info } from 'lucide-react';
-import { getCorFromPeso, getPesoFromNome } from '../data/mockData';
+import { habilidadesData, getCorFromPeso, getPesoFromNome } from '../data/mockData';
+import { useAvaliacoes } from '../context/AvaliacoesContext';
+import { JOAO_ID } from '../pages/minhaCarreiraShared';
 
 interface ResultadoAvaliacaoProps {
-  avaliacao: any;
+  avaliacaoId: string;
   onVoltar: () => void;
 }
 
-// Dados mockados do resultado detalhado
-const resultadoDetalhado = {
-  competencias: [
-    {
-      id: '1',
-      nome: 'Desenvolvimento Frontend',
-      habilidades: [
-        { nome: 'React', nivel: 'Avançado', cor: '#3B82F6' },
-        { nome: 'TypeScript', nivel: 'Avançado', cor: '#3B82F6' },
-        { nome: 'Figma', nivel: 'Intermediário', cor: '#60A5FA' },
-      ],
-      media: 3.3,
-    },
-    {
-      id: '2',
-      nome: 'Desenvolvimento Backend',
-      habilidades: [
-        { nome: 'Node.js', nivel: 'Avançado', cor: '#3B82F6' },
-        { nome: 'PostgreSQL', nivel: 'Intermediário', cor: '#60A5FA' },
-        { nome: 'Python', nivel: 'Especialista', cor: '#6366F1' },
-      ],
-      media: 3.7,
-    },
-  ],
-};
+function media(pesos: number[]): number {
+  if (pesos.length === 0) return 0;
+  return Math.round((pesos.reduce((a, b) => a + b, 0) / pesos.length) * 10) / 10;
+}
 
-export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoProps) {
+export function ResultadoAvaliacao({ avaliacaoId, onVoltar }: ResultadoAvaliacaoProps) {
+  const { avaliacoes } = useAvaliacoes();
+  const avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!;
+  const participante = avaliacao.participantes.find(p => p.colaboradorId === JOAO_ID)!;
+
+  // Respostas reais do participante desta avaliação específica — nunca dado
+  // de exemplo fixo. Cada resposta cruzada com habilidadesData para saber a
+  // competência (por id, nunca por nome de string).
+  const respostasComHabilidade = participante.respostas
+    .map(r => {
+      const habilidade = habilidadesData.find(h => h.id === r.habilidadeId);
+      return habilidade ? { resposta: r, habilidade } : null;
+    })
+    .filter((x): x is { resposta: typeof participante.respostas[number]; habilidade: (typeof habilidadesData)[number] } => x != null);
+
+  const mediaGeral = media(respostasComHabilidade.map(x => getPesoFromNome(x.resposta.nivelRespondido)));
+
+  const competenciasMap = new Map<string, { id: string; nome: string; itens: typeof respostasComHabilidade }>();
+  respostasComHabilidade.forEach(item => {
+    const compId = item.habilidade.competenciaId;
+    if (!competenciasMap.has(compId)) {
+      competenciasMap.set(compId, { id: compId, nome: item.habilidade.competencia, itens: [] });
+    }
+    competenciasMap.get(compId)!.itens.push(item);
+  });
+  const competencias = Array.from(competenciasMap.values()).map(comp => ({
+    ...comp,
+    media: media(comp.itens.map(x => getPesoFromNome(x.resposta.nivelRespondido))),
+  }));
+
+  // Distribuição por nível respondido — só os níveis que de fato aparecem,
+  // pra não misturar as duas escalas do sistema (Básico/Avançado vs
+  // Iniciante/Aprendiz) com barras zeradas sem sentido.
+  const distribuicaoMap = new Map<string, number>();
+  respostasComHabilidade.forEach(x => {
+    distribuicaoMap.set(x.resposta.nivelRespondido, (distribuicaoMap.get(x.resposta.nivelRespondido) ?? 0) + 1);
+  });
+  const distribuicao = Array.from(distribuicaoMap.entries())
+    .map(([nivel, quantidade]) => ({ nivel, quantidade, peso: getPesoFromNome(nivel) }))
+    .sort((a, b) => a.peso - b.peso);
+
   return (
     <div className="space-y-6">
       {/* Header com botão voltar */}
@@ -45,7 +66,7 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
           Minhas Avaliações
         </button>
         <h1 className="text-2xl font-semibold text-gray-900">Resultado da Avaliação</h1>
-        <p className="text-sm text-gray-600 mt-1">{avaliacao.titulo}</p>
+        <p className="text-sm text-gray-600 mt-1">{avaliacao.nome}</p>
       </div>
 
       {/* Cards de resumo */}
@@ -55,7 +76,7 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
             <span className="text-base font-semibold text-gray-700">Nível médio geral</span>
             <Award className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{avaliacao.resultado?.media}</p>
+          <p className="text-3xl font-bold text-gray-900">{mediaGeral}</p>
           <p className="text-xs text-gray-400 mt-1">escala de 1 a 5</p>
         </div>
 
@@ -64,7 +85,7 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
             <span className="text-base font-semibold text-gray-700">Habilidades avaliadas</span>
             <CheckCircle2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{avaliacao.habilidades}</p>
+          <p className="text-3xl font-bold text-gray-900">{respostasComHabilidade.length}</p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -72,7 +93,7 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
             <span className="text-base font-semibold text-gray-700">Competências avaliadas</span>
             <BarChart2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{avaliacao.competencias}</p>
+          <p className="text-3xl font-bold text-gray-900">{competencias.length}</p>
         </div>
       </div>
 
@@ -89,7 +110,7 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
         <h2 className="text-base font-semibold text-gray-900 mb-1">Minha distribuição nesta avaliação</h2>
         <p className="text-sm text-gray-500 mb-4">Quantidade de habilidades avaliadas em cada nível</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {avaliacao.resultado?.distribuicao.map((item: any) => (
+          {distribuicao.map((item) => (
             <div key={item.nivel} className="text-center">
               <div className="text-2xl font-semibold text-gray-900 mb-1">{item.quantidade}</div>
               <div className="text-sm text-gray-600">{item.nivel}</div>
@@ -101,15 +122,15 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
       {/* Resultados por competência */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Resultados por Competência</h2>
-        
-        {resultadoDetalhado.competencias.map((competencia) => (
+
+        {competencias.map((competencia) => (
           <div key={competencia.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             {/* Header da competência */}
             <div className="p-4 bg-gray-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-medium text-gray-900">{competencia.nome}</h3>
-                  <p className="text-sm text-gray-500">{competencia.habilidades.length} habilidades</p>
+                  <p className="text-sm text-gray-500">{competencia.itens.length} habilidades</p>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-semibold text-[var(--brand-600)]">{competencia.media}</div>
@@ -121,20 +142,16 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
 
             {/* Lista de habilidades */}
             <div className="p-5 space-y-3">
-              {competencia.habilidades.map((habilidade, index) => (
-                <div key={index} className="flex items-center justify-between">
+              {competencia.itens.map(({ habilidade, resposta }) => (
+                <div key={habilidade.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-900">{habilidade.nome}</span>
                   </div>
                   <span
                     className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                    style={{
-                      backgroundColor: getPesoFromNome(habilidade.nivel) > 0
-                        ? getCorFromPeso(getPesoFromNome(habilidade.nivel))
-                        : '#9CA3AF',
-                    }}
+                    style={{ backgroundColor: getCorFromPeso(getPesoFromNome(resposta.nivelRespondido)) }}
                   >
-                    {habilidade.nivel}
+                    {resposta.nivelRespondido}
                   </span>
                 </div>
               ))}
@@ -142,7 +159,6 @@ export function ResultadoAvaliacao({ avaliacao, onVoltar }: ResultadoAvaliacaoPr
           </div>
         ))}
       </div>
-
     </div>
   );
 }

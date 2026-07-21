@@ -11,6 +11,24 @@ entidades — deve ser **calculável a partir de `mockData.ts` no momento da
 renderização**. Nunca um valor digitado à mão que precise ser lembrado e
 atualizado manualmente depois.
 
+## Camada mecânica — src/data/schema.ts
+
+Desde 2026-07-21, o princípio acima é reforçado mecanicamente por
+`src/data/schema.ts`: cada entidade tem uma interface TypeScript lá, e
+`mockData.ts` tipa todos os seus arrays exportados com essas interfaces.
+`docs/DATA_MODEL.md` é a versão legível (sem jargão de código) do mesmo
+conteúdo, organizada por entidade, com campos explicados e lista de "usado
+em:" por tela.
+
+Desde 2026-07-21 (fechamento da lacuna de checagem mecânica), o projeto tem
+`tsconfig.json`/`tsconfig.app.json`/`tsconfig.node.json` (strict mode),
+`typescript`/`@types/react`/`@types/react-dom`/`@types/node` como
+devDependencies, e `npm run build` executa `npm run typecheck && vite build`
+— o build **quebra de verdade** se qualquer arquivo não bater com os tipos de
+`schema.ts` (ou tiver variável/import não usado, via `noUnusedLocals`/
+`noUnusedParameters`). Rodar `npm run typecheck` isoladamente para checar sem
+gerar build. Não há mais a lacuna descrita anteriormente nesta nota.
+
 Se um número pode ser calculado (`array.filter(...).length`, `array.find(...)`),
 ele **deve** ser calculado — nunca armazenado como campo fixo que alguém
 precisa lembrar de manter sincronizado.
@@ -112,6 +130,36 @@ Qualquer Context novo que goste de uma lista de entidade (ex: um futuro
   Context
 - Seguir exatamente o padrão já usado por `HabilidadesContext.tsx` e
   `CompetenciasContext.tsx` — não inventar uma estrutura diferente
+
+## Regras de uso do schema.ts (vigentes a partir de 2026-07-21)
+
+1. Nenhuma tela ou componente pode redefinir inline uma estrutura que já
+   existe em `src/data/schema.ts` (interface local duplicada, `useState` com
+   array de objetos literais que reproduz uma entidade, tipo `any`/`any[]`
+   para contornar a ausência de um tipo). Campo novo entra primeiro em
+   `schema.ts` (com a entrada correspondente em `docs/DATA_MODEL.md`), só
+   depois é usado em qualquer tela.
+
+2. Antes de implementar qualquer mudança que toque um campo ou entidade já
+   consumida por outra tela (segundo o "usado em:" de `docs/DATA_MODEL.md`),
+   avisar explicitamente quais outras telas podem ser afetadas e **parar** —
+   nunca implementar silenciosamente uma mudança compartilhada sem
+   confirmação.
+
+3. **Protocolo de promoção** — específico para dado que nasce em
+   `/testes/*`: sempre que algo hoje exploratório (rota de teste ou dado de
+   apoio criado só para uma tela de teste) for promovido para rota oficial
+   de produto, é obrigatório, antes da promoção:
+   (a) comparar a fonte de dado usada no teste contra a fonte "oficial" em
+       `schema.ts`/`mockData.ts`;
+   (b) resolver qualquer divergência encontrada naquele momento — nunca
+       promover deixando duas fontes divergentes coexistindo silenciosamente;
+   (c) atualizar `docs/DATA_MODEL.md` com a entidade/campo recém-oficializado.
+
+4. Descobertas novas durante exploração (processo não-linear, normal e
+   esperado) sempre entram primeiro em `schema.ts` + `docs/DATA_MODEL.md`,
+   antes de virar código em qualquer tela — mesmo que a exploração em si
+   aconteça em qualquer ordem.
 
 ## Protocolo de auditoria ao tocar em tela existente
 

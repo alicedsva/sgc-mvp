@@ -1,12 +1,11 @@
 import { useState, useMemo, Fragment } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { getCompetenciaNome } from '../../data/mockData';
+import { getCompetenciaNome, colaboradoresData } from '../../data/mockData';
 
-const GERENCIAS = [
-  'Tecnologia', 'Recursos Humanos', 'Financeiro', 'Marketing',
-  'Vendas', 'Operações', 'Produto', 'Design',
-];
+// Gerências reais (derivadas de colaboradoresData) — nunca lista fixa.
+// Mesmo padrão usado em DashboardPage.tsx e ContentArea.tsx.
+const GERENCIAS = Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort();
 
 const ETAPAS = [
   { numero: 1, label: 'Identificação' },

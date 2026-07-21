@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useHabilidades } from '../context/HabilidadesContext';
 import { useCompetencias } from '../context/CompetenciasContext';
-import { useCarreiras } from '../context/CarreirasContext';
+import { useCarreiras, generateId } from '../context/CarreirasContext';
+import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
 import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData } from '../data/mockData';
+import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
 import { ConfirmationModal } from './templates/ConfirmationModal';
@@ -18,13 +20,52 @@ import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { NovaAvaliacaoDrawer, NovaAvaliacaoFormData } from './avaliacoes/NovaAvaliacaoDrawer';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Edit, Award, Layers, Search, RefreshCw, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
+import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
   selectedItem: string;
   viewMode: 'admin' | 'colaborador';
   isSidebarCollapsed: boolean;
+}
+
+// Gerências reais (derivadas de colaboradoresData) — nunca lista fixa, para
+// que público-alvo de Avaliações sempre reflita as gerências que existem de
+// fato no sistema. Mesmo padrão já usado em DashboardPage.tsx.
+const GERENCIAS_REAIS = Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort();
+
+// Formata o rótulo de público-alvo de uma Avaliação a partir das gerências
+// selecionadas, seguindo o padrão observado nos dados reais (publicoLabel é
+// texto livre, não FK — ver schema.ts).
+function formatPublicoLabel(gerencias: string[]): string {
+  if (gerencias.length === 0 || gerencias.length >= GERENCIAS_REAIS.length) return 'Todos os colaboradores';
+  if (gerencias.length === 1) return `Gerência ${gerencias[0]}`;
+  if (gerencias.length === 2) return `Gerências ${gerencias[0]} e ${gerencias[1]}`;
+  return `Gerências ${gerencias.slice(0, -1).join(', ')} e ${gerencias[gerencias.length - 1]}`;
+}
+
+// Caminho inverso de formatPublicoLabel — usado só para pré-popular o
+// formulário de edição a partir do publicoLabel já salvo. É best-effort:
+// round-trip perfeito para rótulos gerados por formatPublicoLabel; rótulos
+// fora desse padrão (ex: o outlier histórico 'Cargo Desenvolvedor Pleno')
+// resultam em nenhuma gerência pré-marcada.
+function parsePublicoLabelParaGerencias(label: string): string[] {
+  if (label === 'Todos os colaboradores') return [...GERENCIAS_REAIS];
+  const semPrefixo = label.replace(/^Gerências?\s+/, '');
+  if (semPrefixo === label) return [];
+  return semPrefixo
+    .split(/,\s*| e /)
+    .map(s => s.trim())
+    .filter(nome => GERENCIAS_REAIS.includes(nome));
+}
+
+// IDs dos colaboradores no público-alvo — usado para montar/recalcular
+// Avaliacao.participantes a partir das gerências selecionadas no formulário.
+function idsColaboradoresAlvo(gerencias: string[]): string[] {
+  const todos = gerencias.length === 0 || gerencias.length >= GERENCIAS_REAIS.length;
+  return colaboradoresData
+    .filter(c => todos || gerencias.includes(c.gerencia))
+    .map(c => c.id);
 }
 
 export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: ContentAreaProps) {
@@ -77,7 +118,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   const [buscaCarreira, setBuscaCarreira] = useState('');
   const [currentPageCarreiras, setCurrentPageCarreiras] = useState(1);
   const [itemsPerPageCarreiras, setItemsPerPageCarreiras] = useState(10);
-  const [carreiraFormData, setCarreiraFormData] = useState({
+  const [carreiraFormData, setCarreiraFormData] = useState<{ nome: string; status: 'Ativa' | 'Desativada' }>({
     nome: '',
     status: 'Ativa',
   });
@@ -91,6 +132,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     nome: '',
     descricao: '',
     competencias: [] as string[],
+    habilidades: [] as string[],
     gerencias: [] as string[],
     dataInicio: '',
     dataFim: '',
@@ -169,7 +211,12 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     [niveisData, habilidadesData]
   );
   const { competencias, addCompetencia, updateCompetencia } = useCompetencias();
-  const { jornadas: jornadasDoContexto } = useCarreiras();
+  const {
+    carreiras: carreirasData,
+    adicionarCarreira,
+    atualizarCarreira,
+    jornadas: jornadasDoContexto,
+  } = useCarreiras();
   const [habilidadeFormData, setHabilidadeFormData] = useState({
     nome: '',
     descricao: '',
@@ -196,48 +243,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     [syncedProfileIds]
   );
 
-  // Dados de exemplo para Carreiras
-  const [carreirasData, setCarreirasData] = useState([
-    { id: '1',  nome: 'Tecnologia da Informação', status: 'Ativa' },
-    { id: '2',  nome: 'Recursos Humanos',          status: 'Ativa' },
-    { id: '3',  nome: 'Financeiro',                status: 'Ativa' },
-    { id: '4',  nome: 'Marketing',                 status: 'Ativa' },
-    { id: '5',  nome: 'Vendas',                    status: 'Ativa' },
-    { id: '6',  nome: 'Operações',                 status: 'Ativa' },
-    { id: '7',  nome: 'Jurídico',                  status: 'Ativa' },
-    { id: '8',  nome: 'Atendimento ao Cliente',    status: 'Ativa' },
-    { id: '9',  nome: 'Produto',                   status: 'Ativa' },
-    { id: '10', nome: 'Design',                    status: 'Ativa' },
-    { id: '11', nome: 'Engenharia',                status: 'Ativa' },
-    { id: '12', nome: 'Qualidade',                 status: 'Ativa' },
-    { id: '13', nome: 'Projetos',                  status: 'Desativada' },
-    { id: '14', nome: 'Inovação',                  status: 'Ativa' },
-    { id: '15', nome: 'Suprimentos',               status: 'Ativa' },
-    { id: '16', nome: 'Logística',                 status: 'Desativada' },
-    { id: '17', nome: 'Compliance',                status: 'Ativa' },
-    { id: '18', nome: 'Comunicação',               status: 'Ativa' },
-  ]);
-
-  // Dados de exemplo para Avaliações
-  const [avaliacoesData, setAvaliacoesData] = useState([
-    { id: '1', nome: 'Avaliação de Competências Técnicas Q1 2026', tipo: 'Autoavaliação', periodo: '01/03 - 31/03/2026', dataInicio: '2026-03-01', dataFim: '2026-03-31', participantes: 42, concluidas: 38, status: 'Ativa', competencias: ['Desenvolvimento Frontend', 'Desenvolvimento Backend', 'DevOps e Infraestrutura'], publico: 'gerencias', gerencias: ['Tecnologia'] },
-    { id: '2', nome: 'Avaliação de Liderança 2026', tipo: 'Autoavaliação', periodo: '15/02 - 28/02/2026', dataInicio: '2026-02-15', dataFim: '2026-02-28', participantes: 18, concluidas: 18, status: 'Encerrada', competencias: ['Liderança', 'Comunicação Corporativa'], publico: 'gerencias', gerencias: ['Recursos Humanos', 'Operações'] },
-    { id: '3', nome: 'Soft Skills - Semestral', tipo: 'Autoavaliação', periodo: '10/04 - 30/04/2026', dataInicio: '2026-04-10', dataFim: '2026-04-30', participantes: 0, concluidas: 0, status: 'Rascunho', competencias: ['Comunicação Corporativa', 'Inteligência Emocional', 'Trabalho em Equipe'], publico: 'todos', gerencias: [] },
-    { id: '4', nome: 'Avaliação de Vendas Q1', tipo: 'Autoavaliação', periodo: '05/03 - 25/03/2026', dataInicio: '2026-03-05', dataFim: '2026-03-25', participantes: 25, concluidas: 12, status: 'Ativa', competencias: ['Vendas e Negociação', 'Comunicação Corporativa'], publico: 'gerencias', gerencias: ['Vendas'] },
-    { id: '5', nome: 'Competências Analíticas', tipo: 'Autoavaliação', periodo: '01/01 - 31/01/2026', dataInicio: '2026-01-01', dataFim: '2026-01-31', participantes: 35, concluidas: 35, status: 'Encerrada', competencias: ['Análise de Dados', 'Business Intelligence', 'Analytics'], publico: 'gerencias', gerencias: ['Tecnologia', 'Financeiro'] },
-    { id: '6', nome: 'Metodologias Ágeis', tipo: 'Autoavaliação', periodo: '20/03 - 10/04/2026', dataInicio: '2026-03-20', dataFim: '2026-04-10', participantes: 0, concluidas: 0, status: 'Rascunho', competencias: ['Metodologias Ágeis', 'Gestão de Projetos'], publico: 'gerencias', gerencias: ['Tecnologia', 'Produto'] },
-    { id: '7', nome: 'Avaliação Design Q1 2026', tipo: 'Autoavaliação', periodo: '01/03 - 20/03/2026', dataInicio: '2026-03-01', dataFim: '2026-03-20', participantes: 12, concluidas: 10, status: 'Ativa', competencias: ['Design de Produto', 'UX Research'], publico: 'gerencias', gerencias: ['Design', 'Produto'] },
-    { id: '8', nome: 'Competências em Cloud Computing', tipo: 'Autoavaliação', periodo: '15/01 - 15/02/2026', dataInicio: '2026-01-15', dataFim: '2026-02-15', participantes: 28, concluidas: 28, status: 'Encerrada', competencias: ['Cloud Computing', 'DevOps e Infraestrutura'], publico: 'gerencias', gerencias: ['Tecnologia'] },
-  ]);
-
-  const handleDeleteCompetencia = () => {
-    if (selectedRow) {
-      updateCompetencia(selectedRow.id, { status: 'Desativada' });
-      toast.success(`Competência "${selectedRow.nome}" desativada com sucesso!`);
-      setIsModalOpen(false);
-      setSelectedRow(null);
-    }
-  };
+  // Avaliações — lidas/escritas via AvaliacoesContext (dado real, mesmo
+  // tratamento já aplicado a Carreiras).
+  const {
+    avaliacoes: avaliacoesData,
+    adicionarAvaliacao,
+    atualizarAvaliacao,
+  } = useAvaliacoes();
 
   // ========== EARLY RETURN FOR COLABORADOR VIEW ==========
   // Renderizar visão do colaborador (AFTER all hooks are declared)
@@ -1197,7 +1209,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               onClose={() => {
                 setIsDrawerOpen(false);
                 setSelectedRow(null);
-                setHabilidadeFormData({ nome: '', descricao: '', competencia: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
+                setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
               }}
               title={selectedRow ? 'Editar Habilidade' : 'Nova Habilidade'}
               fields={habilidadesFormFields}
@@ -1408,7 +1420,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
     const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
       if (carreirasSortConfig.column === 'id') {
-        return Number(b.id) - Number(a.id);
+        return 0; // manter ordem do array (novas carreiras inseridas no início)
       }
       const dir = carreirasSortConfig.direction === 'asc' ? 1 : -1;
       if (carreirasSortConfig.column === 'jornadas') {
@@ -1544,11 +1556,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             setSelectedRow(row);
             setIsModalOpen(true);
           } else {
-            setCarreirasData(
-              carreirasData.map((item) =>
-                item.id === row.id ? { ...item, status: 'Ativa' } : item
-              )
-            );
+            atualizarCarreira(row.id, { status: 'Ativa' });
             toast.success(`Carreira "${row.nome}" reativada com sucesso!`);
           }
         },
@@ -1582,28 +1590,24 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
       if (selectedRow) {
         // Editar carreira existente
-        setCarreirasData(
-          carreirasData.map((item) =>
-            item.id === selectedRow.id
-              ? {
-                  ...item,
-                  nome: carreiraFormData.nome,
-                  status: carreiraFormData.status,
-                }
-              : item
-          )
-        );
-        toast.success('Carreira atualizada com sucesso!');
-      } else {
-        // Criar nova carreira
-        const newCarreira = {
-          id: String(carreirasData.length + 1),
+        atualizarCarreira(selectedRow.id, {
           nome: carreiraFormData.nome,
           status: carreiraFormData.status,
+        });
+        toast.success('Carreira atualizada com sucesso!');
+      } else {
+        // Criar nova carreira — jornadas nunca é lido diretamente na
+        // exibição (sempre calculado via jornadasDoContexto.filter), então
+        // começa em 0 por convenção, igual às outras carreiras existentes.
+        const newCarreira: Carreira = {
+          id: generateId('carreira'),
+          nome: carreiraFormData.nome,
+          status: carreiraFormData.status,
+          jornadas: 0,
         };
         setCarreirasSortConfig({ column: 'id', direction: 'desc' });
         setCurrentPageCarreiras(1);
-        setCarreirasData([newCarreira, ...carreirasData]);
+        adicionarCarreira(newCarreira);
         toast.success('Carreira criada com sucesso!');
       }
 
@@ -1615,11 +1619,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     // Desativar carreira
     const handleDesativarCarreira = () => {
       if (selectedRow) {
-        setCarreirasData(
-          carreirasData.map((item) =>
-            item.id === selectedRow.id ? { ...item, status: 'Desativada' } : item
-          )
-        );
+        atualizarCarreira(selectedRow.id, { status: 'Desativada' });
         toast.success(`Carreira "${selectedRow.nome}" desativada com sucesso!`);
         setIsModalOpen(false);
         setSelectedRow(null);
@@ -1757,11 +1757,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
     const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
       if (avaliacoesSortConfig.column === 'id') {
-        return Number(b.id) - Number(a.id);
+        return 0; // manter ordem do array (novas avaliações inseridas no início)
       }
       const dir = avaliacoesSortConfig.direction === 'asc' ? 1 : -1;
       if (avaliacoesSortConfig.column === 'periodo') {
-        return a.dataInicio.localeCompare(b.dataInicio) * dir;
+        return a.periodoInicio.localeCompare(b.periodoInicio) * dir;
       }
       return (a[avaliacoesSortConfig.column] as string).localeCompare(b[avaliacoesSortConfig.column] as string) * dir;
     });
@@ -1818,24 +1818,26 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             )}
           </button>
         ),
-        render: (value) => (
-          <span className="text-sm text-gray-700">{value}</span>
+        render: (_value, row) => (
+          <span className="text-sm text-gray-700">{formatDataCurta(row.periodoInicio)} - {formatDataLonga(row.periodoFim)}</span>
         ),
       },
       {
         key: 'participantes',
         label: 'Participantes',
         width: '15%',
-        render: (value, row) => {
+        render: (_value, row) => {
           if (row.status === 'Rascunho') {
             return <span className="text-sm text-gray-500">-</span>;
           }
-          const progresso = row.participantes > 0 ? Math.round((row.concluidas / row.participantes) * 100) : 0;
+          const total: number = row.participantes.length;
+          const concluidas: number = row.participantes.filter((p: ParticipanteAvaliacao) => p.status === 'Concluída').length;
+          const progresso = total > 0 ? Math.round((concluidas / total) * 100) : 0;
           return (
             <div className="space-y-1">
-              <div className="text-sm text-gray-700">{row.concluidas}/{row.participantes}</div>
+              <div className="text-sm text-gray-700">{concluidas}/{total}</div>
               <div className="w-full bg-gray-200 rounded-full h-1.5">
-                <div 
+                <div
                   className="bg-[var(--brand-600)] h-1.5 rounded-full transition-all"
                   style={{ width: `${progresso}%` }}
                 />
@@ -1889,13 +1891,20 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         icon: <Edit className="w-4 h-4" />,
         onClick: (row) => {
           setSelectedRow(row);
+          const habilidadesSelecionadas: string[] = row.habilidades || [];
+          const competenciasDerivadas = Array.from(new Set(
+            habilidadesSelecionadas
+              .map((hId: string) => habilidadesData.find((h) => h.id === hId)?.competenciaId)
+              .filter((cId): cId is string => !!cId)
+          ));
           setAvaliacaoFormData({
             nome: row.nome,
             descricao: row.descricao || '',
-            competencias: row.competencias || [],
-            gerencias: row.gerencias || [],
-            dataInicio: row.dataInicio || '',
-            dataFim: row.dataFim || '',
+            competencias: competenciasDerivadas,
+            habilidades: habilidadesSelecionadas,
+            gerencias: parsePublicoLabelParaGerencias(row.publicoLabel),
+            dataInicio: row.periodoInicio || '',
+            dataFim: row.periodoFim || '',
           });
           setIsDrawerOpen(true);
         },
@@ -1923,76 +1932,60 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
     const handleNovaAvaliacaoRascunho = (data: NovaAvaliacaoFormData) => {
-      const periodo = data.dataInicio && data.dataFim
-        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
-        : '';
-      const newAvaliacao = {
-        id: String(avaliacoesData.length + 1),
+      const newAvaliacao: Avaliacao = {
+        id: generateId('avaliacao'),
         nome: data.nome,
         tipo: 'Autoavaliação',
-        periodo,
-        dataInicio: data.dataInicio,
-        dataFim: data.dataFim,
-        participantes: 0,
-        concluidas: 0,
         status: 'Rascunho',
-        competencias: data.competencias,
-        publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
-        gerencias: data.gerencias,
+        periodoInicio: data.dataInicio,
+        periodoFim: data.dataFim,
+        publicoLabel: formatPublicoLabel(data.gerencias),
+        descricao: data.descricao,
+        habilidades: data.habilidades,
+        participantes: [],
       };
       setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
       setCurrentPageAvaliacoes(1);
-      setAvaliacoesData([newAvaliacao, ...avaliacoesData]);
+      adicionarAvaliacao(newAvaliacao);
       toast.success('Avaliação criada como rascunho!');
     };
 
     const handleNovaAvaliacaoAtivar = (data: NovaAvaliacaoFormData) => {
-      const periodo = data.dataInicio && data.dataFim
-        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
-        : '';
-      const newAvaliacao = {
-        id: String(avaliacoesData.length + 1),
+      const newAvaliacao: Avaliacao = {
+        id: generateId('avaliacao'),
         nome: data.nome,
         tipo: 'Autoavaliação',
-        periodo,
-        dataInicio: data.dataInicio,
-        dataFim: data.dataFim,
-        participantes: 25,
-        concluidas: 0,
         status: 'Ativa',
-        competencias: data.competencias,
-        publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
-        gerencias: data.gerencias,
+        periodoInicio: data.dataInicio,
+        periodoFim: data.dataFim,
+        publicoLabel: formatPublicoLabel(data.gerencias),
+        descricao: data.descricao,
+        habilidades: data.habilidades,
+        participantes: idsColaboradoresAlvo(data.gerencias).map((colaboradorId) => ({
+          colaboradorId,
+          status: 'Não iniciada' as const,
+          respostas: [],
+        })),
       };
       setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
       setCurrentPageAvaliacoes(1);
-      setAvaliacoesData([newAvaliacao, ...avaliacoesData]);
+      adicionarAvaliacao(newAvaliacao);
       toast.success('Avaliação criada e ativada com sucesso!');
     };
 
     // Callbacks do modal de edição
     const handleEditRascunho = (data: typeof avaliacaoFormData) => {
       if (!selectedRow) return;
-      const periodo = data.dataInicio && data.dataFim
-        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
-        : '';
-      setAvaliacoesData(
-        avaliacoesData.map((item) =>
-          item.id === selectedRow.id
-            ? {
-                ...item,
-                nome: data.nome,
-                periodo,
-                dataInicio: data.dataInicio,
-                dataFim: data.dataFim,
-                competencias: data.competencias,
-                publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
-                gerencias: data.gerencias,
-                status: 'Rascunho',
-              }
-            : item
-        )
-      );
+      atualizarAvaliacao(selectedRow.id, {
+        nome: data.nome,
+        descricao: data.descricao,
+        periodoInicio: data.dataInicio,
+        periodoFim: data.dataFim,
+        publicoLabel: formatPublicoLabel(data.gerencias),
+        habilidades: data.habilidades,
+        status: 'Rascunho',
+        participantes: [],
+      });
       toast.success('Avaliação salva como rascunho!');
       setIsDrawerOpen(false);
       setSelectedRow(null);
@@ -2000,28 +1993,27 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
     const handleEditAtivar = (data: typeof avaliacaoFormData) => {
       if (!selectedRow) return;
-      const periodo = data.dataInicio && data.dataFim
-        ? `${formatDataCurta(data.dataInicio)} - ${formatDataLonga(data.dataFim)}`
-        : '';
-      setAvaliacoesData(
-        avaliacoesData.map((item) =>
-          item.id === selectedRow.id
-            ? {
-                ...item,
-                nome: data.nome,
-                periodo,
-                dataInicio: data.dataInicio,
-                dataFim: data.dataFim,
-                competencias: data.competencias,
-                publico: data.gerencias.length > 0 ? 'gerencias' : 'todos',
-                gerencias: data.gerencias,
-                status: 'Ativa',
-                participantes: item.participantes || 25,
-                concluidas: item.concluidas || 0,
-              }
-            : item
-        )
-      );
+      // Preserva participantes existentes (com respostas/status) que continuam
+      // no público-alvo; remove quem saiu; adiciona quem entrou como novo
+      // participante 'Não iniciada' — nunca descarta respostas já registradas.
+      const idsAlvo = new Set(idsColaboradoresAlvo(data.gerencias));
+      const participantesExistentes: ParticipanteAvaliacao[] = selectedRow.participantes ?? [];
+      const preservados = participantesExistentes.filter((p) => idsAlvo.has(p.colaboradorId));
+      const idsPreservados = new Set(preservados.map((p) => p.colaboradorId));
+      const novos: ParticipanteAvaliacao[] = Array.from(idsAlvo)
+        .filter((id) => !idsPreservados.has(id))
+        .map((colaboradorId) => ({ colaboradorId, status: 'Não iniciada' as const, respostas: [] }));
+
+      atualizarAvaliacao(selectedRow.id, {
+        nome: data.nome,
+        descricao: data.descricao,
+        periodoInicio: data.dataInicio,
+        periodoFim: data.dataFim,
+        publicoLabel: formatPublicoLabel(data.gerencias),
+        habilidades: data.habilidades,
+        status: 'Ativa',
+        participantes: [...preservados, ...novos],
+      });
       toast.success('Avaliação ativada com sucesso!');
       setIsDrawerOpen(false);
       setSelectedRow(null);
@@ -2030,11 +2022,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     // Encerrar avaliação
     const handleEncerrarAvaliacao = () => {
       if (selectedRow) {
-        setAvaliacoesData(
-          avaliacoesData.map((item) =>
-            item.id === selectedRow.id ? { ...item, status: 'Encerrada' } : item
-          )
-        );
+        atualizarAvaliacao(selectedRow.id, { status: 'Encerrada' });
         toast.success(`Avaliação "${selectedRow.nome}" encerrada com sucesso!`);
         setIsModalOpen(false);
         setSelectedRow(null);
@@ -2097,6 +2085,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             onAtivar={handleEditAtivar}
             initialData={avaliacaoFormData}
             competencias={competencias}
+            habilidades={habilidadesData}
           />
 
           <NovaAvaliacaoDrawer

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 
 export default function ConfigurarCargoPage() {
-  const { carreiraId, jornadaId, cargoId } = useParams();
+  const { carreiraId, jornadaId } = useParams();
   const navigate = useNavigate();
 
   // Redirecionar para a nova estrutura inline (jornada com accordion)

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import { carreirasData, cargosData, jornadasData } from '../data/mockData';
+import { cargosData, jornadasData } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
+import type { Jornada, Cargo } from '../../data/schema';
 import { toast } from 'sonner';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -35,9 +36,9 @@ function CriarJornadaPageContent() {
   const { carreiraId } = useParams();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
-  const { adicionarJornada, atualizarCargosJornada } = useCarreiras();
+  const { carreiras, adicionarJornada, atualizarCargosJornada } = useCarreiras();
 
-  const carreira = carreirasData.find(c => c.id === carreiraId);
+  const carreira = carreiras.find(c => c.id === carreiraId);
 
   const [nomeJornada, setNomeJornada] = useState('');
   const [tipoJornada, setTipoJornada] = useState<'Contribuidor Individual' | 'Gestão'>('Contribuidor Individual');
@@ -72,7 +73,7 @@ function CriarJornadaPageContent() {
     if (!nomeJornada.trim()) { toast.error('Preencha o nome da jornada'); return; }
     if (cargosSelecionados.length === 0) { toast.error('Selecione pelo menos um cargo'); return; }
 
-    const novaJornada = {
+    const novaJornada: Jornada = {
       id: generateId('jornada'),
       carreiraId: carreiraId!,
       nome: nomeJornada,
@@ -84,12 +85,13 @@ function CriarJornadaPageContent() {
 
     adicionarJornada(novaJornada);
 
-    const novosCargos = cargosSelecionados.map((cargo, index) => ({
+    const novosCargos: Cargo[] = cargosSelecionados.map((cargo, index) => ({
       id: cargo.id,
       jornadaId: novaJornada.id,
       cargoRM: cargo.nome,
       ordem: String(index + 1),
       habilidadesConfiguradas: 0,
+      totalHabilidades: 0,
       status: 'Pendente',
     }));
 

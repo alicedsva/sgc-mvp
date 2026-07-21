@@ -5,7 +5,7 @@ import {
   TrendingUp, Users, CheckCircle2, Clock, CalendarClock, AlertCircle, XCircle,
   Eye, EyeOff, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
   Plus, Download, Search, X, AlertTriangle, ArrowLeft,
-  Layers, Target, BarChart2, Calendar, Wrench,
+  Layers, Calendar, Wrench, Construction,
   Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -2694,15 +2694,7 @@ function SecaoCards() {
           card de métrica, card de conteúdo e card de estado.
         </p>
       </div>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
-
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
-        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-yellow-800">Badge do cargo atual divergente</p>
-          <p className="text-sm text-yellow-700 mt-1">O DS documenta o badge do cargo atual na Jornada de Carreira como <code className="font-mono text-xs">bg-[var(--brand-600)] text-white</code>. MinhaCarreira.tsx usa <code className="font-mono text-xs">bg-[var(--brand-50)] text-[var(--brand-600)]</code>. A ser resolvido quando a Visão do Colaborador for documentada.</p>
-        </div>
-      </div>
+      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Card de métrica */}
       <div className="mb-8">
@@ -3894,7 +3886,7 @@ function SecaoMensagensOrientacao() {
         <div>
           <h3 className="text-base font-semibold text-gray-900 mb-0.5">Informativo contextual</h3>
           <p className="text-sm text-gray-500">
-            Explica como dados são calculados, limitações da tela ou caveats importantes. Variante mais usada no SGC (3 instâncias).
+            Explica como dados são calculados, limitações da tela ou caveats importantes. Variante mais usada no SGC (1 instância).
           </p>
         </div>
 
@@ -3929,14 +3921,6 @@ function SecaoMensagensOrientacao() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              <tr>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">MinhaCarreira.tsx:203</td>
-                <td className="px-4 py-3 text-gray-700">Seção "Jornada de Carreira" — explica cálculo de cobertura</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">MinhaCarreira.tsx:276</td>
-                <td className="px-4 py-3 text-gray-700">Aba "Próximo passo" — explica origem dos dados do comparativo</td>
-              </tr>
               <tr>
                 <td className="px-4 py-3 font-mono text-xs text-gray-600">ResultadoAvaliacao.tsx:85</td>
                 <td className="px-4 py-3 text-gray-700">"Banner de contexto" — orienta o uso dos resultados</td>
@@ -4220,33 +4204,24 @@ function SecaoEstadosVazios() {
       <div className="mb-14">
         <div className="flex items-baseline gap-3 mb-2">
           <h2 className="text-sm font-semibold text-gray-900">B — Orientativo</h2>
-          <span className="text-xs text-gray-400 font-mono">MinhaCarreira.tsx</span>
+          <span className="text-xs text-gray-400 font-mono">ColaboradorView.tsx</span>
         </div>
         <p className="text-sm text-gray-600 mb-6 max-w-2xl">
-          Usado quando o estado vazio é consequência de uma ação pendente do usuário (ex: nenhuma avaliação respondida,
-          nenhum cargo selecionado). Ícone sem wrapper circular, cor mais suave (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">text-gray-300</code>).
+          Usado para sinalizar que uma seção da tela ainda não tem regra de negócio fechada — placeholder
+          explícito de "em construção", não um estado vazio de dados. Ícone sem wrapper circular, cor mais
+          suave (<code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">text-gray-300</code>).
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Sem avaliação respondida</p>
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <BarChart2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-700 mb-1">Nenhuma avaliação respondida ainda</p>
-              <p className="text-sm text-gray-500">Responda uma avaliação para visualizar seu perfil de competências.</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Aguardando seleção (filtro não aplicado)</p>
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <Target className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-500">Selecione um cargo para ver seus gaps</p>
-              <p className="text-xs text-gray-400 mt-2 max-w-sm mx-auto">
-                Escolha um cargo de referência no filtro acima para visualizar as habilidades com maior
-                distância entre seu nível atual e o esperado.
-              </p>
-            </div>
+        <div className="mb-6">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+            Seção "Detalhamento de Habilidades" (Meu Perfil) — em definição
+          </p>
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+            <Construction className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700 mb-1">Em construção</p>
+            <p className="text-sm text-gray-500">
+              Esta seção ainda está em definição — não deve ser usada como referência para o desenvolvimento.
+            </p>
           </div>
         </div>
 
@@ -4255,10 +4230,8 @@ function SecaoEstadosVazios() {
           <div className="space-y-1.5 font-mono text-xs text-gray-600">
             <div><span className="text-gray-400">container</span>{"  "}<code>bg-white border border-gray-200 rounded-lg p-8 text-center</code></div>
             <div><span className="text-gray-400">ícone</span>{"  "}<code>w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper circular)</div>
-            <div><span className="text-gray-400">título — sem avaliação</span>{"  "}<code>text-sm font-medium text-gray-700 mb-1</code></div>
-            <div><span className="text-gray-400">título — aguardando seleção</span>{"  "}<code>text-sm font-medium text-gray-500</code></div>
-            <div><span className="text-gray-400">descrição — sem avaliação</span>{"  "}<code>text-sm text-gray-500</code></div>
-            <div><span className="text-gray-400">descrição — aguardando seleção</span>{"  "}<code>text-xs text-gray-400 mt-2 max-w-sm mx-auto</code></div>
+            <div><span className="text-gray-400">título</span>{"  "}<code>text-sm font-medium text-gray-700 mb-1</code></div>
+            <div><span className="text-gray-400">descrição</span>{"  "}<code>text-sm text-gray-500</code></div>
           </div>
         </div>
       </div>
@@ -4375,11 +4348,11 @@ function SecaoEstadosVazios() {
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-4 py-3 border border-gray-200 font-medium">B — Orientativo</td>
-                <td className="px-4 py-3 border border-gray-200 text-gray-600">Estado dependente de ação do usuário</td>
+                <td className="px-4 py-3 border border-gray-200 text-gray-600">Seção com regra de negócio ainda não fechada</td>
                 <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">w-8 h-8 text-gray-300 mx-auto mb-3</code> (sem wrapper)</td>
                 <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">p-8 text-center</code></td>
-                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm font-medium text-gray-700</code> ou <code className="bg-gray-100 px-1 rounded">text-gray-500</code></td>
-                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code> ou <code className="bg-gray-100 px-1 rounded">text-xs text-gray-400</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm font-medium text-gray-700</code></td>
+                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code></td>
                 <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
               </tr>
               <tr>
@@ -4426,18 +4399,6 @@ function SecaoEstadosVazios() {
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
             <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-orange-800">Variante B tem duas hierarquias de cor no título</p>
-              <p className="text-sm text-orange-700">
-                <strong>Arquivo:</strong> MinhaCarreira.tsx.
-                "Sem avaliação" usa <code>text-gray-700</code>; "Sem cargo selecionado" usa{' '}
-                <code>text-gray-500</code>. Não há distinção semântica clara que justifique a diferença —
-                o padrão deveria ser <code>text-gray-700</code> para título em ambos os casos.
-              </p>
-            </div>
-          </div>
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
-            <Wrench className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
-            <div>
               <p className="text-sm font-medium text-orange-800">Variante A passa ícone <code>w-8 h-8</code> dentro de wrapper <code>w-12 md:w-16</code></p>
               <p className="text-sm text-orange-700">
                 <strong>Arquivo:</strong> EmptyState.tsx + CallerSites.
@@ -4452,7 +4413,7 @@ function SecaoEstadosVazios() {
             <div>
               <p className="text-sm font-medium text-orange-800">Variante B usa <code>text-gray-300</code> no ícone; Variante A usa <code>text-gray-400</code></p>
               <p className="text-sm text-orange-700">
-                <strong>Arquivos:</strong> MinhaCarreira.tsx vs EmptyState.tsx.
+                <strong>Arquivos:</strong> ColaboradorView.tsx vs EmptyState.tsx.
                 A diferença pode ser intencional (ícone orientativo mais suave = instrução pendente)
                 mas não está documentada. Se for padrão, deve ser adotada consistentemente.
               </p>
@@ -4477,8 +4438,8 @@ function SecaoEstadosVazios() {
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Quando usar Variante B</h3>
             <ul className="space-y-1 text-gray-700">
-              <li>• Conteúdo ausente por inação do usuário (nenhum filtro selecionado, nenhuma avaliação)</li>
-              <li>• Contexto colaborador (MinhaCarreira, MeuPerfil)</li>
+              <li>• Seção com regra de negócio ainda não fechada (placeholder "em construção")</li>
+              <li>• Contexto colaborador (ex: MeuPerfil)</li>
               <li>• Sem ação disponível no estado vazio</li>
               <li>• Ícone direto <code className="bg-white px-1.5 py-0.5 rounded">text-gray-300</code>, sem wrapper circular</li>
             </ul>
@@ -6131,7 +6092,12 @@ export default function DesignSystemPage() {
                     { secao: 'Meu Perfil',        status: 'em-construcao', debitos: 0, alertas: 0 },
                     { secao: 'Minhas Avaliações', status: 'em-construcao', debitos: 0, alertas: 0 },
                     { secao: 'Minha Carreira',    status: 'em-construcao', debitos: 0, alertas: 0 },
-                  ] as const).map(({ secao, status, debitos, alertas }) => (
+                  ] as Array<{
+                    secao: string;
+                    status: 'documentado' | 'em-construcao' | 'desatualizado';
+                    debitos: number;
+                    alertas: number;
+                  }>).map(({ secao, status, debitos, alertas }) => (
                     <tr key={secao} className="bg-white">
                       <td className="px-4 py-3 text-sm text-gray-900">{secao}</td>
                       <td className="px-4 py-3">

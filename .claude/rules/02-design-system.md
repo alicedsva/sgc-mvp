@@ -192,6 +192,7 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
 - Card de identificação: exceção — `rounded-xl` + gradiente slate
 - Card de cargo atual: `bg-[var(--brand-50)]` apenas quando cargo atual
 - Ícone em card de métrica: sempre à direita, `w-5 h-5 flex-shrink-0`, nunca wrapper colorido
+  Exceção — Colaborador: ver "Cards de métrica" abaixo.
 - Ação inline "Ver todos →": `text-[var(--brand-600)]`, nunca botão com fundo
 
 ### Cards de métrica
@@ -200,6 +201,32 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
 - Valor: `text-3xl font-bold text-gray-900`
 - Ícone: `w-5 h-5 text-[var(--brand-600)] flex-shrink-0` — sempre à direita, sem wrapper
 - Nunca shadow — apenas border
+
+Exceção documentada — Colaborador: cards de métrica em telas do Colaborador
+(ex: `ColaboradorView.tsx`) podem usar wrapper colorido no ícone —
+`bg-[var(--brand-100)]` de fundo, ícone `w-5 h-5 text-[var(--brand-600)]`.
+Cards de métrica do Admin continuam sem wrapper, conforme regra geral acima.
+
+Dentro dessa exceção, o tom do wrapper é neutro (brand) por padrão, EXCETO
+nos cards com significado de status definido:
+- Aderência ao cargo, Avaliações em aberto, Próxima avaliação: neutro —
+  `bg-[var(--brand-100)]` / `text-[var(--brand-600)]`.
+- Avaliações concluídas: `bg-green-100` / `text-green-800` — reaproveita
+  direto o token já usado nos badges de status `Concluída`
+  (Estado do colaborador na avaliação) e `Ativa` (Status de registro),
+  sem criar cor nova.
+- Habilidades abaixo do esperado: `bg-amber-100` / `text-amber-600` — novo
+  padrão, registrado aqui pela primeira vez, específico para wrapper de
+  ícone em card de métrica.
+
+  Nota — coexistência com o indicador de texto: em "Indicadores de
+  habilidade do colaborador" (04-regras-negocio.md) já existe
+  `Abaixo do esperado: text-xs text-red-500`, mas isso é um rótulo de
+  texto INLINE dentro de uma lista de habilidades (ex: ao lado do nome de
+  cada habilidade), contexto diferente deste wrapper de ÍCONE em card de
+  métrica agregado. As duas cores para "abaixo do esperado" (vermelho no
+  texto inline, âmbar no wrapper do card) coexistem por serem usos
+  diferentes — não é inconsistência a "corrigir", não alinhar as duas.
 
 ## Drawers
 

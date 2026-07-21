@@ -27,10 +27,16 @@ ANTES de criar qualquer componente, tela ou lógica nova:
 
 ## Arquivos-chave
 
+- `src/data/schema.ts` — fonte única de verdade dos TIPOS de cada entidade
+  (Carreira, Jornada, Cargo, Colaborador, Avaliação, Habilidade, Nível etc.).
+  Campo novo entra aqui primeiro, antes de qualquer tela — ver
+  `rules/06-integridade-de-dados.md`
+- `docs/DATA_MODEL.md` — versão legível (sem jargão de código) do mesmo modelo,
+  com explicação de cada campo e relação entre entidades
 - `src/styles/theme.css` — tokens de cor da marca
 - `src/app/components/ui/` — componentes compartilhados
 - `src/app/components/templates/` — templates reutilizáveis
-- `src/app/data/mockData.ts` — dados e função getCorFromPeso()
+- `src/app/data/mockData.ts` — dados (tipados por `src/data/schema.ts`) e função getCorFromPeso()
 - `src/app/utils/cobertura.ts` — cálculo de cobertura de habilidades
 - `src/app/routes.ts` — todas as rotas do sistema
 
@@ -62,6 +68,9 @@ Antes de criar qualquer página ou componente novo, verifique se um template já
 - Nunca criar array de dados hardcoded para uma entidade que já existe ou
   deveria existir em `mockData.ts`, nem armazenar contador que poderia ser
   calculado dinamicamente — ver `rules/06-integridade-de-dados.md`
+- Nunca redefinir inline (interface local, `useState` com literais) uma
+  estrutura que já existe em `src/data/schema.ts` — campo novo entra primeiro
+  em `schema.ts` + `docs/DATA_MODEL.md`, só depois em qualquer tela
 - Nunca adicionar rota sem registrar em `src/app/routes.ts`
 
 ## Usuários de referência

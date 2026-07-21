@@ -1,4 +1,4 @@
-import { FormEvent, useState, useEffect } from 'react';
+import { FormEvent, useState } from 'react';
 import { X, Search, Plus, Trash2 } from 'lucide-react';
 import { getCompetenciaNome } from '../data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -34,7 +34,6 @@ export function ConfigurarHabilidadesCargo({
   setBuscaHabilidade,
   filtroCategoria,
   setFiltroCategoria,
-  competenciasData,
 }: ConfigurarHabilidadesCargoProps) {
   const [showAddHabilidade, setShowAddHabilidade] = useState(false);
 

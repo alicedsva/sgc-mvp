@@ -1,31 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { jornadasData as jornadasIniciais, cargosData as cargosIniciais, habilidadesCargoData as habilidadesIniciais, colaboradoresData } from '../data/mockData';
-
-interface Jornada {
-  id: string;
-  carreiraId: string;
-  nome: string;
-  carreira: string;
-  tipo: string;
-  quantidadeCargos: number;
-  status: string;
-}
-
-interface Cargo {
-  id: string;
-  jornadaId: string;
-  cargoRM: string;
-  ordem: string;
-  habilidadesConfiguradas: number;
-  status: string;
-}
-
-interface HabilidadeCargo {
-  id: string;
-  cargoId: string;
-  habilidadeId: string;
-  nivelEsperado: string;
-}
+import { carreirasData as carreirasIniciais, jornadasData as jornadasIniciais, cargosData as cargosIniciais, habilidadesCargoData as habilidadesIniciais, colaboradoresData } from '../data/mockData';
+import type { Carreira, Jornada, Cargo, HabilidadeCargo } from '../../data/schema';
 
 interface Vinculo {
   colaboradorId: string;
@@ -33,6 +8,9 @@ interface Vinculo {
 }
 
 interface CarreirasContextType {
+  carreiras: Carreira[];
+  adicionarCarreira: (carreira: Carreira) => void;
+  atualizarCarreira: (carreiraId: string, dadosAtualizados: Partial<Carreira>) => void;
   jornadas: Jornada[];
   cargos: Cargo[];
   habilidadesCargo: HabilidadeCargo[];
@@ -54,6 +32,7 @@ const CarreirasContext = createContext<CarreirasContextType | undefined>(undefin
 
 // Chaves do localStorage
 const STORAGE_KEYS = {
+  CARREIRAS: 'carreiras_carreiras',
   JORNADAS: 'carreiras_jornadas',
   CARGOS: 'carreiras_cargos',
   HABILIDADES_CARGO: 'carreiras_habilidades_cargo',
@@ -97,7 +76,7 @@ function saveToStorage<T>(key: string, data: T): void {
 // do mockData.ts atualizado. Sem isso, mudanças
 // no código não aparecem na interface para
 // usuários com dados antigos no localStorage.
-const MOCK_DATA_VERSION = '2026-06-24-4';
+const MOCK_DATA_VERSION = '2026-07-21-5';
 const VERSION_KEY = 'carreiras_mock_version';
 
 function shouldResetStorage(): boolean {
@@ -112,6 +91,7 @@ function shouldResetStorage(): boolean {
 export function CarreirasProvider({ children }: { children: ReactNode }) {
   // Verificar versão e limpar localStorage desatualizado antes de qualquer leitura
   if (shouldResetStorage()) {
+    localStorage.removeItem(STORAGE_KEYS.CARREIRAS);
     localStorage.removeItem(STORAGE_KEYS.JORNADAS);
     localStorage.removeItem(STORAGE_KEYS.CARGOS);
     localStorage.removeItem(STORAGE_KEYS.HABILIDADES_CARGO);
@@ -120,6 +100,9 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   }
 
   // Carregar do localStorage ou usar dados iniciais
+  const [carreiras, setCarreiras] = useState<Carreira[]>(() =>
+    loadFromStorage(STORAGE_KEYS.CARREIRAS, carreirasIniciais)
+  );
   const [jornadas, setJornadas] = useState<Jornada[]>(() =>
     loadFromStorage(STORAGE_KEYS.JORNADAS, jornadasIniciais)
   );
@@ -137,6 +120,11 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
         .map(c => ({ colaboradorId: c.id, jornadaId: c.jornadaId! }))
     )
   );
+
+  // Persistir carreiras no localStorage sempre que mudarem
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.CARREIRAS, carreiras);
+  }, [carreiras]);
 
   // Persistir jornadas no localStorage sempre que mudarem
   useEffect(() => {
@@ -157,6 +145,20 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.VINCULOS, vinculos);
   }, [vinculos]);
+
+  const adicionarCarreira = (novaCarreira: Carreira) => {
+    // Inserida no início — mesma convenção de addCompetencia (CompetenciasContext)
+    // e do sort por 'id' (retorna 0, mantém ordem do array).
+    setCarreiras((prev) => [novaCarreira, ...prev]);
+  };
+
+  const atualizarCarreira = (carreiraId: string, dadosAtualizados: Partial<Carreira>) => {
+    setCarreiras((prevCarreiras) =>
+      prevCarreiras.map((c) =>
+        c.id === carreiraId ? { ...c, ...dadosAtualizados } : c
+      )
+    );
+  };
 
   const adicionarJornada = (novaJornada: Jornada) => {
     setJornadas((prev) => [...prev, novaJornada]);
@@ -254,6 +256,9 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   return (
     <CarreirasContext.Provider
       value={{
+        carreiras,
+        adicionarCarreira,
+        atualizarCarreira,
         jornadas,
         cargos,
         habilidadesCargo,

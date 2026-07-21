@@ -1,6 +1,36 @@
 ﻿// Dados mockados compartilhados entre todas as páginas
+//
+// Tipos de cada entidade vêm de src/data/schema.ts — fonte única de verdade
+// mecanicamente reforçada (ver .claude/rules/06-integridade-de-dados.md).
+// Nunca redeclarar uma interface aqui ou em qualquer tela; campo novo entra
+// primeiro em schema.ts.
+import type {
+  Carreira,
+  Jornada,
+  Cargo,
+  HabilidadeCargo,
+  Colaborador,
+  RespostaAvaliacao,
+  ParticipanteAvaliacao,
+  Avaliacao,
+  HistoricoAvaliacao,
+  Competencia,
+  Habilidade,
+  Nivel,
+  JoaoHabilidadeCargoMatriz,
+  HistoricoCargoJoao,
+  BenchmarkCargo,
+  HabilidadeCargoBenchmark,
+} from '../../data/schema';
 
-export const carreirasData = [
+export type {
+  RespostaAvaliacao,
+  ParticipanteAvaliacao,
+  Avaliacao,
+  Competencia,
+};
+
+export const carreirasData: Carreira[] = [
   { id: '1', nome: 'Tecnologia da Informação', jornadas: 8, status: 'Ativa' },
   { id: '2', nome: 'Recursos Humanos', jornadas: 5, status: 'Ativa' },
   { id: '3', nome: 'Financeiro', jornadas: 3, status: 'Ativa' },
@@ -21,7 +51,7 @@ export const carreirasData = [
   { id: '18', nome: 'Comunicação', jornadas: 0, status: 'Ativa' },
 ];
 
-export const jornadasData = [
+export const jornadasData: Jornada[] = [
   { id: 'j1', carreiraId: '1', nome: 'Desenvolvedor', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 4, status: 'Ativa' },
   { id: 'j2', carreiraId: '1', nome: 'Analista de Infraestrutura', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 2, status: 'Ativa' },
   { id: 'j3', carreiraId: '1', nome: 'Analista de Dados', carreira: 'Tecnologia da Informação', tipo: 'Contribuidor Individual', quantidadeCargos: 3, status: 'Ativa' },
@@ -57,7 +87,7 @@ export const jornadasData = [
   { id: 'j27', carreiraId: '14', nome: 'Especialista em Inovação',   carreira: 'Inovação',  tipo: 'Contribuidor Individual', quantidadeCargos: 1, status: 'Ativa' },
 ];
 
-export const cargosData = [
+export const cargosData: Cargo[] = [
   { id: 'c1', jornadaId: 'j1', cargoRM: 'Desenvolvedor Junior', ordem: '1', habilidadesConfiguradas: 15, totalHabilidades: 15, status: 'Configurado' },
   { id: 'c2', jornadaId: 'j1', cargoRM: 'Desenvolvedor Pleno', ordem: '2', habilidadesConfiguradas: 15, totalHabilidades: 15, status: 'Configurado' },
   { id: 'c3', jornadaId: 'j1', cargoRM: 'Desenvolvedor Sênior', ordem: '3', habilidadesConfiguradas: 15, totalHabilidades: 15, status: 'Configurado' },
@@ -142,7 +172,7 @@ export const cargosData = [
   { id: 'c59', jornadaId: 'j9',  cargoRM: 'Analista de RH Sênior',                ordem: '3', habilidadesConfiguradas: 6, totalHabilidades: 6, status: 'Configurado' },
 ];
 
-export const habilidadesCargoData = [
+export const habilidadesCargoData: HabilidadeCargo[] = [
   { cargoId: 'c1', habilidadeId: '1', nivelEsperado: 'Básico', obrigatoria: true },
   { cargoId: 'c1', habilidadeId: '2', nivelEsperado: 'Básico', obrigatoria: true },
   { cargoId: 'c1', habilidadeId: '18', nivelEsperado: 'Básico', obrigatoria: true },
@@ -648,7 +678,7 @@ export const habilidadesCargoData = [
   { cargoId: 'c57', habilidadeId: '88',  nivelEsperado: 'Avançado',      obrigatoria: true },
 ];
 
-export const colaboradoresData = [
+export const colaboradoresData: Colaborador[] = [
   {
     id: '1',
     nome: 'Ana Silva',
@@ -949,38 +979,13 @@ export const colaboradoresData = [
   { id: '95', nome: 'Débora Cavalcanti',    cargo: 'Analista de Inovação Sênior',       cargoId: 'c36', jornadaId: 'j26', carreiraId: '14', gerencia: 'Inovação',    status: 'Ativo' as const, ultimoAcesso: '03 de junho de 2026', atualizacaoDisponivel: false, tempoNoCargo: '3 anos e 5 meses',ultimaAvaliacao: undefined },
 ];
 
-// ─── Interfaces e dados de avaliações ────────────────────────────────────────
-
-export interface RespostaAvaliacao {
-  habilidadeId: string;
-  nivelRespondido: string;
-  dataResposta: string; // 'YYYY-MM-DD' — quando essa resposta específica foi registrada
-}
+// ─── Dados de avaliações (interfaces em src/data/schema.ts) ──────────────────
 
 // Data de referência fixa usada para simular "hoje" nos cálculos temporais do
 // mock (ex.: avaliações respondidas hoje/ontem no Dashboard). Nunca usar a data
 // real do navegador (new Date()) — mantém os dados determinísticos, seguindo o
 // mesmo princípio de MOCK_DATA_VERSION em CarreirasContext.tsx.
 export const HOJE_SIMULADO = new Date('2026-07-06T00:00:00Z');
-
-export interface ParticipanteAvaliacao {
-  colaboradorId: string;
-  status: 'Não iniciada' | 'Em andamento' | 'Concluída' | 'Expirada';
-  respostas: RespostaAvaliacao[];
-}
-
-export interface Avaliacao {
-  id: string;
-  nome: string;
-  tipo: 'Autoavaliação';
-  status: 'Rascunho' | 'Ativa' | 'Encerrada';
-  periodoInicio: string;
-  periodoFim: string;
-  publicoLabel: string;
-  descricao?: string;
-  habilidades?: string[];
-  participantes: ParticipanteAvaliacao[];
-}
 
 export const avaliacoesData: Avaliacao[] = [
   // ─── id=1 · Competências Técnicas TI Q1 2026 · Ativa ───────────────────────
@@ -990,9 +995,14 @@ export const avaliacoesData: Avaliacao[] = [
     tipo: 'Autoavaliação',
     status: 'Ativa',
     periodoInicio: '2026-03-01',
-    periodoFim: '2026-03-31',
+    periodoFim: '2026-07-31', // corrigido — estava com periodoFim no passado (2026-03-31) enquanto status='Ativa'; alinhado a HOJE_SIMULADO
     publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['1', '2', '3', '9', '18'],
     participantes: [
+      { colaboradorId: '10', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+      ]},
       { colaboradorId: '1',  status: 'Concluída', respostas: [
         { habilidadeId: '1',  nivelRespondido: 'Intermediário', dataResposta: '2026-06-14' },
         { habilidadeId: '2',  nivelRespondido: 'Intermediário', dataResposta: '2026-06-14' },
@@ -1052,6 +1062,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-02-15',
     periodoFim: '2026-02-28',
     publicoLabel: 'Gerências Recursos Humanos e Operações',
+    habilidades: ['9', '10', '14', '21', '22'],
     participantes: [
       { colaboradorId: '2',  status: 'Concluída', respostas: [
         { habilidadeId: '14', nivelRespondido: 'Avançado', dataResposta: '2026-06-28' },
@@ -1114,6 +1125,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-03-05',
     periodoFim: '2026-03-25',
     publicoLabel: 'Gerência Financeiro',
+    habilidades: ['110', '111', '112'],
     participantes: [
       { colaboradorId: '19', status: 'Concluída', respostas: [
         { habilidadeId: '110', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
@@ -1149,6 +1161,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-01-01',
     periodoFim: '2026-01-31',
     publicoLabel: 'Gerências Tecnologia e Financeiro',
+    habilidades: ['65', '66', '67'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', respostas: [
         { habilidadeId: '65', nivelRespondido: 'Intermediário', dataResposta: '2026-06-21' },
@@ -1201,6 +1214,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-03-01',
     periodoFim: '2026-03-20',
     publicoLabel: 'Gerências Design e Produto',
+    habilidades: ['118', '119', '124', '125'],
     participantes: [
       { colaboradorId: '67', status: 'Concluída', respostas: [
         { habilidadeId: '124', nivelRespondido: 'Básico', dataResposta: '2026-07-06' },
@@ -1239,6 +1253,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-01-15',
     periodoFim: '2026-02-15',
     publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['53', '56', '57', '58'],
     participantes: [
       { colaboradorId: '6',  status: 'Concluída', respostas: [
         { habilidadeId: '56', nivelRespondido: 'Básico', dataResposta: '2026-07-04' },
@@ -1277,6 +1292,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-04-01',
     periodoFim: '2026-04-30',
     publicoLabel: 'Gerência Produto',
+    habilidades: ['88', '89', '104', '118', '119', '120', '121', '122'],
     participantes: [
       { colaboradorId: '62', status: 'Concluída', respostas: [
         { habilidadeId: '118', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
@@ -1341,6 +1357,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-04-01',
     periodoFim: '2026-04-30',
     publicoLabel: 'Gerência Operações',
+    habilidades: ['88', '137', '138', '139', '140', '141'],
     participantes: [
       { colaboradorId: '50', status: 'Concluída', respostas: [
         { habilidadeId: '137', nivelRespondido: 'Iniciante', dataResposta: '2026-06-15' },
@@ -1408,6 +1425,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-04-01',
     periodoFim: '2026-04-30',
     publicoLabel: 'Gerência Inovação',
+    habilidades: ['23', '104', '106', '142', '143', '144', '145', '146'],
     participantes: [
       { colaboradorId: '84', status: 'Concluída', respostas: [
         { habilidadeId: '142', nivelRespondido: 'Iniciante', dataResposta: '2026-06-23' },
@@ -1479,6 +1497,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-04-01',
     periodoFim: '2026-04-30',
     publicoLabel: 'Gerência Engenharia',
+    habilidades: ['131', '132', '133', '134', '135', '136'],
     participantes: [
       { colaboradorId: '22', status: 'Concluída', respostas: [
         { habilidadeId: '131', nivelRespondido: 'Iniciante', dataResposta: '2026-06-22' },
@@ -1552,6 +1571,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-04-01',
     periodoFim: '2026-04-30',
     publicoLabel: 'Gerências Design e Financeiro',
+    habilidades: ['86', '87', '88', '89', '110', '111', '112', '113', '124', '125', '126', '128'],
     participantes: [
       { colaboradorId: '71', status: 'Concluída', respostas: [
         { habilidadeId: '124', nivelRespondido: 'Especialista', dataResposta: '2026-07-03' },
@@ -1581,6 +1601,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-05-01',
     periodoFim: '2026-05-31',
     publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['1', '2', '3', '9', '10', '14', '18', '21', '22', '86', '87', '88'],
     participantes: [
       // c1 — Desenvolvedor Junior
       { colaboradorId: '11', status: 'Concluída', respostas: [
@@ -1832,6 +1853,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-05-01',
     periodoFim: '2026-05-31',
     publicoLabel: 'Gerência Infraestrutura',
+    habilidades: ['9', '10', '53', '55', '56', '80', '81'],
     participantes: [
       // c5 — Analista de Infraestrutura Junior
       { colaboradorId: '7',  status: 'Concluída', respostas: [
@@ -1905,6 +1927,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-06-01',
     periodoFim: '2026-06-30',
     publicoLabel: 'Gerência Financeiro',
+    habilidades: ['110', '111', '112', '113', '114', '115', '117'],
     participantes: [
       { colaboradorId: '52', status: 'Concluída', respostas: [
         { habilidadeId: '110', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
@@ -1945,6 +1968,7 @@ export const avaliacoesData: Avaliacao[] = [
     periodoInicio: '2026-06-01',
     periodoFim: '2026-06-30',
     publicoLabel: 'Gerências Design e Produto',
+    habilidades: ['118', '119', '124', '125', '126', '127', '128', '129', '130'],
     participantes: [
       // j17 — Product Designer Junior (c14)
       { colaboradorId: '20', status: 'Concluída', respostas: [
@@ -1987,353 +2011,1007 @@ export const avaliacoesData: Avaliacao[] = [
       ]},
     ],
   },
-];
 
-// Avaliações dos colaboradores (níveis atuais)
-export const avaliacoesColaboradoresData = [
-  // Ana Silva - Desenvolvedor Pleno
-  { colaboradorId: '1', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '3', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '4', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '18', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '9', nivelAtual: 'Avançado', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '22', nivelAtual: 'Intermediário', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
-  { colaboradorId: '1', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-01-15' },
+  // ─── Avaliações da gerência Tecnologia (ids 18–25) ─────────────────────────
+  // Público-alvo = gerência Tecnologia (17 colaboradores reais de
+  // colaboradoresData, cargos c1–c4 da jornada j1). João Silva (id='10')
+  // participa das 8 — status e respostas combinados com Alice antes de
+  // escrever (ver histórico da conversa "Meu Perfil"). Datas de resposta das
+  // 3 avaliações Ativas evitam propositalmente 2026-07-05/06 (HOJE_SIMULADO
+  // e véspera) para não alterar os cards "Avaliações respondidas" do
+  // Dashboard como efeito colateral não pedido.
 
-  // João Silva (id='10') — Desenvolvedor Pleno — Avaliação março 2026
-  // Distribuição vs joaoHabilidadesCargoMatriz: 7 ACIMA | 10 NO | 10 ABAIXO | 6 SEM
-  { colaboradorId: '10', habilidadeId: '1',   nivelAtual: 'Avançado',      dataAvaliacao: '2026-03-10' }, // ACIMA  (vs Intermediário)
-  { colaboradorId: '10', habilidadeId: '2',   nivelAtual: 'Avançado',      dataAvaliacao: '2026-03-10' }, // ACIMA
-  { colaboradorId: '10', habilidadeId: '3',   nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  { colaboradorId: '10', habilidadeId: '4',   nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  { colaboradorId: '10', habilidadeId: '18',  nivelAtual: 'Avançado',      dataAvaliacao: '2026-03-10' }, // ACIMA
-  { colaboradorId: '10', habilidadeId: '9',   nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  { colaboradorId: '10', habilidadeId: '10',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  { colaboradorId: '10', habilidadeId: '11',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  { colaboradorId: '10', habilidadeId: '12',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // NO    (vs Básico)
-  { colaboradorId: '10', habilidadeId: '21',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  { colaboradorId: '10', habilidadeId: '22',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  // h23 (Pensamento Crítico) e h14 (Feedback Construtivo): SEM AVALIAÇÃO
-  { colaboradorId: '10', habilidadeId: '50',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // ACIMA (vs Básico)
-  { colaboradorId: '10', habilidadeId: '51',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // ACIMA
-  { colaboradorId: '10', habilidadeId: '74',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO    (vs Intermediário)
-  { colaboradorId: '10', habilidadeId: '91',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  { colaboradorId: '10', habilidadeId: '86',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO
-  { colaboradorId: '10', habilidadeId: '75',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  { colaboradorId: '10', habilidadeId: '76',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  { colaboradorId: '10', habilidadeId: '68',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO
-  // h88 (Tomada de Decisão) e h107 (Gestão de Metas): SEM AVALIAÇÃO
-  { colaboradorId: '10', habilidadeId: '147', nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // NO    (vs Intermediário)
-  { colaboradorId: '10', habilidadeId: '148', nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // NO    (vs Básico)
-  { colaboradorId: '10', habilidadeId: '150', nivelAtual: 'Avançado',      dataAvaliacao: '2026-03-10' }, // ACIMA (vs Intermediário)
-  { colaboradorId: '10', habilidadeId: '151', nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO (vs Intermediário)
-  { colaboradorId: '10', habilidadeId: '152', nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' }, // ACIMA (vs Básico)
-  // h149 (Mensageria e Filas) e h153 (Testes de Carga): SEM AVALIAÇÃO
-  { colaboradorId: '10', habilidadeId: '61',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO — gap 4 (vs Especialista)
-  { colaboradorId: '10', habilidadeId: '64',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO — gap 3 (vs Avançado)
-  { colaboradorId: '10', habilidadeId: '70',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' }, // ABAIXO — gap 3 (vs Avançado)
-  // Habilidades extras avaliadas — fora da matriz do cargo, alimentam radar e benchmark
-  { colaboradorId: '10', habilidadeId: '52',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '53',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '54',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '56',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '59',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '60',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '62',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '63',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '65',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '66',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '69',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '77',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '83',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '87',  nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '92',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '95',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '98',  nivelAtual: 'Intermediário', dataAvaliacao: '2026-03-10' },
-  { colaboradorId: '10', habilidadeId: '104', nivelAtual: 'Básico',        dataAvaliacao: '2026-03-10' },
-  // Demais colaboradores do cargo c2 (Desenvolvedor Pleno) — avaliados na
-  // mesma matriz estendida de João (joaoHabilidadesCargoMatriz), para
-  // alimentar a comparação "Contexto na empresa" na tela de teste de
-  // Minha Carreira com a mesma fonte/fórmula usada no gauge de João.
-  // Gustavo Lima (id='23') — Desenvolvedor Pleno
-  { colaboradorId: '23', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '2', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '3', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '4', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '10', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '11', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '18', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  { colaboradorId: '23', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-14' },
-  // Juliana Martins (id='13') — Desenvolvedor Pleno
-  { colaboradorId: '13', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '2', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '3', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '4', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '9', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '10', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '11', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '18', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  { colaboradorId: '13', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-07' },
-  // Renata Alves (id='24') — Desenvolvedor Pleno
-  { colaboradorId: '24', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '3', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '4', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '10', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '11', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '18', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  { colaboradorId: '24', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-25' },
-  // Bruno Nascimento (id='25') — Desenvolvedor Pleno
-  { colaboradorId: '25', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '11', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '18', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  { colaboradorId: '25', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-27' },
-  // Letícia Costa (id='26') — Desenvolvedor Pleno
-  { colaboradorId: '26', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '18', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '21', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  { colaboradorId: '26', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-29' },
-  // Vinícius Gomes (id='27') — Desenvolvedor Pleno
-  { colaboradorId: '27', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '18', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '21', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '68', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  { colaboradorId: '27', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-07-01' },
-  // Fabiana Martins (id='28') — Desenvolvedor Pleno
-  { colaboradorId: '28', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '18', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '21', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '22', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '68', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '74', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '75', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '76', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  { colaboradorId: '28', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-07-03' },
-  // Diego Araújo (id='29') — Desenvolvedor Pleno
-  { colaboradorId: '29', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '18', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '21', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '22', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '68', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '74', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '75', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '76', nivelAtual: 'Intermediário', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '86', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '147', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '150', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  { colaboradorId: '29', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-07-05' },
-  // Monique Teixeira (id='30') — Desenvolvedor Pleno
-  { colaboradorId: '30', habilidadeId: '1', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '2', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '3', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '4', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '9', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '10', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '11', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '12', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '14', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '18', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '21', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '22', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '23', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '50', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '51', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '68', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '74', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '75', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '76', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '86', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '88', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '91', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '107', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '147', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '148', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '149', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '150', nivelAtual: 'Intermediário', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '151', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '152', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
-  { colaboradorId: '30', habilidadeId: '153', nivelAtual: 'Básico', dataAvaliacao: '2026-06-16' },
+  // ─── id=18 · Competências Técnicas Q4 2025 · Encerrada ─────────────────────
+  {
+    id: '18',
+    nome: 'Competências Técnicas Q4 2025',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2025-10-01',
+    periodoFim: '2025-10-31',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['1', '2', '18'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2025-10-16' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2025-10-16' },
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-10-16' },
+      ]},
+      { colaboradorId: '3',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2025-10-17' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2025-10-17' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-10-17' },
+      ]},
+      { colaboradorId: '4',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2025-10-18' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2025-10-18' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-10-18' },
+      ]},
+      { colaboradorId: '8',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2025-10-20' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2025-10-20' },
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-10-20' },
+      ]},
+      // João Silva — recém no cargo (início ~jul/2025), não respondeu a tempo.
+      { colaboradorId: '10', status: 'Expirada', respostas: [] },
+      { colaboradorId: '11', status: 'Expirada', respostas: [] },
+      { colaboradorId: '13', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2025-10-21' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2025-10-21' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-10-21' },
+      ]},
+      { colaboradorId: '16', status: 'Expirada', respostas: [] },
+      { colaboradorId: '18', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2025-10-19' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2025-10-19' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-10-19' },
+      ]},
+      { colaboradorId: '23', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2025-10-22' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2025-10-22' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-10-22' },
+      ]},
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2025-10-23' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2025-10-23' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-10-23' },
+      ]},
+      { colaboradorId: '29', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2025-10-24' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2025-10-24' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-10-24' },
+      ]},
+      { colaboradorId: '31', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2025-10-25' },
+        { habilidadeId: '2', nivelRespondido: 'Especialista', dataResposta: '2025-10-25' },
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-10-25' },
+      ]},
+      { colaboradorId: '35', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2025-10-26' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2025-10-26' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-10-26' },
+      ]},
+      { colaboradorId: '38', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2025-10-27' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2025-10-27' },
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-10-27' },
+      ]},
+      { colaboradorId: '39', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2025-10-28' },
+        { habilidadeId: '2', nivelRespondido: 'Especialista', dataResposta: '2025-10-28' },
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-10-28' },
+      ]},
+      { colaboradorId: '42', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2025-10-29' },
+        { habilidadeId: '2', nivelRespondido: 'Especialista', dataResposta: '2025-10-29' },
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-10-29' },
+      ]},
+    ],
+  },
+
+  // ─── id=19 · Avaliação de Ferramentas e Versionamento · Encerrada ──────────
+  {
+    id: '19',
+    nome: 'Avaliação de Ferramentas e Versionamento',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2025-12-01',
+    periodoFim: '2025-12-18',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['3', '4', '18'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-12-08' },
+        { habilidadeId: '3',  nivelRespondido: 'Avançado', dataResposta: '2025-12-08' },
+        { habilidadeId: '4',  nivelRespondido: 'Avançado', dataResposta: '2025-12-08' },
+      ]},
+      { colaboradorId: '3',  status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-12-09' },
+        { habilidadeId: '3',  nivelRespondido: 'Básico', dataResposta: '2025-12-09' },
+        { habilidadeId: '4',  nivelRespondido: 'Básico', dataResposta: '2025-12-09' },
+      ]},
+      // Rafael Mendes não respondeu a tempo.
+      { colaboradorId: '4',  status: 'Expirada', respostas: [] },
+      { colaboradorId: '8',  status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-12-10' },
+        { habilidadeId: '3',  nivelRespondido: 'Avançado', dataResposta: '2025-12-10' },
+        { habilidadeId: '4',  nivelRespondido: 'Avançado', dataResposta: '2025-12-10' },
+      ]},
+      { colaboradorId: '10', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-12-11' },
+        { habilidadeId: '3',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-11' },
+        { habilidadeId: '4',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-11' },
+      ]},
+      { colaboradorId: '11', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-12-06' },
+        { habilidadeId: '3',  nivelRespondido: 'Básico', dataResposta: '2025-12-06' },
+        { habilidadeId: '4',  nivelRespondido: 'Básico', dataResposta: '2025-12-06' },
+      ]},
+      { colaboradorId: '13', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-12-12' },
+        { habilidadeId: '3',  nivelRespondido: 'Básico', dataResposta: '2025-12-12' },
+        { habilidadeId: '4',  nivelRespondido: 'Básico', dataResposta: '2025-12-12' },
+      ]},
+      { colaboradorId: '16', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-12-13' },
+        { habilidadeId: '3',  nivelRespondido: 'Básico', dataResposta: '2025-12-13' },
+        { habilidadeId: '4',  nivelRespondido: 'Básico', dataResposta: '2025-12-13' },
+      ]},
+      { colaboradorId: '18', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2025-12-14' },
+        { habilidadeId: '3',  nivelRespondido: 'Básico', dataResposta: '2025-12-14' },
+        { habilidadeId: '4',  nivelRespondido: 'Básico', dataResposta: '2025-12-14' },
+      ]},
+      // Gustavo Lima não respondeu a tempo.
+      { colaboradorId: '23', status: 'Expirada', respostas: [] },
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-12-15' },
+        { habilidadeId: '3',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-15' },
+        { habilidadeId: '4',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-15' },
+      ]},
+      { colaboradorId: '29', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-12-16' },
+        { habilidadeId: '3',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-16' },
+        { habilidadeId: '4',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-16' },
+      ]},
+      { colaboradorId: '31', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-12-17' },
+        { habilidadeId: '3',  nivelRespondido: 'Especialista', dataResposta: '2025-12-17' },
+        { habilidadeId: '4',  nivelRespondido: 'Especialista', dataResposta: '2025-12-17' },
+      ]},
+      { colaboradorId: '35', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2025-12-07' },
+        { habilidadeId: '3',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-07' },
+        { habilidadeId: '4',  nivelRespondido: 'Intermediário', dataResposta: '2025-12-07' },
+      ]},
+      { colaboradorId: '38', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2025-12-11' },
+        { habilidadeId: '3',  nivelRespondido: 'Avançado', dataResposta: '2025-12-11' },
+        { habilidadeId: '4',  nivelRespondido: 'Avançado', dataResposta: '2025-12-11' },
+      ]},
+      { colaboradorId: '39', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-12-12' },
+        { habilidadeId: '3',  nivelRespondido: 'Avançado', dataResposta: '2025-12-12' },
+        { habilidadeId: '4',  nivelRespondido: 'Avançado', dataResposta: '2025-12-12' },
+      ]},
+      { colaboradorId: '42', status: 'Concluída', respostas: [
+        { habilidadeId: '18', nivelRespondido: 'Especialista', dataResposta: '2025-12-13' },
+        { habilidadeId: '3',  nivelRespondido: 'Avançado', dataResposta: '2025-12-13' },
+        { habilidadeId: '4',  nivelRespondido: 'Avançado', dataResposta: '2025-12-13' },
+      ]},
+    ],
+  },
+
+  // ─── id=20 · Fundamentos de Frontend Avançado · Encerrada ──────────────────
+  {
+    id: '20',
+    nome: 'Fundamentos de Frontend Avançado',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2026-02-02',
+    periodoFim: '2026-02-20',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['1', '50', '51'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-02-09' },
+        { habilidadeId: '50', nivelRespondido: 'Avançado', dataResposta: '2026-02-09' },
+        { habilidadeId: '51', nivelRespondido: 'Avançado', dataResposta: '2026-02-09' },
+      ]},
+      { colaboradorId: '3',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-10' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-10' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-10' },
+      ]},
+      { colaboradorId: '4',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-11' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-11' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-11' },
+      ]},
+      { colaboradorId: '8',  status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-02-12' },
+        { habilidadeId: '50', nivelRespondido: 'Avançado', dataResposta: '2026-02-12' },
+        { habilidadeId: '51', nivelRespondido: 'Avançado', dataResposta: '2026-02-12' },
+      ]},
+      { colaboradorId: '10', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-02-13' },
+        { habilidadeId: '50', nivelRespondido: 'Intermediário', dataResposta: '2026-02-13' },
+        { habilidadeId: '51', nivelRespondido: 'Intermediário', dataResposta: '2026-02-13' },
+      ]},
+      { colaboradorId: '11', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-08' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-08' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-08' },
+      ]},
+      { colaboradorId: '13', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-14' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-14' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-14' },
+      ]},
+      { colaboradorId: '16', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-15' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-15' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-15' },
+      ]},
+      { colaboradorId: '18', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-02-16' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-02-16' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-02-16' },
+      ]},
+      { colaboradorId: '23', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-02-17' },
+        { habilidadeId: '50', nivelRespondido: 'Intermediário', dataResposta: '2026-02-17' },
+        { habilidadeId: '51', nivelRespondido: 'Intermediário', dataResposta: '2026-02-17' },
+      ]},
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-02-18' },
+        { habilidadeId: '50', nivelRespondido: 'Intermediário', dataResposta: '2026-02-18' },
+        { habilidadeId: '51', nivelRespondido: 'Intermediário', dataResposta: '2026-02-18' },
+      ]},
+      // Diego Araújo não respondeu a tempo.
+      { colaboradorId: '29', status: 'Expirada', respostas: [] },
+      { colaboradorId: '31', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2026-02-19' },
+        { habilidadeId: '50', nivelRespondido: 'Especialista', dataResposta: '2026-02-19' },
+        { habilidadeId: '51', nivelRespondido: 'Especialista', dataResposta: '2026-02-19' },
+      ]},
+      { colaboradorId: '35', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-02-10' },
+        { habilidadeId: '50', nivelRespondido: 'Intermediário', dataResposta: '2026-02-10' },
+        { habilidadeId: '51', nivelRespondido: 'Intermediário', dataResposta: '2026-02-10' },
+      ]},
+      // Sandra Rocha não respondeu a tempo.
+      { colaboradorId: '38', status: 'Expirada', respostas: [] },
+      { colaboradorId: '39', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2026-02-11' },
+        { habilidadeId: '50', nivelRespondido: 'Avançado', dataResposta: '2026-02-11' },
+        { habilidadeId: '51', nivelRespondido: 'Avançado', dataResposta: '2026-02-11' },
+      ]},
+      { colaboradorId: '42', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2026-02-12' },
+        { habilidadeId: '50', nivelRespondido: 'Avançado', dataResposta: '2026-02-12' },
+        { habilidadeId: '51', nivelRespondido: 'Avançado', dataResposta: '2026-02-12' },
+      ]},
+    ],
+  },
+
+  // ─── id=21 · Boas Práticas de Colaboração em Equipe · Encerrada ────────────
+  {
+    id: '21',
+    nome: 'Boas Práticas de Colaboração em Equipe',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2026-04-06',
+    periodoFim: '2026-04-24',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['9', '10', '21', '22'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Avançado', dataResposta: '2026-04-11' },
+        { habilidadeId: '10', nivelRespondido: 'Avançado', dataResposta: '2026-04-11' },
+        { habilidadeId: '21', nivelRespondido: 'Avançado', dataResposta: '2026-04-11' },
+        { habilidadeId: '22', nivelRespondido: 'Avançado', dataResposta: '2026-04-11' },
+      ]},
+      { colaboradorId: '3',  status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-12' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-12' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-12' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-12' },
+      ]},
+      { colaboradorId: '4',  status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-13' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-13' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-13' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-13' },
+      ]},
+      // Thiago Rodrigues não respondeu a tempo.
+      { colaboradorId: '8',  status: 'Expirada', respostas: [] },
+      { colaboradorId: '10', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-04-14' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-04-14' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-04-14' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-04-14' },
+      ]},
+      { colaboradorId: '11', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-10' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-10' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-10' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-10' },
+      ]},
+      { colaboradorId: '13', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-15' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-15' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-15' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-15' },
+      ]},
+      { colaboradorId: '16', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-16' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-16' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-16' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-16' },
+      ]},
+      { colaboradorId: '18', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-04-17' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-04-17' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-04-17' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-04-17' },
+      ]},
+      { colaboradorId: '23', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-04-18' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-04-18' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-04-18' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-04-18' },
+      ]},
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-04-19' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-04-19' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-04-19' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-04-19' },
+      ]},
+      { colaboradorId: '29', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-04-20' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-04-20' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-04-20' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-04-20' },
+      ]},
+      { colaboradorId: '31', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Especialista', dataResposta: '2026-04-21' },
+        { habilidadeId: '10', nivelRespondido: 'Especialista', dataResposta: '2026-04-21' },
+        { habilidadeId: '21', nivelRespondido: 'Especialista', dataResposta: '2026-04-21' },
+        { habilidadeId: '22', nivelRespondido: 'Especialista', dataResposta: '2026-04-21' },
+      ]},
+      { colaboradorId: '35', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-04-22' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-04-22' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-04-22' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-04-22' },
+      ]},
+      { colaboradorId: '38', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Avançado', dataResposta: '2026-04-23' },
+        { habilidadeId: '10', nivelRespondido: 'Avançado', dataResposta: '2026-04-23' },
+        { habilidadeId: '21', nivelRespondido: 'Avançado', dataResposta: '2026-04-23' },
+        { habilidadeId: '22', nivelRespondido: 'Avançado', dataResposta: '2026-04-23' },
+      ]},
+      { colaboradorId: '39', status: 'Concluída', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Especialista', dataResposta: '2026-04-13' },
+        { habilidadeId: '10', nivelRespondido: 'Especialista', dataResposta: '2026-04-13' },
+        { habilidadeId: '21', nivelRespondido: 'Especialista', dataResposta: '2026-04-13' },
+        { habilidadeId: '22', nivelRespondido: 'Especialista', dataResposta: '2026-04-13' },
+      ]},
+      // Luciana Nogueira não respondeu a tempo.
+      { colaboradorId: '42', status: 'Expirada', respostas: [] },
+    ],
+  },
+
+  // ─── id=22 · Avaliação de Metodologias Ágeis · Encerrada ───────────────────
+  {
+    id: '22',
+    nome: 'Avaliação de Metodologias Ágeis',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2026-05-11',
+    periodoFim: '2026-05-29',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['11', '12'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Avançado', dataResposta: '2026-05-16' },
+        { habilidadeId: '12', nivelRespondido: 'Avançado', dataResposta: '2026-05-16' },
+      ]},
+      { colaboradorId: '3',  status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-05-17' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-17' },
+      ]},
+      { colaboradorId: '4',  status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-05-18' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-18' },
+      ]},
+      { colaboradorId: '8',  status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Avançado', dataResposta: '2026-05-19' },
+        { habilidadeId: '12', nivelRespondido: 'Intermediário', dataResposta: '2026-05-19' },
+      ]},
+      { colaboradorId: '10', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-05-20' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-20' },
+      ]},
+      { colaboradorId: '11', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-05-15' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-15' },
+      ]},
+      // Juliana Martins não respondeu a tempo.
+      { colaboradorId: '13', status: 'Expirada', respostas: [] },
+      { colaboradorId: '16', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-05-21' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-21' },
+      ]},
+      { colaboradorId: '18', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-05-22' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-22' },
+      ]},
+      { colaboradorId: '23', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-05-23' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-23' },
+      ]},
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-05-24' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-24' },
+      ]},
+      { colaboradorId: '29', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-05-25' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-25' },
+      ]},
+      // Eduardo Correia não respondeu a tempo.
+      { colaboradorId: '31', status: 'Expirada', respostas: [] },
+      { colaboradorId: '35', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-05-26' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-05-26' },
+      ]},
+      { colaboradorId: '38', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Avançado', dataResposta: '2026-05-27' },
+        { habilidadeId: '12', nivelRespondido: 'Intermediário', dataResposta: '2026-05-27' },
+      ]},
+      { colaboradorId: '39', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Avançado', dataResposta: '2026-05-28' },
+        { habilidadeId: '12', nivelRespondido: 'Avançado', dataResposta: '2026-05-28' },
+      ]},
+      { colaboradorId: '42', status: 'Concluída', respostas: [
+        { habilidadeId: '11', nivelRespondido: 'Avançado', dataResposta: '2026-05-19' },
+        { habilidadeId: '12', nivelRespondido: 'Avançado', dataResposta: '2026-05-19' },
+      ]},
+    ],
+  },
+
+  // ─── id=23 · Competências Técnicas Q3 2026 · Ativa ─────────────────────────
+  {
+    id: '23',
+    nome: 'Competências Técnicas Q3 2026',
+    tipo: 'Autoavaliação',
+    status: 'Ativa',
+    periodoInicio: '2026-06-01',
+    periodoFim: '2026-08-10',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['1', '2', '3', '4', '18'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-06-26' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2026-06-26' },
+      ]},
+      { colaboradorId: '3',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '4',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '8',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '10', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+      ]},
+      { colaboradorId: '11', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '13', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+      ]},
+      { colaboradorId: '16', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '18', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '23', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-28' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-28' },
+      ]},
+      { colaboradorId: '26', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+      ]},
+      { colaboradorId: '29', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-30' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-30' },
+      ]},
+      { colaboradorId: '31', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '35', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '38', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '39', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2026-07-01' },
+        { habilidadeId: '2', nivelRespondido: 'Especialista', dataResposta: '2026-07-01' },
+      ]},
+      { colaboradorId: '42', status: 'Em andamento', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Especialista', dataResposta: '2026-07-02' },
+        { habilidadeId: '2', nivelRespondido: 'Especialista', dataResposta: '2026-07-02' },
+      ]},
+    ],
+  },
+
+  // ─── id=24 · Avaliação de Liderança Técnica e Comunicação · Ativa ──────────
+  {
+    id: '24',
+    nome: 'Avaliação de Liderança Técnica e Comunicação',
+    tipo: 'Autoavaliação',
+    status: 'Ativa',
+    periodoInicio: '2026-07-01',
+    periodoFim: '2026-07-25',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['9', '10', '14', '23'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '3',  status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-07-02' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-07-02' },
+      ]},
+      { colaboradorId: '4',  status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+      ]},
+      { colaboradorId: '8',  status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+        { habilidadeId: '10', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+      ]},
+      { colaboradorId: '10', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '11', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-07-02' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-07-02' },
+      ]},
+      { colaboradorId: '13', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '16', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+      ]},
+      { colaboradorId: '18', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-07-04' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-07-04' },
+      ]},
+      { colaboradorId: '23', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '26', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '29', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '31', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Especialista', dataResposta: '2026-07-03' },
+        { habilidadeId: '10', nivelRespondido: 'Especialista', dataResposta: '2026-07-03' },
+      ]},
+      { colaboradorId: '35', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-07-02' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-07-02' },
+      ]},
+      { colaboradorId: '38', status: 'Em andamento', respostas: [
+        { habilidadeId: '9', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+        { habilidadeId: '10', nivelRespondido: 'Avançado', dataResposta: '2026-07-04' },
+      ]},
+      { colaboradorId: '39', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '42', status: 'Não iniciada', respostas: [] },
+    ],
+  },
+
+  // ─── id=25 · Avaliação de Práticas de Testes e Qualidade · Ativa ───────────
+  {
+    id: '25',
+    nome: 'Avaliação de Práticas de Testes e Qualidade',
+    tipo: 'Autoavaliação',
+    status: 'Ativa',
+    periodoInicio: '2026-06-20',
+    periodoFim: '2026-07-20',
+    publicoLabel: 'Gerência Tecnologia',
+    habilidades: ['74', '11', '12'],
+    participantes: [
+      { colaboradorId: '1',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '3',  status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '4',  status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-23' },
+      ]},
+      { colaboradorId: '8',  status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Avançado', dataResposta: '2026-06-24' },
+      ]},
+      { colaboradorId: '10', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '11', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '13', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '16', status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+      ]},
+      { colaboradorId: '18', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '23', status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-06-26' },
+      ]},
+      { colaboradorId: '26', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '29', status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+      ]},
+      { colaboradorId: '31', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '35', status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-06-28' },
+      ]},
+      { colaboradorId: '38', status: 'Não iniciada', respostas: [] },
+      { colaboradorId: '39', status: 'Em andamento', respostas: [
+        { habilidadeId: '74', nivelRespondido: 'Especialista', dataResposta: '2026-06-29' },
+      ]},
+      { colaboradorId: '42', status: 'Não iniciada', respostas: [] },
+    ],
+  },
+
+  // ─── id=26 · Consolidação de Competências — Desenvolvedor Pleno · Encerrada ──
+  // Migrada de avaliacoesColaboradoresData (extinta) — cada participante mantém a
+  // dataResposta original que tinha no snapshot. Cobre os 11 colaboradores do
+  // cargo c2 (Desenvolvedor Pleno). periodoFim não é mais usado como critério de
+  // recência (ver getHabilidadesAvaliadasColaborador) — só dataResposta individual
+  // decide qual resposta vence quando há mais de uma avaliação pra mesma habilidade.
+  {
+    id: '26',
+    nome: 'Consolidação de Competências — Desenvolvedor Pleno',
+    tipo: 'Autoavaliação',
+    status: 'Encerrada',
+    periodoInicio: '2026-05-15',
+    periodoFim: '2026-05-30',
+    publicoLabel: 'Cargo Desenvolvedor Pleno',
+    habilidades: ['1', '2', '3', '4', '9', '10', '11', '12', '14', '18', '21', '22', '23', '50', '51', '52', '53', '54', '56', '59', '60', '61', '62', '63', '64', '65', '66', '68', '69', '70', '74', '75', '76', '77', '83', '86', '87', '88', '91', '92', '95', '98', '104', '107', '147', '148', '149', '150', '151', '152', '153'],
+    participantes: [
+      // Ana Silva (id='1')
+      { colaboradorId: '1', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '3', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+        { habilidadeId: '4', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '9', nivelRespondido: 'Avançado', dataResposta: '2026-01-15' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-01-15' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-01-15' },
+      ]},
+      // João Silva (id='10')
+      { colaboradorId: '10', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Avançado', dataResposta: '2026-03-10' },
+        { habilidadeId: '2', nivelRespondido: 'Avançado', dataResposta: '2026-03-10' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '4', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '18', nivelRespondido: 'Avançado', dataResposta: '2026-03-10' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '50', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '51', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '91', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '86', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '147', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '150', nivelRespondido: 'Avançado', dataResposta: '2026-03-10' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '152', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '61', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '64', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '70', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '52', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '53', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '54', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '56', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '59', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '60', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '62', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '63', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '65', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '66', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '69', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '77', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '83', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '87', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+        { habilidadeId: '92', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '95', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '98', nivelRespondido: 'Intermediário', dataResposta: '2026-03-10' },
+        { habilidadeId: '104', nivelRespondido: 'Básico', dataResposta: '2026-03-10' },
+      ]},
+      // Gustavo Lima (id='23')
+      { colaboradorId: '23', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-14' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '3', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '4', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-06-14' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-14' },
+      ]},
+      // Juliana Martins (id='13')
+      { colaboradorId: '13', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-07' },
+        { habilidadeId: '2', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '3', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '4', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '9', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-07' },
+      ]},
+      // Renata Alves (id='24')
+      { colaboradorId: '24', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-25' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-25' },
+        { habilidadeId: '3', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '4', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-06-25' },
+        { habilidadeId: '10', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-25' },
+      ]},
+      // Bruno Nascimento (id='25')
+      { colaboradorId: '25', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-06-27' },
+        { habilidadeId: '11', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-27' },
+      ]},
+      // Letícia Costa (id='26')
+      { colaboradorId: '26', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-06-29' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '18', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '21', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-29' },
+      ]},
+      // Vinícius Gomes (id='27')
+      { colaboradorId: '27', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-07-01' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '68', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-07-01' },
+      ]},
+      // Fabiana Martins (id='28')
+      { colaboradorId: '28', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '22', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '68', nivelRespondido: 'Intermediário', dataResposta: '2026-07-03' },
+        { habilidadeId: '74', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '75', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '76', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-07-03' },
+      ]},
+      // Diego Araújo (id='29')
+      { colaboradorId: '29', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '68', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '75', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '76', nivelRespondido: 'Intermediário', dataResposta: '2026-07-05' },
+        { habilidadeId: '86', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '147', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '150', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-07-05' },
+      ]},
+      // Monique Teixeira (id='30')
+      { colaboradorId: '30', status: 'Concluída', respostas: [
+        { habilidadeId: '1', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '2', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '3', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '4', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '9', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '10', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '11', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '12', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '14', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '18', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '21', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '22', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '23', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '50', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '51', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '68', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '74', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '75', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '76', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '86', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '88', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '91', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '107', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '147', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '148', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '149', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '150', nivelRespondido: 'Intermediário', dataResposta: '2026-06-16' },
+        { habilidadeId: '151', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '152', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+        { habilidadeId: '153', nivelRespondido: 'Básico', dataResposta: '2026-06-16' },
+      ]},
+    ],
+  },
 ];
 
 // Histórico de avaliações
-export const historicoAvaliacoesData = [
+export const historicoAvaliacoesData: HistoricoAvaliacao[] = [
   {
     id: 'av1',
     colaboradorId: '1',
@@ -2375,13 +3053,6 @@ export const historicoAvaliacoesData = [
     status: 'Concluída',
   },
 ];
-
-export interface Competencia {
-  id: string;
-  nome: string;
-  descricao: string;
-  status: 'Ativa' | 'Desativada';
-}
 
 export const competenciasData: Competencia[] = [
   { id: 'comp1',  nome: 'Desenvolvimento Frontend',  descricao: 'Engloba tecnologias e práticas para construção de interfaces web modernas, com foco em frameworks como React e tipagem estática com TypeScript.',                                          status: 'Ativa' },
@@ -2427,7 +3098,7 @@ export function getCompetenciaNome(id: string): string {
   return getCompetenciaPorId(id)?.nome ?? 'Sem competência';
 }
 
-export const habilidadesData = [
+export const habilidadesData: Habilidade[] = [
   { id: '1',  nome: 'React',               descricao: 'Desenvolvimento com React e ecossistema',          competencia: 'Desenvolvimento Frontend', competenciaId: 'comp1', tipo: 'Técnica',       status: 'Ativa', niveis: [
     { nivelId: '1', criterio: 'Cria componentes funcionais simples e entende JSX' },
     { nivelId: '2', criterio: 'Usa hooks, gerencia estado local e consome APIs REST' },
@@ -3333,7 +4004,7 @@ export function getCorFromPeso(peso: number): string {
 }
 
 // Fonte única de verdade para os níveis de habilidades padrão
-export const niveisDefaultData = [
+export const niveisDefaultData: Nivel[] = [
   { id: '1',  nome: 'Básico',        descricao: 'Conhecimento inicial. Realiza atividades simples com supervisão constante.',               peso: 1, status: 'Ativo', emUso: 45 },
   { id: '2',  nome: 'Intermediário', descricao: 'Executa tarefas com autonomia em situações conhecidas. Busca suporte em contextos novos.', peso: 2, status: 'Ativo', emUso: 38 },
   { id: '3',  nome: 'Avançado',      descricao: 'Atua com autonomia em situações complexas e orienta outros profissionais.',                peso: 4, status: 'Ativo', emUso: 22 },
@@ -3379,6 +4050,13 @@ export function getNivelAtualColaborador(
 // Retorna Map<habilidadeId, nivelMaisRecente> para todas as habilidades já avaliadas
 // pelo colaborador. Mais eficiente que getNivelAtualColaborador em loop — percorre
 // avaliacoesData uma única vez.
+// Critério de recência: dataResposta de CADA resposta individual — nunca o
+// periodoFim da avaliação inteira. Duas respostas da mesma avaliação podem ter
+// dataResposta diferentes (rascunho salvo em datas distintas antes do envio),
+// e usar o periodoFim da avaliação como proxy de "quando essa habilidade foi
+// respondida" fazia essa função (e o Dashboard/Admin/páginas de teste que
+// dependem dela) ignorar respostas mais recentes de uma habilidade só porque
+// vieram de uma avaliação mais antiga — bug encontrado e corrigido em 2026-07-21.
 export function getHabilidadesAvaliadasColaborador(
   colaboradorId: string
 ): Map<string, string> {
@@ -3388,9 +4066,8 @@ export function getHabilidadesAvaliadasColaborador(
     const participante = avaliacao.participantes.find(p => p.colaboradorId === colaboradorId);
     if (!participante) continue;
 
-    const data = avaliacao.periodoFim ?? avaliacao.periodoInicio;
-
     for (const resposta of participante.respostas) {
+      const data = resposta.dataResposta;
       const atual = resultado.get(resposta.habilidadeId);
       if (!atual || data > atual.data) {
         resultado.set(resposta.habilidadeId, { nivel: resposta.nivelRespondido, data });
@@ -3406,7 +4083,7 @@ export function getHabilidadesAvaliadasColaborador(
 // Matriz do cargo de João (replica c2 + extensão com novas habilidades).
 // Usada apenas pelas telas de teste — não afeta habilidadesCargoData nem Ana Silva.
 // Distribuição João vs esta matriz: 5 ACIMA | 8 NO | 6 ABAIXO | 4 SEM
-export const joaoHabilidadesCargoMatriz: { habilidadeId: string; nivelEsperado: string }[] = [
+export const joaoHabilidadesCargoMatriz: JoaoHabilidadeCargoMatriz[] = [
   // Habilidades originais do cargo Desenvolvedor Pleno (c2)
   { habilidadeId: '1',   nivelEsperado: 'Intermediário' },
   { habilidadeId: '2',   nivelEsperado: 'Intermediário' },
@@ -3461,14 +4138,14 @@ export const joaoHabilidadesCargoMatriz: { habilidadeId: string; nivelEsperado: 
 // cargosData (cargoRM) na tela, nunca duplicado aqui, para não divergir se o
 // nome do cargo mudar. `dataInicio: '2025-07'` do cargo atual (c2) é
 // coerente com `tempoNoCargo: '1 ano'` de colaboradoresData.
-export const historicoCargosJoaoData: { cargoId: string | null; cargoNome?: string; dataInicio: string }[] = [
+export const historicoCargosJoaoData: HistoricoCargoJoao[] = [
   { cargoId: null, cargoNome: 'Estagiário de Desenvolvimento', dataInicio: '2022-01' },
   { cargoId: 'c1', dataInicio: '2023-07' },
   { cargoId: 'c2', dataInicio: '2025-07' },
 ];
 
 // Cargos de benchmark — usados apenas pelas telas de teste
-export const benchmarkCargosData = [
+export const benchmarkCargosData: BenchmarkCargo[] = [
   { id: 'CARGO_ATUAL', nome: 'Desenvolvedor Pleno',      area: 'Tecnologia',             cargoBase: 'Desenvolvedor',         senioridade: 'Pleno'  },
   { id: 'cb1',  nome: 'Analista de Dados Sênior',       area: 'Dados e Analytics',       cargoBase: 'Analista de Dados',     senioridade: 'Sênior' },
   { id: 'cb7',  nome: 'Analista de Dados Pleno',        area: 'Dados e Analytics',       cargoBase: 'Analista de Dados',     senioridade: 'Pleno'  },
@@ -3489,7 +4166,7 @@ export const benchmarkCargosData = [
 ];
 
 // Matrizes de habilidades dos cargos de benchmark — usadas apenas pelas telas de teste
-export const habilidadesCargoDataBenchmark: { cargoId: string; habilidadeId: string; nivelEsperado: string }[] = [
+export const habilidadesCargoDataBenchmark: HabilidadeCargoBenchmark[] = [
   // cb1 — Analista de Dados Sênior
   { cargoId: 'cb1', habilidadeId: '65',  nivelEsperado: 'Avançado' },
   { cargoId: 'cb1', habilidadeId: '66',  nivelEsperado: 'Avançado' },

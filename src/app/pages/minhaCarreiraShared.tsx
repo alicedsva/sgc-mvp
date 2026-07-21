@@ -3,10 +3,11 @@ import {
   habilidadesData,
   habilidadesCargoData,
   joaoHabilidadesCargoMatriz,
-  avaliacoesColaboradoresData,
+  getHabilidadesAvaliadasColaborador,
   niveisDefaultData,
   getPesoFromNome,
 } from '../data/mockData';
+import type { TipoHabilidade } from '../../data/schema';
 
 // Lógica compartilhada entre MinhaCarreiraPage ("Mapeamento de competências")
 // e CompetenciaDetalhePage — João Silva é o único colaborador com dados ricos
@@ -37,7 +38,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 export type HabilidadeEnriquecida = {
   habilidadeId: string;
   nome: string;
-  tipo: string;
+  tipo: TipoHabilidade;
   competenciaId: string;
   competenciaNome: string;
   nivelEsperado: string;
@@ -57,15 +58,33 @@ export function getStatus(nivelAtual: string | null, nivelEsperado: string): Sta
 }
 
 // Generalização de getNivelAtualJoao — lê o nível atual de QUALQUER
-// colaborador na mesma fonte (avaliacoesColaboradoresData), usada pela
-// comparação "Contexto na empresa" para calcular a aderência dos colegas de
-// cargo de João com a mesma fórmula/matriz do gauge dele.
+// colaborador, usada pela comparação "Contexto na empresa" para calcular a
+// aderência dos colegas de cargo de João com a mesma fórmula/matriz do gauge
+// dele. Unificado em 2026-07-21 para ler de avaliacoesData (via
+// getHabilidadesAvaliadasColaborador) em vez da extinta
+// avaliacoesColaboradoresData — fonte única, sem tabela paralela.
+//
+// HANDOFF — 2026-07-21: aderência ao cargo atual de João corrigida de 70%
+// para 81% (Técnica 57%→62%, Comportamental 83%→100%). Duas causas
+// independentes, não uma mudança de regra de negócio:
+// 1) Bug de critério de "mais recente" em getHabilidadesAvaliadasColaborador
+//    (mockData.ts) — comparava o periodoFim da avaliação inteira em vez da
+//    dataResposta de cada resposta individual, então respostas mais novas de
+//    uma habilidade podiam perder pra uma avaliação mais antiga só porque a
+//    avaliação como um todo tinha periodoFim maior. Corrigido pra comparar
+//    dataResposta por resposta.
+// 2) Unificação de fonte: avaliacoesColaboradoresData (tabela paralela,
+//    nascida como dado de apoio pra uma tela de teste, nunca atualizada
+//    depois que avaliacoesData ganhou histórico real) foi migrada pra uma
+//    avaliação real (id='26' em avaliacoesData) e removida. Os 3 gaps
+//    propositais de "Oportunidades de desenvolvimento" (h61/h64/h70,
+//    Básico vs Especialista/Avançado/Avançado) foram verificados e
+//    sobrevivem intactos — não há nenhuma outra resposta em avaliacoesData
+//    pra essas 3 habilidades que pudesse sobrescrevê-los.
+// Os 10 colegas de cargo (c2) também mudaram, pelo mesmo motivo — ver
+// histórico de conversa da migração pra números individuais.
 export function getNivelAtualColaboradorTeste(colaboradorId: string, habilidadeId: string): string | null {
-  return (
-    avaliacoesColaboradoresData.find(
-      a => a.colaboradorId === colaboradorId && a.habilidadeId === habilidadeId
-    )?.nivelAtual ?? null
-  );
+  return getHabilidadesAvaliadasColaborador(colaboradorId).get(habilidadeId) ?? null;
 }
 
 export function getNivelAtualJoao(habilidadeId: string): string | null {
@@ -80,6 +99,18 @@ export function matrizParaCargo(cargoId: string): { habilidadeId: string; nivelE
   return habilidadesCargoData
     .filter(h => h.cargoId === cargoId)
     .map(h => ({ habilidadeId: h.habilidadeId, nivelEsperado: h.nivelEsperado }));
+}
+
+// Aderência por tipo (Técnica/Comportamental) — reaproveitada pelo gauge
+// "Aderência ao cargo" (MinhaCarreiraPage) e pelo card "Aderência ao cargo
+// atual" (ColaboradorView/Meu Perfil), única implementação para os dois.
+// Habilidade não avaliada é EXCLUÍDA do cálculo (nunca conta como gap),
+// seguindo a regra geral já documentada em 04-regras-negocio.md.
+export function calcularAderenciaPorTipo(lista: HabilidadeEnriquecida[], tipo: string): number {
+  const avaliadas = lista.filter(h => h.tipo === tipo && h.status !== 'sem');
+  if (avaliadas.length === 0) return 0;
+  const atendidas = avaliadas.filter(h => h.status === 'acima' || h.status === 'no').length;
+  return Math.round((atendidas / avaliadas.length) * 100);
 }
 
 export function enriquecerMatriz(

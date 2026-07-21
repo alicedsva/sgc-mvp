@@ -12,9 +12,8 @@ import {
   TrendingUp,
   FlaskConical,
   Target,
-  BarChart2,
-  ClipboardList,
-  GitCompare,
+  PieChart,
+  Gauge,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -57,10 +56,9 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
   ];
 
   const menuItemsTestes = [
-    { id: 'testes/radar',     label: 'Radar de Competências', icon: Target       },
-    { id: 'testes/barras',    label: 'Barras por Habilidade', icon: BarChart2     },
-    { id: 'testes/screening', label: 'Screening Report',      icon: ClipboardList },
-    { id: 'testes/benchmark', label: 'Benchmark Mode',        icon: GitCompare    },
+    { id: 'testes/radar',                   label: 'Radar de Competências',   icon: Target   },
+    { id: 'testes/perfil-doughnut',         label: 'Aderência — Doughnut',    icon: PieChart },
+    { id: 'testes/perfil-aderencia-geral',  label: 'Cobertura vs. Aderência', icon: Gauge    },
   ];
 
   const menuItems = viewMode === 'admin' ? menuItemsAdmin : menuItemsColaborador;

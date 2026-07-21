@@ -1,47 +1,55 @@
 import { useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { niveisDefaultData, getCorFromPeso } from '../data/mockData';
+import { habilidadesData, niveisDefaultData, getCorFromPeso, HOJE_SIMULADO } from '../data/mockData';
+import type { NivelNome } from '../../data/schema';
+import { useAvaliacoes } from '../context/AvaliacoesContext';
+import { JOAO_ID } from '../pages/minhaCarreiraShared';
+import { formatPeriodo } from '../utils/avaliacoes';
 import { toast } from 'sonner';
 
 interface RespostaAvaliacaoProps {
-  avaliacao: any;
+  avaliacaoId: string;
   onVoltar: () => void;
 }
 
-// Dados mockados de competências e habilidades para avaliação
-const competenciasMock = [
-  {
-    id: '1',
-    nome: 'Desenvolvimento Frontend',
-    habilidades: [
-      { id: '1', nome: 'React', descricao: 'Desenvolvimento com React e ecossistema' },
-      { id: '2', nome: 'TypeScript', descricao: 'Programação com tipagem estática' },
-      { id: '8', nome: 'Figma', descricao: 'Design de interfaces e prototipagem' },
-    ],
-  },
-  {
-    id: '2',
-    nome: 'Desenvolvimento Backend',
-    habilidades: [
-      { id: '3', nome: 'Node.js', descricao: 'Desenvolvimento backend com Node.js' },
-      { id: '4', nome: 'PostgreSQL', descricao: 'Modelagem e consultas em banco relacional' },
-      { id: '15', nome: 'Python', descricao: 'Programação em Python' },
-    ],
-  },
-  {
-    id: '3',
-    nome: 'DevOps e Infraestrutura',
-    habilidades: [
-      { id: '6', nome: 'Kubernetes', descricao: 'Orquestração de containers' },
-      { id: '19', nome: 'CI/CD', descricao: 'Integração e entrega contínua' },
-      { id: '20', nome: 'Terraform', descricao: 'Infrastructure as Code' },
-    ],
-  },
-];
+interface CompetenciaGrupo {
+  id: string;
+  nome: string;
+  habilidades: typeof habilidadesData;
+}
 
-export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProps) {
-  const [respostas, setRespostas] = useState<Record<string, string>>({});
-  const [competenciaExpandida, setCompetenciaExpandida] = useState<string[]>(['1']);
+export function RespostaAvaliacao({ avaliacaoId, onVoltar }: RespostaAvaliacaoProps) {
+  const { avaliacoes, responderAvaliacao } = useAvaliacoes();
+  const avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!;
+  const participanteAtual = avaliacao.participantes.find(p => p.colaboradorId === JOAO_ID)!;
+
+  // Habilidades reais desta avaliação (avaliacao.habilidades) — enunciado vem
+  // de habilidadesData[id].descricao, nunca duplicado/inventado aqui.
+  const habilidadesAvaliacao = (avaliacao.habilidades ?? [])
+    .map(id => habilidadesData.find(h => h.id === id))
+    .filter((h): h is (typeof habilidadesData)[number] => h != null);
+
+  const competencias: CompetenciaGrupo[] = Array.from(
+    habilidadesAvaliacao
+      .reduce((mapa, hab) => {
+        if (!mapa.has(hab.competenciaId)) {
+          mapa.set(hab.competenciaId, { id: hab.competenciaId, nome: hab.competencia, habilidades: [] as typeof habilidadesData });
+        }
+        mapa.get(hab.competenciaId)!.habilidades.push(hab);
+        return mapa;
+      }, new Map<string, CompetenciaGrupo>())
+      .values()
+  );
+
+  // Retoma respostas já salvas (rascunho 'Em andamento') na primeira renderização.
+  const [respostas, setRespostas] = useState<Record<string, string>>(() => {
+    const inicial: Record<string, string> = {};
+    participanteAtual.respostas.forEach(r => { inicial[r.habilidadeId] = r.nivelRespondido; });
+    return inicial;
+  });
+  const [competenciaExpandida, setCompetenciaExpandida] = useState<string[]>(
+    competencias.length > 0 ? [competencias[0].id] : []
+  );
 
   const toggleCompetencia = (competenciaId: string) => {
     setCompetenciaExpandida(prev =>
@@ -51,15 +59,31 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
     );
   };
 
-  const handleNivelChange = (habilidadeId: string, nivelId: string) => {
-    setRespostas(prev => ({ ...prev, [habilidadeId]: nivelId }));
+  const handleNivelChange = (habilidadeId: string, nivelNome: string) => {
+    setRespostas(prev => ({ ...prev, [habilidadeId]: nivelNome }));
   };
 
-  const totalHabilidades = competenciasMock.reduce((acc, comp) => acc + comp.habilidades.length, 0);
+  const totalHabilidades = habilidadesAvaliacao.length;
   const respondidas = Object.keys(respostas).length;
-  const progresso = Math.round((respondidas / totalHabilidades) * 100);
+  const progresso = totalHabilidades > 0 ? Math.round((respondidas / totalHabilidades) * 100) : 0;
+
+  // dataResposta sempre HOJE_SIMULADO — nunca new Date() (determinismo, ver
+  // convenção já usada em DashboardPage.tsx / ColaboradorView.tsx).
+  const hojeISO = HOJE_SIMULADO.toISOString().slice(0, 10);
+
+  function respostasParaEnvio() {
+    // Os botões de seleção só oferecem nomes vindos de niveisDefaultData (o
+    // conjunto fechado de níveis conhecidos), nunca texto livre do colaborador
+    // — por isso é seguro estreitar aqui para NivelNome.
+    return Object.entries(respostas).map(([habilidadeId, nivelRespondido]) => ({
+      habilidadeId,
+      nivelRespondido: nivelRespondido as NivelNome,
+      dataResposta: hojeISO,
+    }));
+  }
 
   const handleSalvarRascunho = () => {
+    responderAvaliacao(avaliacaoId, JOAO_ID, respostasParaEnvio(), false);
     toast.success('Respostas salvas! Você pode continuar depois.');
   };
 
@@ -68,6 +92,7 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
       toast.error('Por favor, avalie todas as habilidades antes de enviar.');
       return;
     }
+    responderAvaliacao(avaliacaoId, JOAO_ID, respostasParaEnvio(), true);
     toast.success('Avaliação enviada com sucesso!');
     setTimeout(() => {
       onVoltar();
@@ -85,9 +110,9 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
           <ArrowLeft className="w-4 h-4" />
           Minhas Avaliações
         </button>
-        <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.titulo}</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Período: {avaliacao.periodo} • Tipo: {avaliacao.tipo}
+          Período: {formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim)} • Tipo: {avaliacao.tipo}
         </p>
       </div>
 
@@ -102,7 +127,7 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
 
       {/* Lista de competências e habilidades */}
       <div className="space-y-4">
-        {competenciasMock.map((competencia) => {
+        {competencias.map((competencia) => {
           const isExpanded = competenciaExpandida.includes(competencia.id);
           const habilidadesRespondidas = competencia.habilidades.filter(h => respostas[h.id]).length;
 
@@ -129,47 +154,60 @@ export function RespostaAvaliacao({ avaliacao, onVoltar }: RespostaAvaliacaoProp
               {/* Lista de habilidades */}
               {isExpanded && (
                 <div className="border-t border-gray-200 divide-y divide-gray-200">
-                  {competencia.habilidades.map((habilidade) => (
-                    <div key={habilidade.id} className="p-5 bg-gray-50">
-                      <div className="mb-3">
-                        <h4 className="text-sm font-medium text-gray-900 mb-1">{habilidade.nome}</h4>
-                        <p className="text-xs text-gray-600">{habilidade.descricao}</p>
-                      </div>
+                  {competencia.habilidades.map((habilidade) => {
+                    // Escala de níveis ESPECÍFICA desta habilidade
+                    // (habilidadesData[id].niveis) — nunca niveisDefaultData
+                    // inteiro, que mistura as duas escalas do sistema
+                    // (Básico/Avançado E Iniciante/Aprendiz).
+                    const niveisHabilidade = habilidade.niveis
+                      .map(n => {
+                        const nivel = niveisDefaultData.find(nd => nd.id === n.nivelId);
+                        return nivel ? { ...nivel, criterio: n.criterio } : null;
+                      })
+                      .filter((n): n is (typeof niveisDefaultData)[number] & { criterio: string } => n != null);
 
-                      {/* Seletor de nível */}
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-700 mb-2">Selecione seu nível:</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                          {niveisDefaultData.map((nivel) => {
-                            const isSelected = respostas[habilidade.id] === nivel.id;
-                            return (
-                              <button
-                                key={nivel.id}
-                                onClick={() => handleNivelChange(habilidade.id, nivel.id)}
-                                className={`p-3 rounded-lg border-2 text-left transition-all ${
-                                  isSelected ? '' : 'border-gray-200 hover:border-gray-300 bg-white'
-                                }`}
-                                style={isSelected ? {
-                                  borderColor: getCorFromPeso(nivel.peso),
-                                  backgroundColor: getCorFromPeso(nivel.peso) + '1A',
-                                } : {}}
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span
-                                    className="text-sm font-medium"
-                                    style={isSelected ? { color: getCorFromPeso(nivel.peso) } : { color: '#374151' }}
-                                  >
-                                    {nivel.nome}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-600">{nivel.descricao}</p>
-                              </button>
-                            );
-                          })}
+                    return (
+                      <div key={habilidade.id} className="p-5 bg-gray-50">
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium text-gray-900 mb-1">{habilidade.nome}</h4>
+                          <p className="text-xs text-gray-600">{habilidade.descricao}</p>
+                        </div>
+
+                        {/* Seletor de nível */}
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-gray-700 mb-2">Selecione seu nível:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                            {niveisHabilidade.map((nivel) => {
+                              const isSelected = respostas[habilidade.id] === nivel.nome;
+                              return (
+                                <button
+                                  key={nivel.id}
+                                  onClick={() => handleNivelChange(habilidade.id, nivel.nome)}
+                                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                                    isSelected ? '' : 'border-gray-200 hover:border-gray-300 bg-white'
+                                  }`}
+                                  style={isSelected ? {
+                                    borderColor: getCorFromPeso(nivel.peso),
+                                    backgroundColor: getCorFromPeso(nivel.peso) + '1A',
+                                  } : {}}
+                                >
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span
+                                      className="text-sm font-medium"
+                                      style={isSelected ? { color: getCorFromPeso(nivel.peso) } : { color: '#374151' }}
+                                    >
+                                      {nivel.nome}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600">{nivel.criterio}</p>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, Search } from 'lucide-react';
-import { carreirasData } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
 import { Table, Column } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -19,7 +18,7 @@ export default function CarreiraDetalhePage() {
   const { carreiraId } = useParams();
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
-  const { jornadas, cargos, removerJornada, atualizarJornada } = useCarreiras();
+  const { carreiras, jornadas, cargos, removerJornada, atualizarJornada } = useCarreiras();
 
   const [buscaJornada, setBuscaJornada] = useState('');
   const [filtroStatusJornada, setFiltroStatusJornada] = useState<'todas' | 'ativa' | 'inativa'>('ativa');
@@ -38,7 +37,7 @@ export default function CarreiraDetalhePage() {
   const [editFormData, setEditFormData] = useState({ nome: '', tipo: '' });
 
   // Buscar dados da carreira
-  const carreira = carreirasData.find(c => c.id === carreiraId);
+  const carreira = carreiras.find(c => c.id === carreiraId);
   const jornadasDaCarreira = jornadas.filter(j => j.carreiraId === carreiraId);
 
   const jornadasFiltradas = jornadasDaCarreira.filter(j => {
@@ -112,7 +111,7 @@ export default function CarreiraDetalhePage() {
     if (jornadaParaExcluir) {
       const jornada = jornadasDaCarreira.find(j => j.id === jornadaParaExcluir);
       removerJornada(jornadaParaExcluir);
-      toast.success('Jornada excluída com sucesso');
+      toast.success(`Jornada "${jornada?.nome}" excluída com sucesso`);
       setJornadaParaExcluir(null);
     }
   };

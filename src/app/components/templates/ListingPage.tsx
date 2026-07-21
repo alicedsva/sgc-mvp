@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Search, Plus } from 'lucide-react';
-import { Table, Column, ActionMenuItem, PaginationConfig } from '../ui/Table';
+import { Table, Column, InlineAction, PaginationConfig } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
 
 export interface FilterOption {
@@ -20,7 +20,7 @@ interface ListingPageProps {
   };
   columns: Column[];
   data: any[];
-  actions?: ActionMenuItem[];
+  actions?: InlineAction[];
   statusFilter?: {
     value: string;
     onChange: (value: string) => void;

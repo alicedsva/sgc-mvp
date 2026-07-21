@@ -13,6 +13,7 @@ import {
   HabilidadeEnriquecida,
   matrizParaCargo,
   enriquecerMatriz,
+  calcularAderenciaPorTipo,
   AderenciaRing,
 } from './minhaCarreiraShared';
 
@@ -26,18 +27,6 @@ const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Se
 function formatarMesAno(data: string): string {
   const [ano, mes] = data.split('-');
   return `${MESES_ABREV[Number(mes) - 1]} ${ano}`;
-}
-
-// Aderência por tipo (Técnica/Comportamental) para o gauge "Aderência ao
-// cargo": habilidade não avaliada é EXCLUÍDA do cálculo (nunca conta como
-// gap), seguindo a regra geral já documentada em 04-regras-negocio.md
-// ("Habilidades não avaliadas: excluídas da média — nunca contadas como
-// zero").
-function calcularAderenciaPorTipo(lista: HabilidadeEnriquecida[], tipo: string): number {
-  const avaliadas = lista.filter(h => h.tipo === tipo && h.status !== 'sem');
-  if (avaliadas.length === 0) return 0;
-  const atendidas = avaliadas.filter(h => h.status === 'acima' || h.status === 'no').length;
-  return Math.round((atendidas / avaliadas.length) * 100);
 }
 
 type FiltroCompetencia = 'todas' | 'abaixo' | 'no-caminho';

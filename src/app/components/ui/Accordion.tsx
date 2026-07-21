@@ -61,7 +61,7 @@ interface AccordionProps {
   className?: string;
 }
 
-export function Accordion({ children, allowMultiple = false, className = '' }: AccordionProps) {
+export function Accordion({ children, className = '' }: AccordionProps) {
   return (
     <div className={`space-y-2 ${className}`}>
       {children}

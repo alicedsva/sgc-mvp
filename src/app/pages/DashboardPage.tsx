@@ -428,7 +428,10 @@ function ExportDropdown() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleExport = (format: 'pdf' | 'excel') => {
+  // Exportação real ainda não implementada neste protótipo — parâmetro
+  // mantido na assinatura para os dois botões (PDF/Excel) já chamarem com o
+  // formato correto quando a geração for implementada.
+  const handleExport = (_format: 'pdf' | 'excel') => {
     setOpen(false);
   };
 

@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { CompetenciasProvider } from './context/CompetenciasContext';
 import { HabilidadesProvider } from './context/HabilidadesContext';
+import { AvaliacoesProvider } from './context/AvaliacoesContext';
 import { router } from './routes';
 
 export default function App() {
@@ -10,10 +11,12 @@ export default function App() {
     <ThemeProvider>
       <CompetenciasProvider>
         <HabilidadesProvider>
-          <div className="min-h-screen">
-            <Toaster position="top-right" richColors />
-            <RouterProvider router={router} />
-          </div>
+          <AvaliacoesProvider>
+            <div className="min-h-screen">
+              <Toaster position="top-right" richColors />
+              <RouterProvider router={router} />
+            </div>
+          </AvaliacoesProvider>
         </HabilidadesProvider>
       </CompetenciasProvider>
     </ThemeProvider>
