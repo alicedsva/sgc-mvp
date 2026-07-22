@@ -1,19 +1,18 @@
+import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Award, BarChart2, CheckCircle2, Info } from 'lucide-react';
 import { habilidadesData, getCorFromPeso, getPesoFromNome } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { JOAO_ID } from '../pages/minhaCarreiraShared';
-
-interface ResultadoAvaliacaoProps {
-  avaliacaoId: string;
-  onVoltar: () => void;
-}
 
 function media(pesos: number[]): number {
   if (pesos.length === 0) return 0;
   return Math.round((pesos.reduce((a, b) => a + b, 0) / pesos.length) * 10) / 10;
 }
 
-export function ResultadoAvaliacao({ avaliacaoId, onVoltar }: ResultadoAvaliacaoProps) {
+export function ResultadoAvaliacao() {
+  const { avaliacaoId } = useParams<{ avaliacaoId: string }>();
+  const navigate = useNavigate();
+  const onVoltar = () => navigate('/minhas-avaliacoes');
   const { avaliacoes } = useAvaliacoes();
   const avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!;
   const participante = avaliacao.participantes.find(p => p.colaboradorId === JOAO_ID)!;
@@ -60,7 +59,7 @@ export function ResultadoAvaliacao({ avaliacaoId, onVoltar }: ResultadoAvaliacao
       <div>
         <button
           onClick={onVoltar}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-3"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Minhas Avaliações

@@ -13,6 +13,8 @@ import AvaliacoesPage from "./pages/AvaliacoesPage";
 import AvaliacaoDetalhePage from "./pages/AvaliacaoDetalhePage";
 import MeuPerfilPage from "./pages/MeuPerfilPage";
 import MinhasAvaliacoesPage from "./pages/MinhasAvaliacoesPage";
+import RespostaAvaliacaoPage from "./pages/RespostaAvaliacaoPage";
+import ResultadoAvaliacaoPage from "./pages/ResultadoAvaliacaoPage";
 import MinhaCarreiraPage from "./pages/MinhaCarreiraPage";
 import CompetenciaDetalhePage from "./pages/CompetenciaDetalhePage";
 import ConfigurarCargoPage from "./pages/ConfigurarCargoPage";
@@ -43,6 +45,8 @@ export const router = createBrowserRouter([
       { path: "avaliacoes/:id", Component: AvaliacaoDetalhePage },
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
+      { path: "minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
+      { path: "minhas-avaliacoes/resultado/:avaliacaoId", Component: ResultadoAvaliacaoPage },
       { path: "minha-carreira", Component: MinhaCarreiraPage },
       { path: "minha-carreira/competencia/:id", Component: CompetenciaDetalhePage },
       { path: "design-system", Component: DesignSystemPage },

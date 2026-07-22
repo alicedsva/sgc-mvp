@@ -1,7 +1,5 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Calendar, Award, CheckCircle2, Clock, ArrowRight, ChevronRight } from 'lucide-react';
-import { RespostaAvaliacao } from './RespostaAvaliacao';
-import { ResultadoAvaliacao } from './ResultadoAvaliacao';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { getParticipacoesColaborador, ParticipacaoColaborador, formatPeriodo, formatData } from '../utils/avaliacoes';
 import { JOAO_ID } from '../pages/minhaCarreiraShared';
@@ -26,36 +24,20 @@ function mediaParticipante(participante: ParticipacaoColaborador['participante']
 }
 
 export function MinhasAvaliacoes() {
+  const navigate = useNavigate();
   const { avaliacoes } = useAvaliacoes();
-  const [viewMode, setViewMode] = useState<'lista' | 'responder' | 'resultado'>('lista');
-  const [avaliacaoSelecionadaId, setAvaliacaoSelecionadaId] = useState<string | null>(null);
 
   // Mesmo helper usado por ColaboradorView.tsx — única fonte do filtro
   // "participações do colaborador, nunca Rascunho".
   const participacoes = getParticipacoesColaborador(avaliacoes, JOAO_ID);
 
   const handleResponderClick = (avaliacaoId: string) => {
-    setAvaliacaoSelecionadaId(avaliacaoId);
-    setViewMode('responder');
+    navigate(`/minhas-avaliacoes/responder/${avaliacaoId}`);
   };
 
   const handleVerResultadoClick = (avaliacaoId: string) => {
-    setAvaliacaoSelecionadaId(avaliacaoId);
-    setViewMode('resultado');
+    navigate(`/minhas-avaliacoes/resultado/${avaliacaoId}`);
   };
-
-  const handleVoltar = () => {
-    setViewMode('lista');
-    setAvaliacaoSelecionadaId(null);
-  };
-
-  if (viewMode === 'responder' && avaliacaoSelecionadaId) {
-    return <RespostaAvaliacao avaliacaoId={avaliacaoSelecionadaId} onVoltar={handleVoltar} />;
-  }
-
-  if (viewMode === 'resultado' && avaliacaoSelecionadaId) {
-    return <ResultadoAvaliacao avaliacaoId={avaliacaoSelecionadaId} onVoltar={handleVoltar} />;
-  }
 
   const naoIniciadas = participacoes.filter(p => p.participante.status === 'Não iniciada');
   const emAndamento = participacoes.filter(p => p.participante.status === 'Em andamento');

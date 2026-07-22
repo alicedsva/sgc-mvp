@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, getCorFromPeso, HOJE_SIMULADO } from '../data/mockData';
 import type { NivelNome } from '../../data/schema';
@@ -7,18 +8,16 @@ import { JOAO_ID } from '../pages/minhaCarreiraShared';
 import { formatPeriodo } from '../utils/avaliacoes';
 import { toast } from 'sonner';
 
-interface RespostaAvaliacaoProps {
-  avaliacaoId: string;
-  onVoltar: () => void;
-}
-
 interface CompetenciaGrupo {
   id: string;
   nome: string;
   habilidades: typeof habilidadesData;
 }
 
-export function RespostaAvaliacao({ avaliacaoId, onVoltar }: RespostaAvaliacaoProps) {
+export function RespostaAvaliacao() {
+  const { avaliacaoId } = useParams<{ avaliacaoId: string }>();
+  const navigate = useNavigate();
+  const onVoltar = () => navigate('/minhas-avaliacoes');
   const { avaliacoes, responderAvaliacao } = useAvaliacoes();
   const avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!;
   const participanteAtual = avaliacao.participantes.find(p => p.colaboradorId === JOAO_ID)!;
@@ -83,7 +82,7 @@ export function RespostaAvaliacao({ avaliacaoId, onVoltar }: RespostaAvaliacaoPr
   }
 
   const handleSalvarRascunho = () => {
-    responderAvaliacao(avaliacaoId, JOAO_ID, respostasParaEnvio(), false);
+    responderAvaliacao(avaliacao.id, JOAO_ID, respostasParaEnvio(), false);
     toast.success('Respostas salvas! Você pode continuar depois.');
   };
 
@@ -92,7 +91,7 @@ export function RespostaAvaliacao({ avaliacaoId, onVoltar }: RespostaAvaliacaoPr
       toast.error('Por favor, avalie todas as habilidades antes de enviar.');
       return;
     }
-    responderAvaliacao(avaliacaoId, JOAO_ID, respostasParaEnvio(), true);
+    responderAvaliacao(avaliacao.id, JOAO_ID, respostasParaEnvio(), true);
     toast.success('Avaliação enviada com sucesso!');
     setTimeout(() => {
       onVoltar();
@@ -105,7 +104,7 @@ export function RespostaAvaliacao({ avaliacaoId, onVoltar }: RespostaAvaliacaoPr
       <div>
         <button
           onClick={onVoltar}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-3"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Minhas Avaliações

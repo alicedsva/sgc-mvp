@@ -3922,7 +3922,7 @@ function SecaoMensagensOrientacao() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">ResultadoAvaliacao.tsx:85</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">ResultadoAvaliacao.tsx:100</td>
                 <td className="px-4 py-3 text-gray-700">"Banner de contexto" — orienta o uso dos resultados</td>
               </tr>
             </tbody>
@@ -3975,7 +3975,7 @@ function SecaoMensagensOrientacao() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">RespostaAvaliacao.tsx:108</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">RespostaAvaliacao.tsx:119</td>
                 <td className="px-4 py-3 text-gray-700">Bloco "Instruções" — acima dos campos de autoavaliação</td>
               </tr>
             </tbody>
