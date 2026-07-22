@@ -89,11 +89,15 @@ Avaliações → Detalhe da avaliação
 
 ### Colaborador
 ```
-Meu Perfil
-Minhas Avaliações → Responder avaliação
-                 → Resultado da avaliação
-Minha Carreira
-         tabs: Minha Jornada · Próximo passo
+Meu Perfil (página única — rota /meu-perfil)
+Minhas Avaliações (rota /minhas-avaliacoes) → Responder avaliação
+                                             → Resultado da avaliação
+Minha Carreira (rota /minha-carreira) — scroll único, seções nesta ordem:
+         Evolução profissional
+         Aderência ao cargo + Contexto na empresa (lado a lado)
+         Oportunidades de desenvolvimento
+         Mapeamento de competências → Ver detalhes por competência
+                 (rota /minha-carreira/competencia/:id)
 ```
 
 Regra importante: navegação do Colaborador usa rotas separadas no React Router —

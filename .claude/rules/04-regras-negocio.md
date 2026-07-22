@@ -106,26 +106,31 @@ Cores da barra de progresso (hex fixo — sem equivalente Tailwind):
 - Parcial: `#F59E0B`
 - Zero: `#E5E7EB`
 
-## Perfil Colaborador — status de implementação
+## Perfil Colaborador — regras estabelecidas
 
-As telas do Colaborador (Meu Perfil, Minhas Avaliações,
-Minha Carreira) estão em construção ativa.
+Regras confirmadas em código (`minhaCarreiraShared.tsx`,
+`ColaboradorView.tsx`, `MinhaCarreiraPage.tsx`):
 
-Regras importantes:
-- Não assumir que nenhuma regra de negócio está definida
-  para o Colaborador sem confirmação explícita
-- Limiares de cobertura de habilidades ainda não definidos
-- Visualizações (radar, barras) ainda em validação nas
-  rotas /testes/*
-- Ao implementar qualquer coisa no perfil Colaborador,
-  perguntar antes: "Há regra definida para isso?"
-- Nunca replicar lógica do Admin para o Colaborador
-  assumindo que é a mesma
-
-Telas com banner "Em construção":
-- MeuPerfilPage
-- MinhasAvaliacoesPage
-- MinhaCarreiraPage
+- **Aderência ao cargo**: sempre `calcularAderenciaPorTipo` — única
+  implementação, reusada entre o card "Aderência ao cargo atual" (Meu
+  Perfil) e o gauge "Aderência ao cargo" (Minha Carreira). Nunca
+  reimplementar essa fórmula localmente numa tela nova.
+- **Habilidades não avaliadas** (`status === 'sem'`): sempre excluídas
+  do numerador e do denominador do cálculo — nunca contam como gap.
+- **Escopo**: sempre o cargo ATUAL do colaborador (`JOAO_CARGO_ATUAL`)
+  — nunca a jornada inteira.
+- **Sistema de cor por card em Meu Perfil** — exceção documentada ao
+  padrão geral "cards de métrica nunca usam wrapper colorido"
+  (02-design-system.md):
+  - Neutro (`bg-[var(--brand-100)]`/`text-[var(--brand-600)]`):
+    Avaliações em aberto, Próxima avaliação encerra em, Aderência ao
+    cargo atual
+  - Verde (`bg-green-100`/`text-green-800`): Avaliações concluídas
+  - Âmbar (`bg-amber-100`/`text-amber-600`): Habilidades abaixo do
+    esperado
+- Nunca replicar lógica do Admin para o Colaborador assumindo que é a
+  mesma — ainda válido como princípio geral para qualquer regra nova
+  não coberta acima.
 
 ## Arquivos sem rota (código morto)
 
