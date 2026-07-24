@@ -43,6 +43,9 @@ const nivelToNota: Record<string, number> = {
   'Avançado': 3,
   'Especialista': 4,
   'Referência': 5,
+  // Sentinela 'nao_sei' (RespostaAvaliacao.nivelRespondido) — nota 0 explícita,
+  // nunca deixar cair no fallback `?? 1` abaixo (mostraria como "Básico").
+  'nao_sei': 0,
 };
 
 function formatPeriodo(inicio: string, fim: string): string {

@@ -11,6 +11,7 @@ interface AvaliacoesContextType {
     respostas: RespostaAvaliacaoItem[],
     enviar: boolean
   ) => void;
+  marcarComoVisualizada: (avaliacaoId: string, colaboradorId: string) => void;
 }
 
 const AvaliacoesContext = createContext<AvaliacoesContextType | null>(null);
@@ -22,7 +23,7 @@ const VERSION_KEY = 'carreiras_avaliacoes_mock_version';
 // mockData.ts sofrer alteração estrutural nas avaliações, incremente esta
 // versão para descartar dados antigos salvos no navegador (mesmo padrão de
 // CarreirasContext.tsx).
-const MOCK_DATA_VERSION = '2026-07-21-1';
+const MOCK_DATA_VERSION = '2026-07-23-4';
 
 function loadFromStorage(): Avaliacao[] {
   try {
@@ -84,9 +85,24 @@ export function AvaliacoesProvider({ children }: { children: ReactNode }) {
     }));
   }
 
+  // Marca a participação como vista pelo colaborador — apaga o badge "Nova"
+  // permanentemente (independente de expirar depois). Chamada no clique de
+  // "Iniciar avaliação"/"Continuar avaliação", nunca ao só renderizar o card.
+  function marcarComoVisualizada(avaliacaoId: string, colaboradorId: string) {
+    setAvaliacoes(prev => prev.map(av => {
+      if (av.id !== avaliacaoId) return av;
+      return {
+        ...av,
+        participantes: av.participantes.map(p =>
+          p.colaboradorId === colaboradorId ? { ...p, visualizada: true } : p
+        ),
+      };
+    }));
+  }
+
   return (
     <AvaliacoesContext.Provider
-      value={{ avaliacoes, adicionarAvaliacao, atualizarAvaliacao, responderAvaliacao }}
+      value={{ avaliacoes, adicionarAvaliacao, atualizarAvaliacao, responderAvaliacao, marcarComoVisualizada }}
     >
       {children}
     </AvaliacoesContext.Provider>

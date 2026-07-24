@@ -209,8 +209,7 @@ Um agrupamento temático de Habilidades (ex: "Desenvolvimento Frontend",
 ## Habilidade
 
 Uma habilidade técnica ou comportamental avaliável, associada a uma
-Competência, com critérios descritos para cada um dos 5 níveis da escala que
-ela usa.
+Competência.
 
 | Campo | Significado |
 |---|---|
@@ -221,7 +220,7 @@ ela usa.
 | `competenciaId` | FK → Competência |
 | `tipo` | `Técnica` ou `Comportamental` |
 | `status` | Sempre `'Ativa'` nos dados atuais |
-| `niveis` | Lista de 5 critérios, um por nível: `{ nivelId, criterio }` |
+| `niveis` | Subconjunto livre de níveis escolhido pelo RH ao criar a habilidade (não precisa ser 5, não precisa ser de uma escala só). Cada nível escolhido recebe um critério de texto próprio: `{ nivelId, criterio }`. Ao montar a Matriz de Habilidades por cargo, o RH escolhe o nível esperado dentre os níveis já aplicáveis desta habilidade — nunca um nível novo fora dessa lista. |
 
 **Atenção — duas escalas de nível:** a maioria das habilidades (100 de 117)
 usa a escala "Básico → Intermediário → Avançado → Especialista"

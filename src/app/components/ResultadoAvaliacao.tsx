@@ -1,12 +1,18 @@
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Award, BarChart2, CheckCircle2, Info } from 'lucide-react';
-import { habilidadesData, getCorFromPeso, getPesoFromNome } from '../data/mockData';
+import { ArrowLeft, AlertCircle, BarChart2, CheckCircle2, Info } from 'lucide-react';
+import { habilidadesData, joaoHabilidadesCargoMatriz, getCorFromPeso, getPesoFromNome } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
-import { JOAO_ID } from '../pages/minhaCarreiraShared';
+import { JOAO_ID, getStatus } from '../pages/minhaCarreiraShared';
 
 function media(pesos: number[]): number {
   if (pesos.length === 0) return 0;
   return Math.round((pesos.reduce((a, b) => a + b, 0) / pesos.length) * 10) / 10;
+}
+
+// Rótulo amigável para o sentinela 'nao_sei' — nunca exibir o valor cru do
+// campo. Nomes de nível reais passam direto.
+function labelNivelResposta(nivel: string): string {
+  return nivel === 'nao_sei' ? 'Sem conhecimento' : nivel;
 }
 
 export function ResultadoAvaliacao() {
@@ -27,7 +33,21 @@ export function ResultadoAvaliacao() {
     })
     .filter((x): x is { resposta: typeof participante.respostas[number]; habilidade: (typeof habilidadesData)[number] } => x != null);
 
-  const mediaGeral = media(respostasComHabilidade.map(x => getPesoFromNome(x.resposta.nivelRespondido)));
+  // Nível esperado do cargo ATUAL de João, por habilidade — mesma matriz
+  // usada em Minha Carreira/Meu Perfil (joaoHabilidadesCargoMatriz), nunca
+  // recriada aqui. Habilidades desta avaliação sem entrada na matriz não têm
+  // "esperado" para comparar (caso "sem referência").
+  const matrizEsperadoMap = new Map(joaoHabilidadesCargoMatriz.map(m => [m.habilidadeId, m.nivelEsperado]));
+
+  // Contagem de gap — reusa getStatus (nivelRespondido desta avaliação vs
+  // nivelEsperado da matriz), nunca enriquecerMatriz (que resolveria
+  // nivelAtual pelo histórico entre avaliações, não o que interessa aqui).
+  // Habilidades sem referência na matriz são excluídas do numerador, mesmo
+  // princípio de excluir "sem dado" já usado em calcularAderenciaPorTipo.
+  const habilidadesAbaixoDoEsperado = respostasComHabilidade.filter(({ resposta }) => {
+    const nivelEsperado = matrizEsperadoMap.get(resposta.habilidadeId);
+    return nivelEsperado != null && getStatus(resposta.nivelRespondido, nivelEsperado) === 'abaixo';
+  }).length;
 
   const competenciasMap = new Map<string, { id: string; nome: string; itens: typeof respostasComHabilidade }>();
   respostasComHabilidade.forEach(item => {
@@ -41,17 +61,6 @@ export function ResultadoAvaliacao() {
     ...comp,
     media: media(comp.itens.map(x => getPesoFromNome(x.resposta.nivelRespondido))),
   }));
-
-  // Distribuição por nível respondido — só os níveis que de fato aparecem,
-  // pra não misturar as duas escalas do sistema (Básico/Avançado vs
-  // Iniciante/Aprendiz) com barras zeradas sem sentido.
-  const distribuicaoMap = new Map<string, number>();
-  respostasComHabilidade.forEach(x => {
-    distribuicaoMap.set(x.resposta.nivelRespondido, (distribuicaoMap.get(x.resposta.nivelRespondido) ?? 0) + 1);
-  });
-  const distribuicao = Array.from(distribuicaoMap.entries())
-    .map(([nivel, quantidade]) => ({ nivel, quantidade, peso: getPesoFromNome(nivel) }))
-    .sort((a, b) => a.peso - b.peso);
 
   return (
     <div className="space-y-6">
@@ -72,15 +81,6 @@ export function ResultadoAvaliacao() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-gray-700">Nível médio geral</span>
-            <Award className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{mediaGeral}</p>
-          <p className="text-xs text-gray-400 mt-1">escala de 1 a 5</p>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <div className="flex items-center justify-between mb-3">
             <span className="text-base font-semibold text-gray-700">Habilidades avaliadas</span>
             <CheckCircle2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
           </div>
@@ -94,6 +94,20 @@ export function ResultadoAvaliacao() {
           </div>
           <p className="text-3xl font-bold text-gray-900">{competencias.length}</p>
         </div>
+
+        {/* Wrapper colorido de ícone — exceção documentada em
+            04-regras-negocio.md/02-design-system.md para cards de métrica do
+            Colaborador (ColaboradorView.tsx), reaproveitada aqui: âmbar =
+            gap real contra o cargo atual. */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-base font-semibold text-gray-700">Habilidades abaixo do esperado</span>
+            <div className="p-2 rounded-lg bg-amber-100 flex-shrink-0">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{habilidadesAbaixoDoEsperado}</p>
+        </div>
       </div>
 
       {/* Banner de contexto */}
@@ -102,20 +116,6 @@ export function ResultadoAvaliacao() {
         <p className="text-sm text-gray-700">
           Use estes resultados como ponto de partida para uma conversa com seu gestor sobre seu desenvolvimento. Os dados refletem sua autopercepção neste momento.
         </p>
-      </div>
-
-      {/* Distribuição de níveis */}
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Minha distribuição nesta avaliação</h2>
-        <p className="text-sm text-gray-500 mb-4">Quantidade de habilidades avaliadas em cada nível</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {distribuicao.map((item) => (
-            <div key={item.nivel} className="text-center">
-              <div className="text-2xl font-semibold text-gray-900 mb-1">{item.quantidade}</div>
-              <div className="text-sm text-gray-600">{item.nivel}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Resultados por competência */}
@@ -141,19 +141,34 @@ export function ResultadoAvaliacao() {
 
             {/* Lista de habilidades */}
             <div className="p-5 space-y-3">
-              {competencia.itens.map(({ habilidade, resposta }) => (
-                <div key={habilidade.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-900">{habilidade.nome}</span>
+              {competencia.itens.map(({ habilidade, resposta }) => {
+                const nivelEsperado = matrizEsperadoMap.get(habilidade.id);
+                const status = nivelEsperado != null ? getStatus(resposta.nivelRespondido, nivelEsperado) : null;
+                return (
+                  <div key={habilidade.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-900">{habilidade.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {nivelEsperado != null ? (
+                        <span className={`text-xs font-medium ${status === 'abaixo' ? 'text-amber-600' : 'text-[var(--brand-600)]'}`}>
+                          Esperado: {nivelEsperado}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Sem referência para seu cargo atual</span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          resposta.nivelRespondido === 'nao_sei' ? 'bg-gray-100 text-gray-600' : 'text-white'
+                        }`}
+                        style={resposta.nivelRespondido === 'nao_sei' ? {} : { backgroundColor: getCorFromPeso(getPesoFromNome(resposta.nivelRespondido)) }}
+                      >
+                        {labelNivelResposta(resposta.nivelRespondido)}
+                      </span>
+                    </div>
                   </div>
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: getCorFromPeso(getPesoFromNome(resposta.nivelRespondido)) }}
-                  >
-                    {resposta.nivelRespondido}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

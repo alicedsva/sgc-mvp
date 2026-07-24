@@ -130,7 +130,7 @@ export default function Layout() {
 
   return (
     <CarreirasProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen flow-root">
         {/* Backdrop mobile */}
         {isMobileMenuOpen && (
           <div 

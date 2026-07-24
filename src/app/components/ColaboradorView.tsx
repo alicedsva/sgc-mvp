@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router';
 import { Clock, CalendarClock, AlertCircle, CheckCircle2, Target, ChevronRight } from 'lucide-react';
 import { colaboradoresData, historicoCargosJoaoData, HOJE_SIMULADO } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
-import { getParticipacoesColaborador } from '../utils/avaliacoes';
+import { getParticipacoesColaborador, getProximaAvaliacaoInfo, estaVencida } from '../utils/avaliacoes';
 import {
   JOAO_ID,
   JOAO_CARGO_ATUAL,
@@ -63,7 +63,9 @@ export function ColaboradorView() {
   const minhasParticipacoes = getParticipacoesColaborador(avaliacoes, JOAO_ID);
 
   const emAberto = minhasParticipacoes.filter(
-    ({ participante }) => participante.status === 'Não iniciada' || participante.status === 'Em andamento'
+    ({ participante, avaliacao }) =>
+      (participante.status === 'Não iniciada' || participante.status === 'Em andamento') &&
+      !estaVencida(avaliacao.periodoFim, HOJE_SIMULADO)
   );
   const avaliacoesEmAberto = emAberto.length;
 
@@ -73,15 +75,9 @@ export function ColaboradorView() {
 
   // Comparado sempre contra HOJE_SIMULADO — nunca a data real do navegador —
   // para manter o cálculo determinístico (mesmo padrão de DashboardPage.tsx).
-  const proximaVencimento = emAberto.length > 0
-    ? emAberto.reduce((min, atual) => atual.avaliacao.periodoFim < min.avaliacao.periodoFim ? atual : min)
-    : null;
-  const diasAteVencimento = proximaVencimento
-    ? Math.max(0, Math.ceil((new Date(proximaVencimento.avaliacao.periodoFim).getTime() - HOJE_SIMULADO.getTime()) / (1000 * 60 * 60 * 24)))
-    : null;
-  const diasLabel = diasAteVencimento !== null
-    ? `${diasAteVencimento} ${diasAteVencimento === 1 ? 'dia' : 'dias'}`
-    : '—';
+  // Fonte única: getProximaAvaliacaoInfo (utils/avaliacoes.ts), mesma usada
+  // por MinhasAvaliacoes.tsx, para os dois nunca divergirem.
+  const { diasLabel } = getProximaAvaliacaoInfo(minhasParticipacoes, HOJE_SIMULADO);
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';

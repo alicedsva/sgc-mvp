@@ -127,7 +127,18 @@ export interface Colaborador {
 
 export interface RespostaAvaliacao {
   habilidadeId: string;
-  nivelRespondido: NivelNome;
+  /**
+   * 'nao_sei' — sentinela para "não sei / não tenho conhecimento", escolhido
+   * pelo próprio colaborador ao responder (mesmo princípio de
+   * HabilidadeCargo.nivelEsperado | 'not_required'). Conceitualmente
+   * diferente de 'not_required' (RH decide que o cargo não exige a
+   * habilidade) e de Status 'sem' em minhaCarreiraShared.tsx (colaborador
+   * nunca respondeu essa habilidade em nenhuma avaliação) — os 3 permanecem
+   * semânticas separadas. 'nao_sei' É uma resposta real: getPesoFromNome
+   * retorna 0 para ela, então sempre vira gap ('abaixo') em getStatus, nunca
+   * 'sem'.
+   */
+  nivelRespondido: NivelNome | 'nao_sei';
   /** 'YYYY-MM-DD' — quando essa resposta específica foi registrada. Único critério de recência válido (nunca periodoFim da avaliação). */
   dataResposta: string;
 }
@@ -138,6 +149,8 @@ export interface ParticipanteAvaliacao {
   colaboradorId: string;
   status: StatusParticipacaoAvaliacao;
   respostas: RespostaAvaliacao[];
+  /** Se o colaborador já abriu esta avaliação (clicou em "Iniciar avaliação"/"Continuar avaliação") ao menos uma vez. Controla o badge "Nova" — nunca reconstruir esse estado a partir de outro campo. */
+  visualizada: boolean;
 }
 
 export type TipoAvaliacao = 'Autoavaliação';
@@ -204,7 +217,13 @@ export interface Habilidade {
   competenciaId: string;
   tipo: TipoHabilidade;
   status: StatusHabilidade;
-  /** Sempre exatamente 5 entradas, uma por nível da escala usada por esta habilidade. */
+  /**
+   * Subconjunto livre de níveis escolhido pelo RH ao criar a habilidade (não
+   * precisa ser 5, não precisa ser de uma escala só). Cada nível escolhido
+   * recebe um critério de texto próprio. Ao montar a Matriz de Habilidades
+   * por cargo, o RH escolhe o nível esperado dentre os níveis já aplicáveis
+   * desta habilidade — nunca um nível novo fora dessa lista.
+   */
   niveis: CriterioNivelHabilidade[];
 }
 

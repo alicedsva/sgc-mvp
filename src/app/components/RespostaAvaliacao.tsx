@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, getCorFromPeso, HOJE_SIMULADO } from '../data/mockData';
 import type { NivelNome } from '../../data/schema';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { JOAO_ID } from '../pages/minhaCarreiraShared';
-import { formatPeriodo } from '../utils/avaliacoes';
+import { formatData } from '../utils/avaliacoes';
 import { toast } from 'sonner';
 
 interface CompetenciaGrupo {
@@ -49,6 +49,7 @@ export function RespostaAvaliacao() {
   const [competenciaExpandida, setCompetenciaExpandida] = useState<string[]>(
     competencias.length > 0 ? [competencias[0].id] : []
   );
+  const [instrucoesAbertas, setInstrucoesAbertas] = useState(false);
 
   const toggleCompetencia = (competenciaId: string) => {
     setCompetenciaExpandida(prev =>
@@ -71,12 +72,12 @@ export function RespostaAvaliacao() {
   const hojeISO = HOJE_SIMULADO.toISOString().slice(0, 10);
 
   function respostasParaEnvio() {
-    // Os botões de seleção só oferecem nomes vindos de niveisDefaultData (o
-    // conjunto fechado de níveis conhecidos), nunca texto livre do colaborador
-    // — por isso é seguro estreitar aqui para NivelNome.
+    // Os botões de seleção só oferecem nomes vindos de niveisDefaultData ou o
+    // sentinela 'nao_sei' (conjunto fechado de opções, nunca texto livre do
+    // colaborador) — por isso é seguro estreitar aqui para NivelNome | 'nao_sei'.
     return Object.entries(respostas).map(([habilidadeId, nivelRespondido]) => ({
       habilidadeId,
-      nivelRespondido: nivelRespondido as NivelNome,
+      nivelRespondido: nivelRespondido as NivelNome | 'nao_sei',
       dataResposta: hojeISO,
     }));
   }
@@ -99,7 +100,8 @@ export function RespostaAvaliacao() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-8 space-y-6">
       {/* Header com botão voltar */}
       <div>
         <button
@@ -111,17 +113,38 @@ export function RespostaAvaliacao() {
         </button>
         <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Período: {formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim)} • Tipo: {avaliacao.tipo}
+          Prazo: {formatData(avaliacao.periodoFim)}
         </p>
       </div>
 
-      {/* Instruções */}
-      <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
-        <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-slate-700">
-          <span className="font-medium text-slate-800">Instruções: </span>
-          Avalie seu nível de proficiência em cada habilidade listada. Seja honesto e considere sua experiência prática e conhecimento teórico. Você pode salvar como rascunho e continuar depois.
-        </p>
+      {/* Instruções — container expansível, mesmo padrão de toggle das
+          competências abaixo (useState + Chevron + render condicional). */}
+      <div className="bg-white border border-[var(--brand-600)] rounded-lg overflow-hidden">
+        <button
+          onClick={() => setInstrucoesAbertas(prev => !prev)}
+          className="w-full p-4 flex items-center justify-between hover:bg-[var(--brand-50)] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0" />
+            <span className="text-base font-semibold text-[var(--brand-600)]">Instruções</span>
+          </div>
+          {instrucoesAbertas ? (
+            <ChevronUp className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+          )}
+        </button>
+        {instrucoesAbertas && (
+          <div className="border-t border-gray-200 px-4 pb-4 pt-3">
+            <p className="text-sm font-medium text-gray-800 mb-2">Como funciona a autoavaliação:</p>
+            <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
+              <li>Para cada habilidade, escolha o nível que melhor representa seu conhecimento atual, com base nos critérios de cada opção.</li>
+              <li>Não teve contato com a habilidade ou não sabe avaliar seu nível? Marque "Sem conhecimento" em vez de chutar uma resposta.</li>
+              <li>Sua resposta é comparada ao nível esperado para o seu cargo atual e ajuda a identificar oportunidades de desenvolvimento. Ela não garante promoção nem muda seu cargo automaticamente.</li>
+              <li>Você pode salvar como rascunho e continuar depois, ou enviar quando finalizar todas as habilidades.</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Lista de competências e habilidades */}
@@ -166,23 +189,52 @@ export function RespostaAvaliacao() {
                       .filter((n): n is (typeof niveisDefaultData)[number] & { criterio: string } => n != null);
 
                     return (
-                      <div key={habilidade.id} className="p-5 bg-gray-50">
-                        <div className="mb-3">
-                          <h4 className="text-sm font-medium text-gray-900 mb-1">{habilidade.nome}</h4>
-                          <p className="text-xs text-gray-600">{habilidade.descricao}</p>
+                      <div key={habilidade.id} className="p-5 bg-white">
+                        <div className="mb-5 flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-900 mb-1">{habilidade.nome}</h4>
+                            <p className="text-sm text-gray-600">{habilidade.descricao}</p>
+                          </div>
+                          <span
+                            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full flex-shrink-0 ${
+                              habilidade.tipo === 'Técnica'
+                                ? 'bg-[var(--brand-100)] text-[var(--brand-800)]'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}
+                          >
+                            {habilidade.tipo}
+                          </span>
                         </div>
 
                         {/* Seletor de nível */}
                         <div className="space-y-2">
-                          <p className="text-xs font-medium text-gray-700 mb-2">Selecione seu nível:</p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                            {/* Opção "não sei" — sentinela 'nao_sei', sempre primeiro
+                                item do grid, mesma célula/formato dos cards de nível
+                                (borda sólida, mesmo padding), só a cor de seleção é
+                                neutra (nunca derivada de peso) para não ser confundida
+                                com um nível de fato respondido. */}
+                            <button
+                              onClick={() => handleNivelChange(habilidade.id, 'nao_sei')}
+                              className={`p-3 rounded-lg border-2 flex flex-col items-start text-left transition-all ${
+                                respostas[habilidade.id] === 'nao_sei'
+                                  ? 'border-gray-400 bg-gray-100'
+                                  : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-gray-600">Sem conhecimento</span>
+                              </div>
+                              <p className="text-xs text-gray-600">Ainda não teve contato ou não sabe avaliar seu nível atual.</p>
+                            </button>
+
                             {niveisHabilidade.map((nivel) => {
                               const isSelected = respostas[habilidade.id] === nivel.nome;
                               return (
                                 <button
                                   key={nivel.id}
                                   onClick={() => handleNivelChange(habilidade.id, nivel.nome)}
-                                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                                  className={`p-3 rounded-lg border-2 flex flex-col items-start text-left transition-all ${
                                     isSelected ? '' : 'border-gray-200 hover:border-gray-300 bg-white'
                                   }`}
                                   style={isSelected ? {
@@ -213,28 +265,33 @@ export function RespostaAvaliacao() {
           );
         })}
       </div>
+    </div>
 
-      {/* Ações fixas */}
-      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4 md:-mx-8 flex items-center justify-between gap-4">
-        <div className="text-sm text-gray-600">
-          {respondidas} de {totalHabilidades} habilidades avaliadas ({progresso}%)
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSalvarRascunho}
-            className="px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors"
-          >
-            Salvar rascunho
-          </button>
-          <button
-            onClick={handleEnviar}
-            disabled={respondidas < totalHabilidades}
-            className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Enviar avaliação
-          </button>
-        </div>
+    {/* Ações fixas — fora da área scrollável, mesmo padrão de rodapé fixo
+        já usado em CriarJornadaPage/EditarJornadaPage/JornadaDetalhePage
+        (flex-1 overflow-y-auto no conteúdo + rodapé como irmão dentro do
+        <main> flex flex-col h-[calc(100vh-4rem)] — nunca sticky/-mx hack,
+        que só gruda durante o scroll e não fixa quando o conteúdo é curto). */}
+    <div className="bg-white border-t border-gray-200 px-4 md:px-8 py-4 flex items-center justify-between gap-4">
+      <div className="text-sm text-gray-600">
+        {respondidas} de {totalHabilidades} habilidades avaliadas ({progresso}%)
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSalvarRascunho}
+          className="px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors"
+        >
+          Salvar rascunho
+        </button>
+        <button
+          onClick={handleEnviar}
+          disabled={respondidas < totalHabilidades}
+          className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Enviar avaliação
+        </button>
       </div>
     </div>
+    </>
   );
 }

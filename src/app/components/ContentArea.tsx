@@ -1964,6 +1964,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         participantes: idsColaboradoresAlvo(data.gerencias).map((colaboradorId) => ({
           colaboradorId,
           status: 'Não iniciada' as const,
+          visualizada: false,
           respostas: [],
         })),
       };
@@ -2002,7 +2003,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       const idsPreservados = new Set(preservados.map((p) => p.colaboradorId));
       const novos: ParticipanteAvaliacao[] = Array.from(idsAlvo)
         .filter((id) => !idsPreservados.has(id))
-        .map((colaboradorId) => ({ colaboradorId, status: 'Não iniciada' as const, respostas: [] }));
+        .map((colaboradorId) => ({ colaboradorId, status: 'Não iniciada' as const, visualizada: false, respostas: [] }));
 
       atualizarAvaliacao(selectedRow.id, {
         nome: data.nome,
