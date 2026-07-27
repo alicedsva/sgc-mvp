@@ -4,7 +4,7 @@ import {
   Settings, LayoutDashboard, Award, UserCircle, ClipboardList, ClipboardCheck,
   TrendingUp, Users, CheckCircle2, Clock, CalendarClock, AlertCircle, XCircle,
   Eye, EyeOff, Pencil, Power, RefreshCw, Archive, ChevronLeft, ChevronDown, ChevronUp,
-  Plus, Download, Search, X, AlertTriangle, ArrowLeft,
+  Plus, Download, Search, X, AlertTriangle, ArrowLeft, ArrowRight,
   Layers, Calendar, Wrench, Construction,
   Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
 } from 'lucide-react';
@@ -4780,17 +4780,471 @@ function SecaoMeuPerfil() {
 }
 
 function SecaoMinhasAvaliacoes() {
+  const [tabAvaliacoes, setTabAvaliacoes] = useState(0);
+  const TABS_AVALIACOES = [
+    'Visão geral',
+    'Cards de resumo',
+    'Avaliações em aberto',
+    'Badges e cores',
+    'Histórico',
+    'Estado vazio de filtro',
+  ];
+
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Minhas Avaliações</h1>
-      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-yellow-800">
-          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
-          O conteúdo será documentado após as decisões de produto serem tomadas.
-        </p>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Minhas Avaliações</h1>
+      <p className="text-sm text-gray-600 mb-4">
+        Especificação da tela de listagem de avaliações do Colaborador (autoavaliação — único tipo no MVP).
+        Fonte:{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">MinhasAvaliacoes.tsx</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">utils/avaliacoes.ts</code>,{' '}
+        <code className="bg-gray-100 px-1 rounded text-xs">ListingPage.tsx</code>.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="27/07/2026" debitosTecnicos={0} alertas={0} />
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
+        {TABS_AVALIACOES.map((label, idx) => (
+          <button
+            key={label}
+            onClick={() => setTabAvaliacoes(idx)}
+            className={`pb-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+              tabAvaliacoes === idx
+                ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* TAB 1 — Visão geral */}
+      {tabAvaliacoes === 0 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Estrutura da página</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Página com scroll único — não é wizard. Todos os blocos são renderizados simultaneamente.',
+                'Bloco 1 — Cards de resumo: 3 métricas (Avaliações em aberto, Próxima avaliação encerra em, Avaliações concluídas).',
+                'Bloco 2 — "Avaliações em aberto": só aparece quando há ≥1 avaliação Não iniciada ou Em andamento. Pills de filtro (Tipo + Urgência) acima de um grid de cards.',
+                'Bloco 3 — "Histórico de avaliações": só aparece quando há ≥1 Concluída ou Expirada. Reusa ListingPage.tsx — mesmo padrão de busca + filtro de status + tabela + paginação já usado pelo Admin em Competências/Habilidades/Carreiras/Avaliações.',
+                'Nenhum bloco depende de um campo status gravado sem checar prazo: "Em aberto" só conta se o prazo (periodoFim) ainda não passou; caso contrário a avaliação já migra para o Histórico como Expirada, mesmo sem o campo ter sido atualizado manualmente (estaVencida).',
+                'Avaliação com status Admin "Rascunho" nunca aparece nesta tela — já filtrado dentro de getParticipacoesColaborador, antes de qualquer outro cálculo.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--brand-700)]">
+                "Expirada" no Histórico cobre dois casos que se comportam de forma idêntica na UI: avaliações já
+                gravadas como Expirada no mock e avaliações Não iniciada/Em andamento cujo prazo venceu agora, sem
+                nunca terem sido respondidas. Os dois casos são recalculados a cada renderização — nenhum é lido
+                como um valor fixo esperando ser corrigido manualmente depois.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2 — Cards de resumo */}
+      {tabAvaliacoes === 1 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Cards de resumo</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                '"Avaliações em aberto": contagem de Não iniciada + Em andamento (com prazo ainda válido). Ícone e valor sempre neutros (brand).',
+                '"Próxima avaliação encerra em": mesma fonte usada por ColaboradorView.tsx (Meu Perfil) via getProximaAvaliacaoInfo — os dois nunca divergem sobre qual é a próxima avaliação.',
+                'Cor do 2º card é DINÂMICA, calculada por corUrgenciaDias em função dos dias restantes: vermelho (<5 dias), âmbar (5–10 dias) ou neutro/brand (>10 dias ou sem avaliação em aberto). Ícone, valor e nome da avaliação abaixo do valor compartilham a mesma cor.',
+                '"Avaliações concluídas": contagem de participações com status Concluída. Ícone e valor sempre neutros (brand).',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático dos 3 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-semibold text-gray-700">Avaliações em aberto</span>
+                  <Clock className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">2</p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-semibold text-gray-700">Próxima avaliação encerra em</span>
+                  <CalendarClock className="w-5 h-5 flex-shrink-0 text-red-600" />
+                </div>
+                <p className="text-3xl font-bold text-red-600">1 dia</p>
+                <p className="text-sm text-gray-600 mt-1 line-clamp-1">Liderança 2026</p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-semibold text-gray-700">Avaliações concluídas</span>
+                  <CheckCircle2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">4</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3 — Avaliações em aberto */}
+      {tabAvaliacoes === 2 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Grid "Avaliações em aberto"</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Pills de filtro: Tipo (Todas / Técnica / Comportamental) e Urgência (Todas / Urgente / Sem urgência) — os dois combinam em AND. "Urgente" agrupa vermelho+âmbar (prazo ≤ 10 dias), mesmo limiar de bandaUrgencia.',
+                'Filtro se aplica só a este grid — nunca ao Histórico, que já tem busca/filtro próprios via ListingPage.',
+                'Ordenação: avaliações "Nova" (ver Tab 4) sempre no topo da lista.',
+                'Cada card: badges de tipo (canto superior esquerdo) + badges de Nova/urgência (canto superior direito, na ordem Nova → urgência) + nome da avaliação (line-clamp-2) + total de habilidades e prazo + barra de progresso + botão de ação.',
+                'Botão de ação muda de estado conforme progresso: 0% = "Iniciar avaliação" (preenchido, brand-600); >0% = "Continuar avaliação" (outline, brand-600).',
+                'Clicar em Iniciar/Continuar marca a avaliação como visualizada (marcarComoVisualizada) antes de navegar — é esse clique, não a renderização do card, que desliga a badge "Nova".',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático da toolbar de filtro */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4 flex flex-wrap items-center gap-3 mb-4">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                {['Todas', 'Técnica', 'Comportamental'].map((label, i) => (
+                  <span key={label} className={`px-3 py-2 text-sm font-normal rounded-md whitespace-nowrap ${i === 0 ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                {['Todas', 'Urgente', 'Sem urgência'].map((label, i) => (
+                  <span key={label} className={`px-3 py-2 text-sm font-normal rounded-md whitespace-nowrap ${i === 0 ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Mockup estático do grid — 3 combinações reais de badge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  tipos: ['Técnica'],
+                  nova: true,
+                  urgencia: { label: 'Vence amanhã', classes: 'border border-red-300 text-red-600 bg-transparent' },
+                  nome: 'Liderança 2026',
+                  habilidades: 8,
+                  prazo: '28/07/2026',
+                  progresso: 0,
+                },
+                {
+                  tipos: ['Comportamental'],
+                  nova: false,
+                  urgencia: { label: 'Vence em 5 dias', classes: 'border border-yellow-400 text-yellow-600 bg-transparent' },
+                  nome: 'Competências de Comunicação',
+                  habilidades: 5,
+                  prazo: '01/08/2026',
+                  progresso: 40,
+                },
+                {
+                  tipos: ['Técnica', 'Comportamental'],
+                  nova: false,
+                  urgencia: null,
+                  nome: 'Avaliação Semestral de Desempenho',
+                  habilidades: 12,
+                  prazo: '20/09/2026',
+                  progresso: 0,
+                },
+              ].map((card) => (
+                <div key={card.nome} className="flex flex-col h-full rounded-lg p-5 bg-white border border-gray-200">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {card.tipos.map(tipo => (
+                        <span
+                          key={tipo}
+                          className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                            tipo === 'Técnica' ? 'bg-[var(--brand-100)] text-[var(--brand-800)]' : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {tipo}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {card.nova && (
+                        <span className="inline-flex items-center gap-1.5 px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full border border-green-300 text-green-800 bg-transparent whitespace-nowrap flex-shrink-0">
+                          <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                          Nova
+                        </span>
+                      )}
+                      {card.urgencia && (
+                        <span className={`inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full whitespace-nowrap flex-shrink-0 ${card.urgencia.classes}`}>
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          {card.urgencia.label}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-medium text-gray-900 line-clamp-2 mb-3">{card.nome}</h3>
+
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-gray-400" />
+                      <span>{card.habilidades} habilidades</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span>Prazo: {card.prazo}</span>
+                    </div>
+                  </div>
+
+                  <div className="my-4 flex items-center gap-3">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div className="bg-[var(--brand-600)] h-2 rounded-full" style={{ width: `${card.progresso}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-600 flex-shrink-0">{card.progresso}%</span>
+                  </div>
+
+                  <button
+                    className={`mt-auto w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      card.progresso > 0
+                        ? 'border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]'
+                        : 'text-white bg-[var(--brand-600)] hover:bg-[var(--brand-700)]'
+                    }`}
+                  >
+                    {card.progresso > 0 ? 'Continuar avaliação' : 'Iniciar avaliação'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4 — Badges e cores */}
+      {tabAvaliacoes === 3 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Tokens de cor desta tela</h2>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3 mb-5">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--brand-700)]">
+                <strong>Atenção — fonte única de urgência:</strong> os dois consumidores de cor de urgência (o valor/ícone
+                do card-resumo "Próxima avaliação encerra em" e a badge de contagem regressiva de cada card do grid)
+                já usaram tokens de vermelho/âmbar DISTINTOS entre si no passado. Foram unificados nesta sessão em uma
+                única função — <code className="bg-white/60 px-1 rounded text-xs">corUrgencia(banda)</code>, consumida
+                tanto por <code className="bg-white/60 px-1 rounded text-xs">corUrgenciaDias</code> quanto por{' '}
+                <code className="bg-white/60 px-1 rounded text-xs">badgeUrgenciaCard</code> — de forma que os dois
+                nunca mais divirjam sobre qual "vermelho" ou qual "âmbar" o sistema usa. Não recriar uma cor de
+                urgência local em nenhum lugar novo: sempre importar e reusar essa função.
+              </p>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Uso</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Exemplo</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Classes</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Regra</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Urgência — vermelho</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border border-red-300 text-red-600 bg-transparent">
+                        <Clock className="w-3 h-3" /> Vence amanhã
+                      </span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">text-red-600</code> / borda <code className="bg-gray-100 px-1 rounded text-xs">border-red-300</code></td>
+                    <td className="px-4 py-3 text-gray-700">Menos de 5 dias até o prazo (0–4).</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Urgência — âmbar</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border border-yellow-400 text-yellow-600 bg-transparent">
+                        <Clock className="w-3 h-3" /> Vence em 5 dias
+                      </span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">text-yellow-600</code> / borda <code className="bg-gray-100 px-1 rounded text-xs">border-yellow-400</code></td>
+                    <td className="px-4 py-3 text-gray-700">De 5 a 10 dias até o prazo.</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Urgência — neutro</td>
+                    <td className="px-4 py-3"><span className="text-sm text-[var(--brand-600)] font-bold">6 dias</span></td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">text-[var(--brand-600)]</code></td>
+                    <td className="px-4 py-3 text-gray-700">Mais de 10 dias — sem badge no card (só o card-resumo usa esta cor).</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Nova</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full border border-green-300 text-green-800 bg-transparent">
+                        <span className="w-2 h-2 rounded-full bg-green-500" /> Nova
+                      </span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">border-green-300 text-green-800</code></td>
+                    <td className="px-4 py-3 text-gray-700">Colaborador não visualizou e a avaliação foi criada há menos de 5 dias. Distinto do laranja de "Não iniciada".</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Tipo — Técnica</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[var(--brand-100)] text-[var(--brand-800)]">Técnica</span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">bg-[var(--brand-100)] text-[var(--brand-800)]</code></td>
+                    <td className="px-4 py-3 text-gray-700">Derivado das habilidades reais da avaliação — nunca um campo próprio.</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Tipo — Comportamental</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">Comportamental</span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">bg-purple-100 text-purple-800</code></td>
+                    <td className="px-4 py-3 text-gray-700">Mesmos tokens já usados em ContentArea.tsx (coluna Tipo de Habilidades).</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Status — Concluída</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Concluída</span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">bg-green-100 text-green-800</code></td>
+                    <td className="px-4 py-3 text-gray-700">Só no Histórico. Mesmo token do estado geral "Ativa"/positivo do sistema.</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 text-gray-900">Status — Expirada</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">Expirada</span>
+                    </td>
+                    <td className="px-4 py-3"><code className="bg-gray-100 px-1 rounded text-xs">bg-gray-100 text-gray-700</code></td>
+                    <td className="px-4 py-3 text-gray-700">Só no Histórico. Mesmo token neutro de "Encerrada"/inativo.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5 — Histórico */}
+      {tabAvaliacoes === 4 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Histórico de avaliações</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Reusa ListingPage.tsx sem título/subtítulo próprios (title/subtitle omitidos) — o <h2> "Histórico de avaliações" fica fora do componente, mesmo padrão de título solto + container separado já usado no grid "Avaliações em aberto".',
+                'Sem primaryAction — colaborador não cria avaliação, então não há FAB nem botão principal na toolbar.',
+                'Colunas: Avaliação realizada, Conclusão (data ou "—" quando Expirada sem resposta), Habilidades (contagem), Status (badge).',
+                'Ação por linha: ícone Eye isolado, visível só quando temResultado (status Concluída) — Expirada sem resposta fica sem ação, nunca desabilitada (mesmo padrão de outras tabelas do sistema que ocultam via show em vez de disabled).',
+                'Busca + filtro de status (Todas/Concluída/Expirada) + paginação: mesmo padrão de Table.tsx/ListingPage já usado pelo Admin. Resetar para página 1 ao aplicar busca ou filtro.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático da tabela */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 md:px-6 py-3 text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Avaliação realizada</th>
+                    <th className="text-left px-4 md:px-6 py-3 text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Conclusão</th>
+                    <th className="text-left px-4 md:px-6 py-3 text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidades</th>
+                    <th className="text-left px-4 md:px-6 py-3 text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-4 md:px-6 py-3 text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {[
+                    { nome: 'Avaliação Semestral 2025.2', conclusao: '15/01/2026', habilidades: 10, status: 'Concluída' as const },
+                    { nome: 'Competências Técnicas Q4', conclusao: '—', habilidades: 6, status: 'Expirada' as const },
+                  ].map((row) => (
+                    <tr key={row.nome} className="hover:bg-[rgba(0,159,194,0.06)] transition-colors">
+                      <td className="px-4 md:px-6 py-3 text-xs md:text-sm text-gray-900">{row.nome}</td>
+                      <td className="px-4 md:px-6 py-3 text-xs md:text-sm text-gray-900">{row.conclusao}</td>
+                      <td className="px-4 md:px-6 py-3 text-xs md:text-sm text-gray-900">{row.habilidades} habilidades</td>
+                      <td className="px-4 md:px-6 py-3">
+                        <span className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                          row.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-6 py-3 text-right">
+                        {row.status === 'Concluída' && (
+                          <button className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6 — Estado vazio de filtro */}
+      {tabAvaliacoes === 5 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Estados vazios desta tela</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Dois estados vazios distintos nesta tela — não confundir um com o outro.',
+                '(A) Grid "Avaliações em aberto" sem resultado para o filtro de Tipo/Urgência ativo: painel compacto inline, sem botão de limpar filtro (usuário reajusta as pills diretamente).',
+                '(B) Histórico sem nenhuma avaliação Concluída/Expirada: EmptyState padrão (Padrão A do Design System, ver aba "Estados vazios"), renderizado pelo próprio ListingPage.tsx.',
+                'O bloco "Avaliações em aberto" inteiro (título + toolbar + grid) só aparece quando há pelo menos 1 avaliação Não iniciada/Em andamento — se não houver nenhuma, o bloco todo é omitido, não vira um estado vazio de bloco.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">(A) Filtro sem resultado — inline</p>
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+              <p className="text-sm text-gray-500">Nenhuma avaliação encontrada com esse filtro.</p>
+            </div>
+
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">(B) Histórico vazio — EmptyState (via ListingPage)</p>
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <EmptyState
+                icon={<CheckCircle2 className="w-8 h-8" />}
+                title="Nenhuma avaliação no histórico"
+                description="Avaliações concluídas ou expiradas aparecerão aqui."
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -6090,7 +6544,7 @@ export default function DesignSystemPage() {
                     { secao: 'Estados vazios',    status: 'documentado',   debitos: 4, alertas: 1 },
                     { secao: 'Paginação',         status: 'documentado',   debitos: 1, alertas: 0 },
                     { secao: 'Meu Perfil',        status: 'em-construcao', debitos: 0, alertas: 0 },
-                    { secao: 'Minhas Avaliações', status: 'em-construcao', debitos: 0, alertas: 0 },
+                    { secao: 'Minhas Avaliações', status: 'documentado',   debitos: 0, alertas: 0 },
                     { secao: 'Minha Carreira',    status: 'em-construcao', debitos: 0, alertas: 0 },
                   ] as Array<{
                     secao: string;

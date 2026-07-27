@@ -35,29 +35,33 @@ function bandaUrgencia(diasAteVencimento: number | null): BandaUrgencia {
   return 'vermelho';
 }
 
-// Cor do ícone/valor do card "Próxima avaliação encerra em" conforme
-// urgência — vermelho (red-400, dois tons mais claro que red-600) ainda
-// claramente distinto do amarelo; amarelo (yellow-500) um tom mais escuro
-// que yellow-400, ainda claramente distinto do laranja escuro do badge
-// "Não iniciada" (orange-100/orange-800). Sem eval em aberto: mantém neutro.
-function corUrgenciaDias(diasAteVencimento: number | null): string {
-  const banda = bandaUrgencia(diasAteVencimento);
-  if (banda === 'vermelho') return 'text-red-400';
-  if (banda === 'amarelo') return 'text-yellow-500';
+// Cor única de urgência por faixa — mesma tonalidade de vermelho/amarelo
+// usada tanto no ícone/valor do card-resumo quanto no texto da badge de
+// contagem regressiva por card, para os dois nunca divergirem sobre qual
+// "vermelho" ou "amarelo" o sistema usa. Ainda claramente distinto do laranja
+// escuro do badge "Não iniciada" (orange-100/orange-800). Sem eval em
+// aberto: mantém neutro.
+function corUrgencia(banda: BandaUrgencia): string {
+  if (banda === 'vermelho') return 'text-red-600';
+  if (banda === 'amarelo') return 'text-yellow-600';
   return 'text-[var(--brand-600)]';
 }
 
+function corUrgenciaDias(diasAteVencimento: number | null): string {
+  return corUrgencia(bandaUrgencia(diasAteVencimento));
+}
+
 // Badge de contagem regressiva no card — substitui o antigo contorno
-// colorido. Reusa bandaUrgencia (mesmo limiar 5/10), aplicando os tokens
-// padrão de badge do sistema (bg-X-100/text-X-800, mesma família já usada
-// em "Rascunho"/"Desativada"). null = sem badge (mais de 10 dias).
+// colorido. Reusa bandaUrgencia (mesmo limiar 5/10) e corUrgencia (mesmo
+// tom de texto do card-resumo); só a borda é uma tonalidade mais clara,
+// própria de badge outline (mesma família já usada em "Rascunho"/
+// "Desativada"). null = sem badge (mais de 10 dias).
 function badgeUrgenciaCard(dias: number): { label: string; classes: string } | null {
   const banda = bandaUrgencia(dias);
   if (banda === 'neutro') return null;
   const label = dias === 0 ? 'Vence hoje' : dias === 1 ? 'Vence amanhã' : `Vence em ${dias} dias`;
-  const classes = banda === 'vermelho'
-    ? 'border border-red-300 text-red-700 bg-transparent'
-    : 'border border-yellow-400 text-yellow-800 bg-transparent';
+  const borda = banda === 'vermelho' ? 'border-red-300' : 'border-yellow-400';
+  const classes = `border ${borda} ${corUrgencia(banda)} bg-transparent`;
   return { label, classes };
 }
 

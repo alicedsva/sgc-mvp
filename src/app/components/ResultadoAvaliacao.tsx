@@ -20,8 +20,39 @@ export function ResultadoAvaliacao() {
   const navigate = useNavigate();
   const onVoltar = () => navigate('/minhas-avaliacoes');
   const { avaliacoes } = useAvaliacoes();
-  const avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!;
-  const participante = avaliacao.participantes.find(p => p.colaboradorId === JOAO_ID)!;
+  // Sem "!" — avaliacaoId inválido na URL ou colaborador fora dos
+  // participantes não pode quebrar a tela (ver estado vazio abaixo).
+  const avaliacao = avaliacoes.find(a => a.id === avaliacaoId);
+  const participante = avaliacao?.participantes.find(p => p.colaboradorId === JOAO_ID);
+
+  // Estado vazio — mesmo padrão visual já usado em
+  // AvaliacaoDetalhePage.tsx/CarreiraDetalhePage.tsx/CompetenciaDetalhePage.tsx
+  // para "não encontrado", reaproveitado aqui em vez de criar um novo.
+  if (!avaliacao || !participante) {
+    return (
+      <div className="max-w-2xl mx-auto mt-16">
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            {!avaliacao ? 'Avaliação não encontrada' : 'Você não tem acesso a esta avaliação'}
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            {!avaliacao
+              ? 'Esta avaliação não existe ou foi removida.'
+              : 'Você não está entre os participantes desta avaliação.'}
+          </p>
+          <button
+            onClick={onVoltar}
+            className="px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+          >
+            Voltar para Minhas Avaliações
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Respostas reais do participante desta avaliação específica — nunca dado
   // de exemplo fixo. Cada resposta cruzada com habilidadesData para saber a
