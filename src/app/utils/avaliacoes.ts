@@ -1,4 +1,5 @@
-import { Avaliacao, ParticipanteAvaliacao } from '../data/mockData';
+import { Avaliacao, ParticipanteAvaliacao, niveisDefaultData } from '../data/mockData';
+import type { Habilidade } from '../../data/schema';
 
 export interface ParticipacaoColaborador {
   avaliacao: Avaliacao;
@@ -6,7 +7,7 @@ export interface ParticipacaoColaborador {
 }
 
 // Formatação de período/data compartilhada entre MinhasAvaliacoes.tsx,
-// RespostaAvaliacao.tsx e ResultadoAvaliacao.tsx — evita reimplementar em
+// RespostaAvaliacaoPage.tsx e ResultadoAvaliacao.tsx — evita reimplementar em
 // cada tela (mesmo padrão de formatPeriodo já usado em DashboardPage.tsx,
 // mas exportado aqui para reuso entre telas do Colaborador).
 export function formatPeriodo(inicio: string, fim: string): string {
@@ -19,6 +20,19 @@ export function formatPeriodo(inicio: string, fim: string): string {
 export function formatData(iso: string): string {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+
+// Escala de níveis ESPECÍFICA de uma habilidade (habilidade.niveis) — nunca
+// niveisDefaultData inteiro, que mistura as duas escalas do sistema
+// (Básico/Avançado E Iniciante/Aprendiz). Fonte única usada por
+// RespostaAvaliacaoPage.tsx, para nunca divergir na junção nível+critério.
+export function getNiveisHabilidade(habilidade: Habilidade) {
+  return habilidade.niveis
+    .map(n => {
+      const nivel = niveisDefaultData.find(nd => nd.id === n.nivelId);
+      return nivel ? { ...nivel, criterio: n.criterio } : null;
+    })
+    .filter((n): n is (typeof niveisDefaultData)[number] & { criterio: string } => n != null);
 }
 
 // Participações de um colaborador em avaliações reais — nunca inclui

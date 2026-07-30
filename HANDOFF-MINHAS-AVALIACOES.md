@@ -19,16 +19,19 @@ Carreira" (aprofundamento/trajetória) — não duplica métricas que já existe
 nessas outras telas.
 
 - **Arquivos principais**: `src/app/components/MinhasAvaliacoes.tsx`
-  (listagem), `src/app/components/RespostaAvaliacao.tsx` (formulário de
-  resposta), `src/app/utils/avaliacoes.ts` (funções compartilhadas de
-  cálculo/formatação), `src/app/context/AvaliacoesContext.tsx` (fonte de
-  dado + mutações).
-- **Rotas** (`src/app/routes.ts:46-49`):
+  (listagem), `src/app/pages/RespostaAvaliacaoPage.tsx` (arquivo único —
+  formulário de resposta em modo de foco fullscreen, sem componente
+  separado, ver seção 4), `src/app/utils/avaliacoes.ts` (funções
+  compartilhadas de cálculo/formatação), `src/app/context/AvaliacoesContext.tsx`
+  (fonte de dado + mutações).
+- **Rotas** (`src/app/routes.ts`):
   ```ts
+  // Dentro de Layout:
   { path: "meu-perfil", Component: MeuPerfilPage },
   { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
-  { path: "minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
   { path: "minhas-avaliacoes/resultado/:avaliacaoId", Component: ResultadoAvaliacaoPage },
+  // Rota irmã, fora de Layout — modo de foco (ver 4.1):
+  { path: "/minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
   ```
   Cada rota lê o `avaliacaoId` via `useParams()` e busca o dado real via
   `useAvaliacoes()` — não recebe o objeto inteiro via prop de um componente pai.
@@ -46,7 +49,7 @@ Toda a tela lê de `AvaliacoesContext` (que hidrata de `avaliacoesData` em
 daquele colaborador de forma imutável (`prev.map(...)`, nunca muta
 `avaliacoesData` original), persistindo na sessão via `localStorage`
 (`STORAGE_KEY = 'carreiras_avaliacoes'`) e `MOCK_DATA_VERSION`
-(`AvaliacoesContext.tsx:26`, hoje `'2026-07-23-4'`) — sempre que a estrutura
+(`AvaliacoesContext.tsx:26`) — sempre que a estrutura
 das avaliações no mock muda, essa versão precisa subir para descartar dados
 antigos salvos no navegador.
 
@@ -135,8 +138,8 @@ coerente com o corte "sem badge" acima de 10 dias.
 
 Não existe campo de "tipo" na entidade `Avaliacao` — o tipo é **derivado**
 das habilidades que ela contém (`tiposDaAvaliacao`, `MinhasAvaliacoes.tsx:75-82`,
-duplicada de forma equivalente dentro de `RespostaAvaliacao.tsx` via badge por
-habilidade, ver 4.4). Cada habilidade é `Técnica` ou `Comportamental` em
+duplicada de forma equivalente dentro de `RespostaAvaliacaoPage.tsx` via badge
+por habilidade, ver 4.4). Cada habilidade é `Técnica` ou `Comportamental` em
 `habilidadesData`; uma avaliação pode exibir os dois badges de tipo
 simultaneamente se misturar habilidades dos dois tipos.
 
@@ -145,10 +148,10 @@ simultaneamente se misturar habilidades dos dois tipos.
 Sentence case em todos os textos de interface (nunca Title Case ou CAIXA ALTA
 fora de cabeçalho de tabela). Na prática, o texto voltado ao colaborador evita
 "autoavaliação" na maior parte da tela (prazo, botões, cards usam
-"avaliação") — **exceto** o heading interno do container de Instruções em
-Responder Avaliação, que usa literalmente "Como funciona a **autoavaliação**:"
-(`RespostaAvaliacao.tsx:139`). Não é um texto solto por engano — é o único
-lugar da tela onde a palavra aparece; qualquer novo texto deve seguir o
+"avaliação") — **exceto** o heading da etapa de Instruções em Responder
+Avaliação, que usa literalmente "Como funciona a **autoavaliação**:"
+(`RespostaAvaliacaoPage.tsx`, ver 4.2). Não é um texto solto por engano — é o
+único lugar da tela onde a palavra aparece; qualquer novo texto deve seguir o
 padrão "avaliação", tratando este heading como exceção já existente, não como
 precedente para reintroduzir o termo em outros lugares.
 
@@ -235,99 +238,154 @@ seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
 
 ## 4. Tela: Responder Avaliação
 
-### 4.1 Cabeçalho
+> Reescrita em 2026-07-29 após a promoção do formato wizard fullscreen
+> (antigo protótipo `/testes/resposta-sem-nome`) a rota oficial, substituindo
+> por completo o formato anterior de accordion por competência (single-file
+> `RespostaAvaliacao.tsx`, deletado). Arquivo único agora:
+> `src/app/pages/RespostaAvaliacaoPage.tsx` — não há mais componente
+> separado; a página não usa `useOutletContext`/`Layout`, ver 4.1.
 
-- Botão voltar ("← Minhas Avaliações", `ArrowLeft` + `gap-1.5` + `mb-6`).
-- Nome da avaliação (`<h1>`).
-- "Prazo: DD/MM/AAAA" — só a data de encerramento (`formatData(periodoFim)`);
-  não exibe mais o período completo nem "Tipo: Autoavaliação".
+### 4.1 Shell — modo de foco (fullscreen)
 
-### 4.2 Container de instruções
+Rota irmã de nível raiz em `routes.ts`, **fora** da árvore de `Layout.tsx`
+(sem Sidebar/Header do sistema):
+```ts
+{ path: "/minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
+```
+`RespostaAvaliacaoPage` lê `avaliacaoId` via `useParams()` (não recebe prop
+de um componente pai) e monta o próprio wrapper mínimo — `<div
+className="min-h-screen bg-gray-50">`, sem `mt-16`/`ml-*` nem
+`useOutletContext` para estado da sidebar, já que não existe sidebar nesta
+rota.
 
-- Componente expansível (accordion próprio, `useState` local), fechado por
-  padrão.
-- Trigger: ícone `Lightbulb` + texto "Instruções" (`text-base font-semibold`),
-  cor `var(--brand-600)`, borda `var(--brand-600)`, fundo branco.
-- Conteúdo (ao expandir), heading "Como funciona a autoavaliação:" + bullets
-  (`RespostaAvaliacao.tsx:139-144`):
-  1. Para cada habilidade, escolha o nível que melhor representa seu
-     conhecimento atual, com base nos critérios de cada opção.
-  2. Não teve contato com a habilidade ou não sabe avaliar seu nível?
-     Marque "Sem conhecimento" em vez de chutar uma resposta.
-  3. Sua resposta é comparada ao nível esperado para o seu cargo atual e
-     ajuda a identificar oportunidades de desenvolvimento. Ela não garante
-     promoção nem muda seu cargo automaticamente.
-  4. Você pode salvar como rascunho e continuar depois, ou enviar quando
-     finalizar todas as habilidades.
+Fluxo em 2 passos, controlado por `useState<'instrucoes' | 'perguntas'>`:
+1. **Instruções** — tela própria, card único, sem revelar quais
+   competências/habilidades serão avaliadas antes de o colaborador clicar em
+   "Começar" (ver 4.2).
+2. **Perguntas** — wizard uma habilidade por vez + painel lateral de
+   navegação (ver 4.3/4.4).
 
-### 4.3 Blocos por competência
+A barra superior sticky (nome + prazo + botão "Salvar e sair") só aparece na
+etapa de perguntas — na etapa de Instruções o próprio card já mostra
+nome/prazo, uma segunda barra repetiria a informação.
 
-- Cada competência é um accordion próprio: título (`text-base font-medium`)
-  + contador "X de N habilidades avaliadas" (`text-sm text-gray-500`).
-- Container `bg-white rounded-lg border border-gray-200`.
+### 4.2 Etapa de Instruções
 
-### 4.4 Bloco por habilidade
+Card único (`bg-white border border-gray-200 rounded-lg`), sem painel
+lateral de competências — decisão deliberada para não fazer *spoiler* do
+conteúdo da avaliação antes do colaborador começar:
+- Badge do tipo da avaliação (`avaliacao.tipo`, ex. "Autoavaliação").
+- Nome da avaliação (`<h1>`) + meta: ícone `ListChecks` + "N habilidades",
+  ícone `Calendar` + "Prazo de entrega: DD/MM/AAAA".
+- Heading "Como funciona a autoavaliação:" + lista numerada (círculos
+  cinza `1`-`4`, não bullets):
+  1. Para cada habilidade, escolha a descrição que melhor representa seu
+     conhecimento atual.
+  2. Não conhece a habilidade? Marque "Sem conhecimento" em vez de chutar
+     uma resposta.
+  3. Sua resposta é comparada ao nível esperado do seu cargo atual e ajuda
+     a identificar oportunidades de desenvolvimento. Não garante promoção.
+  4. Você pode sair a qualquer momento — suas respostas ficam salvas.
+- Botões "Começar" (primário, avança para a etapa de perguntas) e "Voltar"
+  (terciário, navega para `/minhas-avaliacoes`).
 
-- Nome da habilidade (`text-sm font-semibold`) + descrição
-  (`text-sm text-gray-600`), com **badge de tipo à direita** do bloco
-  (Técnica: `bg-[var(--brand-100)] text-[var(--brand-800)]`; Comportamental:
-  `bg-purple-100 text-purple-800` — `RespostaAvaliacao.tsx:198-206`, não
-  mencionado no rascunho original).
-- Grid de cards de nível, todos no **mesmo formato/tamanho** (`p-3 rounded-lg
-  border-2 flex flex-col items-start` — o `flex flex-col` é necessário para
-  o conteúdo alinhar no topo mesmo quando um card vizinho tem mais linhas de
-  texto; sem isso o texto ficava centralizado verticalmente):
-  - **"Sem conhecimento"** é sempre o primeiro card do grid. Descrição:
-    "Ainda não teve contato ou não sabe avaliar seu nível atual."
-  - Demais cards: um por nível aplicável daquela habilidade específica
-    (`habilidade.niveis`, nunca `niveisDefaultData` inteiro — que mistura as
-    duas escalas do sistema, Básico/Avançado e Iniciante/Aprendiz).
-  - Card selecionado: borda/texto na cor do nível (`getCorFromPeso`); "Sem
-    conhecimento" selecionado usa cor neutra (`border-gray-400 bg-gray-100`),
-    nunca derivada de peso.
-- Não há mais o label "Selecione seu nível:" acima do grid (removido).
+Não é mais um accordion fechado por padrão (formato antigo) — é uma etapa
+obrigatória própria, sempre visível antes do wizard.
 
-### 4.5 Rodapé (fixo)
+### 4.3 Etapa de perguntas — wizard uma habilidade por vez
 
-- Contador: "X de Y habilidades avaliadas (Z%)".
-- Botões: "Salvar rascunho" (secundário, `handleSalvarRascunho`) e "Enviar
-  avaliação" (primário, `handleEnviar`).
-- **O envio é validado**: o botão fica `disabled` enquanto
-  `respondidas < totalHabilidades` (`RespostaAvaliacao.tsx:288`), e
-  `handleEnviar` também bloqueia com `toast.error('Por favor, avalie todas
-  as habilidades antes de enviar.')` caso seja chamado sem 100% de
-  completude (linhas 90-94) — **não** é permitido enviar parcialmente.
-- **Nota técnica sobre "fixo"**: o rodapé é um irmão do conteúdo scrollável
-  dentro de um `<main>` `flex flex-col h-[calc(100vh-4rem)]`
-  (`RespostaAvaliacaoPage.tsx`), com o conteúdo em
-  `flex-1 overflow-y-auto scrollbar-thin` — nunca `position: sticky`/`fixed`
-  com hack de margem negativa (abordagem antiga, que só "grudava" durante o
-  scroll e não fixava quando o conteúdo era curto). Esse padrão replica o já
-  usado em `CriarJornadaPage.tsx`/`EditarJornadaPage.tsx`/
-  `JornadaDetalhePage.tsx`. Depende de `Layout.tsx` ter `flow-root` no
-  container raiz (`<div className="min-h-screen flow-root">`) — sem isso, o
-  `margin-top` do `<main>` "vaza" por margin-collapse e cria um segundo
-  scroll fantasma de 64px no nível do documento (bug real encontrado e
-  corrigido nesta base de código).
+Substituiu por completo o formato antigo de accordion por competência com
+todos os níveis expandidos simultaneamente. Duas colunas lado a lado (altura
+igual entre as duas, calculada uma única vez no wrapper —
+`lg:h-[calc(100vh-16rem)]` — nunca cada painel calculando a própria altura
+de forma independente):
 
-### 4.6 Efeito no envio
+- **Painel principal** (esquerda, `flex-1`): barra de progresso
+  ("Progresso da Autoavaliação", X de Y, Z%) acima do card; dentro do card,
+  nome da competência + nome da habilidade + badge de tipo (Técnica/
+  Comportamental) + descrição, depois a lista de opções de nível (4.4), e
+  navegação "Anterior"/"Próxima habilidade" fixa na base do card
+  (`flex flex-col` + a lista de opções em `flex-1 min-h-0 overflow-y-auto` —
+  o card nunca estica, a lista rola internamente se não couber).
+- **Painel lateral** (direita, `w-72`): lista de todas as habilidades
+  agrupadas por competência, cada uma com indicador de respondida (check
+  verde) ou pendente, e a habilidade atual destacada
+  (`bg-[var(--brand-50)]`). Navegação restrita à ordem: `podeAcessar =
+  respondida || indice === primeiroNaoRespondidoIndex` — só é possível
+  clicar em uma habilidade já respondida (revisar/editar) ou na próxima
+  ainda não respondida na sequência; as posteriores ficam `disabled`
+  (`RespostaAvaliacaoPage.tsx:444`). Correção: uma versão anterior deste
+  documento afirmava que era possível navegar para qualquer habilidade
+  sem passar pelas anteriores — não é o comportamento real do código.
 
-Ao enviar, a resposta é gravada via `responderAvaliacao()` no
-`AvaliacoesContext` (efeito imediato, sem reload):
-- status do participante muda para `Concluída`;
-- os cards de métrica de "Meu Perfil" e a listagem de "Minhas Avaliações"
-  refletem a mudança porque leem do mesmo Context.
+### 4.4 Opções de nível — nome do nível NUNCA visível
 
-### 4.7 Comportamento não coberto por tratamento de erro (edge case real)
+Divergência deliberada em relação ao formato antigo (que sempre mostrava o
+nome do nível, ex. "Avançado"): aqui só o **critério/descrição** de cada
+nível é exibido, em ordem de peso crescente — força a escolha pelo conteúdo
+do critério em vez do rótulo:
+- **"Sem conhecimento"** é sempre a primeira opção, com nome visível (não é
+  um nível na escala, é uma categoria à parte) — "Ainda não teve contato ou
+  não sabe avaliar seu nível atual."
+- Demais opções: uma por nível aplicável daquela habilidade específica
+  (`habilidade.niveis`, nunca `niveisDefaultData` inteiro), ordenadas por
+  peso crescente (`getNiveisHabilidade(...).sort((a, b) => a.peso - b.peso)`)
+  — sem o nome como pista, essa ordem é o único sinal restante de
+  progressão.
+- Opção selecionada: borda/texto na cor do nível (`getCorFromPeso`); "Sem
+  conhecimento" selecionado usa cor neutra (`border-gray-400 bg-gray-100`),
+  nunca derivada de peso.
+- Radio próprio (`role="radio"`, `button`, sem `<label>`) — não usa
+  `<input type="radio">` nativo.
 
-`avaliacao = avaliacoes.find(a => a.id === avaliacaoId)!` e
-`participanteAtual = avaliacao.participantes.find(p => p.colaboradorId ===
-JOAO_ID)!` usam non-null assertion em ambas as telas (`RespostaAvaliacao.tsx:22-23`,
-`ResultadoAvaliacao.tsx` equivalente). Não há fallback visual (mensagem de
-"avaliação não encontrada", redirecionamento, etc.) — um `avaliacaoId`
-inválido na URL ou um colaborador sem participação nessa avaliação quebra a
-tela. Comportamento real hoje, não documentado no rascunho original; registrar
-como limitação conhecida, não como bug a corrigir silenciosamente aqui.
+### 4.5 Header — ação única "Salvar e sair"
+
+Substituiu os antigos botões separados "Salvar rascunho" (rodapé) + "Voltar"
+(cabeçalho). Um único botão no header, à direita, estilo secundário
+(`border-gray-300 text-gray-700`):
+- **Mecânica de dado inalterada**: cada seleção de nível já chama
+  `responderAvaliacao(..., enviar: false)` imediatamente (`handleNivelChange`)
+  — persistência real via `AvaliacoesContext`/`localStorage`, não é um
+  auto-save "fake". "Salvar e sair" só reafirma esse estado (mesmo toast de
+  sucesso do antigo "Salvar rascunho") e navega direto para
+  `/minhas-avaliacoes` — uma ação só, sem diálogo de confirmação de "não
+  salvo" (não há necessidade: nada fica sem persistir entre o clique numa
+  opção e a saída).
+- Não há mais indicador visual de "salvo automaticamente" na tela — a
+  confirmação visível ao colaborador é sempre este botão.
+
+### 4.6 Envio final — validação de 100% obrigatória
+
+Preservado do formato antigo, sem enfraquecer: `handleEnviar`
+(`RespostaAvaliacaoPage.tsx`) bloqueia com
+`toast.error('Por favor, avalie todas as habilidades antes de enviar.')` se
+`respondidas < totalHabilidades`, e só então chama
+`responderAvaliacao(..., enviar: true)`. O botão "Enviar avaliação" (só
+aparece na última habilidade do wizard) também fica `disabled` enquanto
+`respondidas < totalHabilidades` — **não** é permitido enviar parcialmente,
+nem pelo clique direto nem por engano.
+
+Ao enviar com sucesso: status do participante muda para `Concluída` no
+`AvaliacoesContext` (efeito imediato, sem reload), toast de sucesso, e
+navegação para `/minhas-avaliacoes` após 1,5s. Os cards de métrica de "Meu
+Perfil" e a listagem de "Minhas Avaliações" refletem a mudança porque leem
+do mesmo Context.
+
+### 4.7 Tratamento de erro — avaliação não encontrada / sem acesso
+
+Depois de todos os hooks (nunca antes — regra dos hooks), a página verifica
+`if (!avaliacao || !participanteAtual)` e renderiza um estado de erro
+dedicado em vez de quebrar: ícone `AlertCircle` (fundo `bg-red-100`),
+"Avaliação não encontrada" (quando o `avaliacaoId` da URL não existe) ou
+"Você não tem acesso a esta avaliação" (quando existe mas o colaborador não
+está entre os participantes), com botão "Voltar para Minhas Avaliações".
+
+Nota de correção: uma versão anterior deste documento (seção 4.7 original)
+registrava isso como uma **limitação conhecida, sem tratamento** — essa
+afirmação já estava desatualizada em relação ao código antes mesmo desta
+promoção (o antigo `RespostaAvaliacao.tsx` já tinha esse fallback
+implementado). Corrigido aqui: o tratamento de erro sempre existiu no
+formato antigo e foi portado integralmente para o novo.
 
 ## 5. Pendências conhecidas
 
@@ -349,5 +407,12 @@ como limitação conhecida, não como bug a corrigir silenciosamente aqui.
 | 4 | 4.4 (bloco por habilidade) | Não mencionava a badge de tipo (Técnica/Comportamental) ao lado do nome | Adicionada à descrição da seção |
 | 5 | 4.5 (rodapé) | Não explicava a arquitetura do "fixo" | Adicionada nota técnica sobre `flex flex-col h-[calc(100vh-4rem)]` + `flow-root` em `Layout.tsx` (correção de bug real de scroll duplo) |
 | 6 | — | Nenhuma menção a comportamento sem tratamento de erro | Adicionada seção 4.7 sobre `avaliacaoId`/participante inválido |
+| 7 | 4.3 (painel lateral) | Dizia que clicar em qualquer habilidade navega direto para ela, sem passar pelas anteriores | Real: `podeAcessar = respondida \|\| indice === primeiroNaoRespondidoIndex` restringe a navegação à ordem — só habilidade já respondida ou a próxima pendente são clicáveis |
 
-Nenhum código morto foi encontrado nos arquivos revisados.
+Nenhum código morto foi encontrado nos arquivos revisados (só 3 comentários
+históricos citando arquivos já removidos — `routes.ts`,
+`RespostaAvaliacaoPage.tsx:13`, `MinhaCarreiraPage.tsx:520` — mantidos de
+propósito como contexto, não quebram nada).
+
+Documentado no Design System (`DesignSystemPage.tsx`, seção "Responder
+Avaliação" em Especificação de Telas → Colaborador) em 2026-07-30.

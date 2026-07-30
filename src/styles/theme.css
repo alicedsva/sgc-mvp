@@ -262,6 +262,34 @@
     font-size: var(--font-size);
   }
 
+  /* Scrollbar fina e discreta, tom neutro, em todo o sistema — mesmo visual
+     de .scrollbar-thin (thumb gray-300, sem track escuro), promovida para
+     html/body para nunca depender de aplicar a classe página por página.
+     html e body são alvo dos dois porque o navegador decide qual dos dois
+     elementos root recebe a scrollbar visível dependendo do motor/contexto. */
+  html, body {
+    scrollbar-width: thin;
+    scrollbar-color: #D1D5DB transparent;
+  }
+
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  html::-webkit-scrollbar-track, body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+    background-color: #D1D5DB;
+    border-radius: 9999px;
+  }
+
+  html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover {
+    background-color: #9CA3AF;
+  }
+
   h1 {
     font-size: var(--text-2xl);
     font-weight: var(--font-weight-medium);

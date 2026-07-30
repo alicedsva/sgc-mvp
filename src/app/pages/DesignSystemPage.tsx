@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import {
   Info, Palette, Layout, BookOpen, Briefcase, User, ChevronRight,
   Settings, LayoutDashboard, Award, UserCircle, ClipboardList, ClipboardCheck,
@@ -7,6 +8,7 @@ import {
   Plus, Download, Search, X, AlertTriangle, ArrowLeft, ArrowRight,
   Layers, Calendar, Wrench, Construction,
   Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
+  Check, ListChecks, Save,
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
@@ -40,6 +42,7 @@ type SectionId =
   | 'telas-admin/criar-editar-jornada'
   | 'colaborador/meu-perfil'
   | 'colaborador/minhas-avaliacoes'
+  | 'colaborador/responder-avaliacao'
   | 'colaborador/minha-carreira';
 
 type NavItem = { id: SectionId; label: string; }
@@ -118,6 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
         items: [
           { id: 'colaborador/meu-perfil', label: 'Meu Perfil' },
           { id: 'colaborador/minhas-avaliacoes', label: 'Minhas Avaliações' },
+          { id: 'colaborador/responder-avaliacao', label: 'Responder Avaliação' },
           { id: 'colaborador/minha-carreira', label: 'Minha Carreira' },
         ],
       },
@@ -136,6 +140,19 @@ const QUICK_ACCESS = [
 
 const ALL_ITEMS = NAV_GROUPS.flatMap((g) =>
   g.items ?? g.subgroups?.flatMap(sg => sg.items) ?? []
+);
+
+// Slug de URL por seção — sempre o último segmento do SectionId (já único
+// entre as 26 seções, checado manualmente; nenhum novo SectionId deve
+// reutilizar um slug já usado por outro, mesmo em grupos diferentes).
+// Permite compartilhar o link de uma seção específica via /design-system/:secao
+// sem expor a estrutura de grupo/subgrupo interna na URL.
+const SECTION_TO_SLUG: Record<SectionId, string> = Object.fromEntries(
+  ALL_ITEMS.map((item) => [item.id, item.id.split('/').pop()!])
+) as Record<SectionId, string>;
+
+const SLUG_TO_SECTION: Record<string, SectionId> = Object.fromEntries(
+  ALL_ITEMS.map((item) => [item.id.split('/').pop()!, item.id])
 );
 
 const BADGE_BASE = 'inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full';
@@ -3975,8 +3992,12 @@ function SecaoMensagensOrientacao() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">RespostaAvaliacao.tsx:119</td>
-                <td className="px-4 py-3 text-gray-700">Bloco "Instruções" — acima dos campos de autoavaliação</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-600">MinhaCarreiraPage.tsx</td>
+                <td className="px-4 py-3 text-gray-700">
+                  Dois avisos (Oportunidades de desenvolvimento e Mapeamento de
+                  competências) usam o mesmo container/ícone, mas sem o label
+                  "Instruções:" — são avisos, não passo a passo
+                </td>
               </tr>
             </tbody>
           </table>
@@ -5249,6 +5270,382 @@ function SecaoMinhasAvaliacoes() {
   );
 }
 
+function SecaoResponderAvaliacao() {
+  const [tabResponder, setTabResponder] = useState(0);
+  const TABS_RESPONDER = [
+    'Visão geral',
+    'Etapa de Instruções',
+    'Wizard — perguntas',
+    'Opções de nível',
+    'Validações e header',
+    'Estado de erro',
+  ];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">Responder Avaliação</h1>
+      <p className="text-sm text-gray-600 mb-4">
+        Especificação da tela de resposta de avaliação do Colaborador — formato de foco (fullscreen),
+        fora da árvore de <code className="bg-gray-100 px-1 rounded text-xs">Layout.tsx</code>.
+        Fonte: <code className="bg-gray-100 px-1 rounded text-xs">RespostaAvaliacaoPage.tsx</code>.
+      </p>
+      <SectionMeta status="documentado" ultimaAtualizacao="30/07/2026" debitosTecnicos={0} alertas={0} />
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
+        {TABS_RESPONDER.map((label, idx) => (
+          <button
+            key={label}
+            onClick={() => setTabResponder(idx)}
+            className={`pb-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+              tabResponder === idx
+                ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB 1 — Visão geral */}
+      {tabResponder === 0 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Shell — modo de foco (fullscreen)</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Rota irmã de nível raiz em routes.ts, fora da árvore de Layout.tsx — sem Sidebar/Header do sistema. A página monta o próprio wrapper mínimo (min-h-screen bg-gray-50).',
+                'Fluxo em 2 passos, controlado por um único useState — nunca dois booleanos separados: Instruções (tela própria) → Perguntas (wizard uma habilidade por vez + painel lateral).',
+                'A barra superior sticky (nome + prazo + botão único) só aparece na etapa de Perguntas — na etapa de Instruções o próprio card já mostra nome/prazo, uma segunda barra repetiria a informação.',
+                'Promovida em 2026-07-29 a partir do protótipo de exploração /testes/resposta-sem-nome (já removido), substituindo por completo o formato antigo de accordion por competência com todos os níveis expandidos simultaneamente (RespostaAvaliacao.tsx, deletado).',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+              <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--brand-700)]">
+                Duas divergências deliberadas em relação ao formato antigo: (1) o nome do nível nunca aparece
+                nas opções de resposta — só o critério/descrição, ver Tab 4; (2) o rodapé de "Salvar rascunho" +
+                header de "Voltar" viraram um único botão no header, ver Tab 5.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2 — Etapa de Instruções */}
+      {tabResponder === 1 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Card único, sem spoiler de conteúdo</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Card centralizado (flex-1 + items-center/justify-center no espaço restante da viewport), largura reduzida (max-w-xl) — não é um painel de largura cheia.',
+                'Sem painel lateral de competências nesta etapa — decisão deliberada para não revelar quais competências/habilidades serão avaliadas antes de o colaborador clicar em "Começar".',
+                'Conteúdo: badge do tipo da avaliação + nome (h1) + meta (N habilidades, prazo de entrega) + heading "Como funciona a autoavaliação:" + lista numerada (círculos cinza 1-4, nunca bullets).',
+                'Botões "Começar" (primário, avança para o wizard) e "Voltar" (terciário, navega para /minhas-avaliacoes).',
+                '"Autoavaliação" é citada literalmente só neste heading — exceção documentada ao padrão de terminologia do sistema, que evita a palavra em prazos/botões/cards.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático do card de instruções */}
+            <div className="bg-gray-100 rounded-lg p-6 md:p-10 flex items-center justify-center">
+              <div className="w-full max-w-xl bg-white border border-gray-200 rounded-lg p-6 md:p-8 flex flex-col">
+                <span className="inline-flex self-start px-2 py-1 text-[10px] md:text-xs font-medium uppercase tracking-wider rounded-full bg-[var(--brand-100)] text-[var(--brand-800)] mb-3">
+                  Autoavaliação
+                </span>
+                <h1 className="text-lg font-semibold text-gray-900 mb-2">Liderança 2026</h1>
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
+                    <ListChecks className="w-4 h-4 text-gray-400" />
+                    8 habilidades
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    Prazo de entrega: 28/07/2026
+                  </span>
+                </div>
+
+                <p className="text-sm font-medium text-gray-800 mb-3">Como funciona a autoavaliação:</p>
+                <ol className="space-y-3">
+                  {[
+                    'Para cada habilidade, escolha a descrição que melhor representa seu conhecimento atual.',
+                    'Não conhece a habilidade? Marque "Sem conhecimento" em vez de chutar uma resposta.',
+                    'Sua resposta é comparada ao nível esperado do seu cargo atual e ajuda a identificar oportunidades de desenvolvimento. Não garante promoção.',
+                    'Você pode sair a qualquer momento — suas respostas ficam salvas.',
+                  ].map((texto, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-medium flex items-center justify-center flex-shrink-0">
+                        {i + 1}
+                      </span>
+                      <p className="text-sm text-gray-700 pt-0.5">{texto}</p>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="flex items-center gap-3 mt-8">
+                  <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg">
+                    Começar
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                  <span className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg">
+                    Voltar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3 — Wizard — perguntas */}
+      {tabResponder === 2 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Uma habilidade por vez + painel lateral</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Substitui por completo o formato antigo de accordion por competência com todos os níveis expandidos simultaneamente.',
+                'Barra de progresso ("Progresso da Autoavaliação", X de Y, Z%) acima do card, fora do card — não dentro.',
+                'Duas colunas com ALTURA IGUAL entre si, calculada uma única vez no wrapper (lg:h-[calc(100vh-16rem)]) — nunca cada painel calculando a própria altura de forma independente.',
+                'Painel principal (esquerda, flex-1): nome da competência + nome da habilidade + badge de tipo + descrição, lista de opções de nível (Tab 4, rola internamente via flex-1 min-h-0 overflow-y-auto — o card nunca estica), navegação "Anterior"/"Próxima habilidade" fixa na base.',
+                'Painel lateral (direita, w-72): habilidades agrupadas por competência, indicador de respondida (check) ou pendente, habilidade atual destacada (bg-[var(--brand-50)]).',
+                'Navegação restrita à ordem: só é possível clicar em uma habilidade já respondida (revisar/editar) ou na próxima ainda não respondida na sequência — as posteriores ficam disabled/cinza, nunca é permitido pular habilidades fora de ordem clicando direto no painel lateral.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático do wizard */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-5 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">Progresso da Autoavaliação</p>
+                <p className="text-sm text-gray-500">3 de 8 habilidades respondidas (38%)</p>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: '38%', backgroundColor: '#F59E0B' }} />
+              </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+              <div className="w-full lg:flex-1 bg-white border border-gray-200 rounded-lg p-5 md:p-6 flex flex-col">
+                <div className="mb-5">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Comunicação</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="text-lg font-semibold text-gray-900">Comunicação assertiva</h2>
+                    <span className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full flex-shrink-0 bg-purple-100 text-purple-800">
+                      Comportamental
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">Capacidade de transmitir ideias de forma clara e direta a diferentes públicos.</p>
+                </div>
+                <p className="text-xs text-gray-400 mb-2">(opções de nível — ver Tab 4)</p>
+                <div className="flex items-center justify-between gap-3 mt-auto pt-4 border-t border-gray-200">
+                  <span className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg opacity-50">
+                    <ArrowLeft className="w-4 h-4" />
+                    Anterior
+                  </span>
+                  <p className="text-xs text-gray-400">3 de 8</p>
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg">
+                    Próxima habilidade
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-full lg:w-72 flex-shrink-0 bg-white border border-gray-200 rounded-lg p-4">
+                <div className="space-y-4">
+                  {[
+                    { nome: 'Liderança de equipes', habilidades: [{ nome: 'Delegação', ok: true }, { nome: 'Feedback contínuo', ok: true }] },
+                    { nome: 'Comunicação', habilidades: [{ nome: 'Comunicação assertiva', ok: false, atual: true }, { nome: 'Escuta ativa', ok: false, bloqueada: true }] },
+                  ].map(grupo => (
+                    <div key={grupo.nome}>
+                      <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">{grupo.nome}</p>
+                      <div className="space-y-0.5">
+                        {grupo.habilidades.map(h => (
+                          <div
+                            key={h.nome}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md ${'atual' in h && h.atual ? 'bg-[var(--brand-50)]' : ''}`}
+                          >
+                            <span className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center border-2 ${
+                              h.ok ? 'border-[var(--brand-400)] bg-[var(--brand-400)]' : 'border-gray-300'
+                            }`}>
+                              {h.ok && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                            </span>
+                            <span className={`text-xs truncate ${
+                              'atual' in h && h.atual ? 'text-[var(--brand-700)] font-medium' : 'bloqueada' in h && h.bloqueada ? 'text-gray-400' : 'text-gray-700'
+                            }`}>
+                              {h.nome}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4 — Opções de nível */}
+      {tabResponder === 3 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Nome do nível NUNCA visível</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Divergência deliberada em relação ao formato antigo (que sempre mostrava o nome do nível, ex. "Avançado"): aqui só o critério/descrição de cada nível é exibido — força a escolha pelo conteúdo em vez do rótulo.',
+                '"Sem conhecimento" é sempre a primeira opção, com nome visível — não é um nível na escala, é uma categoria à parte. Selecionado usa cor neutra (border-gray-400 bg-gray-100), nunca derivada de peso.',
+                'Demais opções: uma por nível aplicável daquela habilidade específica (habilidade.niveis, nunca a lista de níveis inteira do sistema), ordenadas por peso crescente — sem o nome como pista, essa ordem é o único sinal restante de progressão.',
+                'Opção selecionada: borda e texto na cor do nível, via getCorFromPeso — nunca uma cor fixa.',
+                'Radio próprio (role="radio", button, sem <label>) — não usa <input type="radio"> nativo.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático das opções de nível */}
+            <div role="radiogroup" className="space-y-2 max-w-xl">
+              <div className="flex items-start gap-3 p-3 rounded-lg border-2 border-gray-200">
+                <span className="w-4 h-4 mt-0.5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-gray-700 font-medium">Sem conhecimento</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ainda não teve contato ou não sabe avaliar seu nível atual.</p>
+                </div>
+              </div>
+              {niveisDefaultData.slice(0, 3).map((nivel, i) => {
+                const cor = getCorFromPeso(nivel.peso);
+                const isSelected = i === 1;
+                return (
+                  <div
+                    key={nivel.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border-2"
+                    style={{ borderColor: isSelected ? cor : '#e5e7eb', backgroundColor: isSelected ? cor + '0D' : 'transparent' }}
+                  >
+                    <span
+                      className="w-4 h-4 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                      style={{ borderColor: isSelected ? cor : '#d1d5db' }}
+                    >
+                      {isSelected && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cor }} />}
+                    </span>
+                    <p className="text-sm" style={{ color: isSelected ? cor : '#374151' }}>
+                      Critério de exemplo do nível "{nivel.nome}" — texto real vem de habilidade.niveis, não do nome mostrado aqui.
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5 — Validações e header */}
+      {tabResponder === 4 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Header — ação única "Salvar e sair"</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Substitui os antigos botões separados "Salvar rascunho" (rodapé) + "Voltar" (cabeçalho). Um único botão no header, à direita, estilo secundário.',
+                'Mecânica de dado inalterada: cada seleção de nível já persiste imediatamente via responderAvaliacao(..., enviar: false) — "Salvar e sair" só reafirma esse estado e navega para /minhas-avaliacoes, sem diálogo de confirmação de "não salvo" (nada fica sem persistir entre o clique numa opção e a saída).',
+                'Label muda conforme progresso: "Sair" (nenhuma resposta ainda) vira "Salvar e sair" assim que a primeira resposta é registrada.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+              <div className="px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex items-baseline gap-2">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Liderança 2026</p>
+                  <span className="text-gray-300 flex-shrink-0">•</span>
+                  <p className="text-sm text-gray-500 flex-shrink-0">Prazo: 28/07/2026</p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg flex-shrink-0">
+                  <Save className="w-4 h-4" />
+                  Salvar e sair
+                </span>
+              </div>
+            </div>
+
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Envio final — validação de 100% obrigatória</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Botão "Enviar avaliação" só aparece na última habilidade do wizard (substitui "Próxima habilidade") e fica disabled enquanto houver habilidade sem resposta — não é permitido enviar parcialmente, nem pelo clique direto nem por engano.',
+                'Se ainda assim disparado sem 100%: toast.error("Por favor, avalie todas as habilidades antes de enviar."), sem enviar.',
+                'Ao enviar com sucesso: status do participante muda para Concluída no Context (efeito imediato), toast de sucesso, navegação para /minhas-avaliacoes após 1,5s. Meu Perfil e Minhas Avaliações refletem a mudança por lerem do mesmo Context.',
+                '"Próxima habilidade" (nas demais habilidades) também fica disabled sem resposta na habilidade atual.',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6 — Estado de erro */}
+      {tabResponder === 5 && (
+        <div>
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Avaliação não encontrada / sem acesso</h2>
+            <ul className="space-y-1.5 mb-5">
+              {[
+                'Depois de todos os hooks (nunca antes — regra dos hooks), a página verifica if (!avaliacao || !participanteAtual) e renderiza um estado de erro dedicado em vez de quebrar.',
+                '"Avaliação não encontrada" quando o avaliacaoId da URL não existe; "Você não tem acesso a esta avaliação" quando existe mas o colaborador não está entre os participantes.',
+                'Card centralizado (mesmo shell fullscreen, sem Layout/Sidebar), ícone AlertCircle sobre fundo bg-red-100, botão único "Voltar para Minhas Avaliações".',
+              ].map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+
+            {/* Mockup estático do estado de erro */}
+            <div className="bg-gray-100 rounded-lg p-6 md:p-10 flex items-center justify-center">
+              <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-12 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Avaliação não encontrada</h2>
+                <p className="text-sm text-gray-600 mb-6">Esta avaliação não existe ou foi removida.</p>
+                <span className="inline-block px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg">
+                  Voltar para Minhas Avaliações
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SecaoMinhaCarreira() {
   return (
     <div>
@@ -6389,16 +6786,42 @@ const IMPLEMENTED: SectionId[] = [
   'padroes/paginacao',
   'colaborador/meu-perfil',
   'colaborador/minhas-avaliacoes',
+  'colaborador/responder-avaliacao',
   'colaborador/minha-carreira',
 ];
 
 export default function DesignSystemPage() {
-  const [activeSection, setActiveSection] = useState<SectionId>('home');
+  const { secao } = useParams<{ secao?: string }>();
+  const navigate = useNavigate();
+
+  // Fonte da verdade é a URL, não um estado solto — /design-system (sem
+  // :secao) é sempre 'home'; um slug desconhecido também cai em 'home' em
+  // vez de quebrar a página.
+  const activeSection: SectionId = (secao && SLUG_TO_SECTION[secao]) || 'home';
+
+  const setActiveSection = (id: SectionId) => {
+    navigate(id === 'home' ? '/design-system' : `/design-system/${SECTION_TO_SLUG[id]}`);
+  };
+
   const [expandedSubgroups, setExpandedSubgroups] = useState<Record<string, boolean>>({
     'telas-admin': false,
     'telas-gestor': false,
     'telas-colaborador': true,
   });
+
+  // Ao abrir uma URL de seção diretamente (link compartilhado), garante que
+  // o subgrupo correspondente já apareça expandido no menu lateral — sem
+  // isso, uma seção de "telas-admin" (fechado por padrão) ficaria destacada
+  // mas invisível na navegação lateral.
+  useEffect(() => {
+    const subgroup = NAV_GROUPS
+      .flatMap(g => g.subgroups ?? [])
+      .find(sg => sg.items.some(item => item.id === activeSection));
+    if (subgroup) {
+      setExpandedSubgroups(prev => (prev[subgroup.id] ? prev : { ...prev, [subgroup.id]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
 
   const toggleSubgroup = (id: string) => {
     setExpandedSubgroups(prev => ({ ...prev, [id]: !prev[id] }));
@@ -6492,7 +6915,7 @@ export default function DesignSystemPage() {
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
-                  <p className="text-sm font-semibold leading-tight">23</p>
+                  <p className="text-sm font-semibold leading-tight">24</p>
                 </div>
               </div>
               <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
@@ -6545,6 +6968,7 @@ export default function DesignSystemPage() {
                     { secao: 'Paginação',         status: 'documentado',   debitos: 1, alertas: 0 },
                     { secao: 'Meu Perfil',        status: 'em-construcao', debitos: 0, alertas: 0 },
                     { secao: 'Minhas Avaliações', status: 'documentado',   debitos: 0, alertas: 0 },
+                    { secao: 'Responder Avaliação', status: 'documentado', debitos: 0, alertas: 0 },
                     { secao: 'Minha Carreira',    status: 'em-construcao', debitos: 0, alertas: 0 },
                   ] as Array<{
                     secao: string;
@@ -6652,6 +7076,7 @@ export default function DesignSystemPage() {
         {activeSection === 'padroes/paginacao' && <SecaoPaginacao />}
         {activeSection === 'colaborador/meu-perfil' && <SecaoMeuPerfil />}
         {activeSection === 'colaborador/minhas-avaliacoes' && <SecaoMinhasAvaliacoes />}
+        {activeSection === 'colaborador/responder-avaliacao' && <SecaoResponderAvaliacao />}
         {activeSection === 'colaborador/minha-carreira' && <SecaoMinhaCarreira />}
 
         {activeSection !== 'home' && !IMPLEMENTED.includes(activeSection) && (

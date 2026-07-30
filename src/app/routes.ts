@@ -20,9 +20,6 @@ import CompetenciaDetalhePage from "./pages/CompetenciaDetalhePage";
 import ConfigurarCargoPage from "./pages/ConfigurarCargoPage";
 import EditarJornadaPage from "./pages/EditarJornadaPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
-import TesteRadarPage from "./pages/testes/TesteRadarPage";
-import TestePerfilDoughnutPage from "./pages/testes/TestePerfilDoughnutPage";
-import TestePerfilAderenciaGeralPage from "./pages/testes/TestePerfilAderenciaGeralPage";
 
 export const router = createBrowserRouter([
   {
@@ -45,14 +42,18 @@ export const router = createBrowserRouter([
       { path: "avaliacoes/:id", Component: AvaliacaoDetalhePage },
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
-      { path: "minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
       { path: "minhas-avaliacoes/resultado/:avaliacaoId", Component: ResultadoAvaliacaoPage },
       { path: "minha-carreira", Component: MinhaCarreiraPage },
       { path: "minha-carreira/competencia/:id", Component: CompetenciaDetalhePage },
       { path: "design-system", Component: DesignSystemPage },
-      { path: "testes/radar",                    Component: TesteRadarPage },
-      { path: "testes/perfil-doughnut",          Component: TestePerfilDoughnutPage },
-      { path: "testes/perfil-aderencia-geral",   Component: TestePerfilAderenciaGeralPage },
+      { path: "design-system/:secao", Component: DesignSystemPage },
     ],
   },
+  // Rota irmã, fora da árvore de Layout.tsx — modo de foco (fullscreen, sem
+  // Sidebar/Header do sistema). Promovida a partir do protótipo vencedor da
+  // exploração de wizard (/testes/resposta-sem-nome, já removido) — monta o
+  // próprio wrapper mínimo (header sticky com nome/prazo + botão único
+  // "Salvar e sair", etapa de Instruções antes do wizard), nunca reaproveita
+  // Layout/Sidebar/Header.
+  { path: "/minhas-avaliacoes/responder/:avaliacaoId", Component: RespostaAvaliacaoPage },
 ]);

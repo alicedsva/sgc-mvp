@@ -23,7 +23,7 @@ const VERSION_KEY = 'carreiras_avaliacoes_mock_version';
 // mockData.ts sofrer alteração estrutural nas avaliações, incremente esta
 // versão para descartar dados antigos salvos no navegador (mesmo padrão de
 // CarreirasContext.tsx).
-const MOCK_DATA_VERSION = '2026-07-23-4';
+const MOCK_DATA_VERSION = '2026-07-28-5';
 
 function loadFromStorage(): Avaliacao[] {
   try {

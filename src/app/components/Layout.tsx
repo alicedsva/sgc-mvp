@@ -13,7 +13,7 @@ import { CarreirasProvider } from '../context/CarreirasContext';
 // acessada sem passar primeiro pelo toggle. Rotas ambíguas (/habilidades,
 // /design-system) ficam de fora de propósito — continuam controladas só
 // pelo toggle, mesmo comportamento de antes.
-const ROTAS_COLABORADOR = ['/meu-perfil', '/minhas-avaliacoes', '/minha-carreira', '/testes/'];
+const ROTAS_COLABORADOR = ['/meu-perfil', '/minhas-avaliacoes', '/minha-carreira'];
 const ROTAS_ADMIN = ['/dashboard', '/perfis', '/carreiras', '/avaliacoes'];
 
 function getViewModeFromPath(pathname: string): 'admin' | 'colaborador' | null {
@@ -54,7 +54,6 @@ export default function Layout() {
     if (pathname.startsWith('/meu-perfil')) return 'meu-perfil';
     if (pathname.startsWith('/minhas-avaliacoes')) return 'minhas-avaliacoes';
     if (pathname.startsWith('/minha-carreira')) return 'minha-carreira';
-    if (pathname.startsWith('/testes/')) return pathname.slice(1); // 'testes/radar', etc.
     return 'habilidades';
   };
 

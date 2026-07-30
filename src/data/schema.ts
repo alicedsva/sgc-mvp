@@ -277,7 +277,7 @@ export interface JoaoHabilidadeCargoMatriz {
   nivelEsperado: NivelNome;
 }
 
-/** Histórico de cargos exclusivo da tela de teste "Minha Carreira" — conceito não existe hoje para nenhum outro colaborador. */
+/** Histórico de progressão de cargos de João Silva — conceito não existe hoje para nenhum outro colaborador. */
 export interface HistoricoCargoJoao {
   /** null = cargo anterior à jornada cadastrada (ex: estágio), não corresponde a nenhuma linha de Cargo. */
   cargoId: string | null;
@@ -285,25 +285,4 @@ export interface HistoricoCargoJoao {
   cargoNome?: string;
   /** 'YYYY-MM' */
   dataInicio: string;
-}
-
-export type SenioridadeBenchmark = 'Júnior' | 'Pleno' | 'Sênior';
-
-/** Cargo fictício de benchmark — usado apenas pelas telas de teste, nunca pela Matriz oficial. */
-export interface BenchmarkCargo {
-  id: string;
-  nome: string;
-  /** Texto livre de agrupamento — NÃO é FK. */
-  area: string;
-  /** Texto livre de agrupamento — NÃO é FK. */
-  cargoBase: string;
-  senioridade: SenioridadeBenchmark;
-}
-
-/** Matriz de habilidades dos cargos de benchmark — usada apenas pelas telas de teste. */
-export interface HabilidadeCargoBenchmark {
-  /** FK -> BenchmarkCargo.id */
-  cargoId: string;
-  habilidadeId: string;
-  nivelEsperado: NivelNome;
 }

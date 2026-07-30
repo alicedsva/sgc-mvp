@@ -76,7 +76,7 @@ Antes de criar qualquer página ou componente novo, verifique se um template já
 ## Usuários de referência
 
 - **Ana Silva** (id=`1`) — usuária padrão Admin/Colaborador; usar para fluxos Admin/RH
-- **João Silva** (id=`10`) — exclusivo para `/testes/*`; tem dados enriquecidos (radar, benchmark, screening)
+- **João Silva** (id=`10`) — usado em Meu Perfil / Minha Carreira (Colaborador); tem dados enriquecidos próprios (`joaoHabilidadesCargoMatriz`, `historicoCargosJoaoData`)
 - Não misturar os dois entre contextos
 
 ---

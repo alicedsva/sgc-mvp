@@ -19,8 +19,6 @@ import type {
   Nivel,
   JoaoHabilidadeCargoMatriz,
   HistoricoCargoJoao,
-  BenchmarkCargo,
-  HabilidadeCargoBenchmark,
 } from '../../data/schema';
 
 export type {
@@ -3098,6 +3096,30 @@ export const avaliacoesData: Avaliacao[] = [
       { colaboradorId: '18', status: 'Não iniciada', visualizada: true, respostas: [] },
     ],
   },
+  // Avaliação de teste de UX para formulário longo (50+ habilidades) — nunca
+  // reaproveitar id=26 (Consolidação de Competências — Desenvolvedor Pleno)
+  // para isso, pois id=26 sustenta a aderência calibrada de João e de outros
+  // colaboradores em telas de perfil/carreira. Mesma lista de 51 habilidades
+  // de id=26 (matriz real do cargo Desenvolvedor Pleno, critérios reais por
+  // nível já existentes — nenhum dado novo inventado). Participantes: os 4
+  // colaboradores reais Desenvolvedor Pleno da gerência Tecnologia (João
+  // Silva, Gustavo Lima, Letícia Costa, Diego Araújo), todos 'Não iniciada'.
+  {
+    id: '30',
+    nome: 'Avaliação Completa — Desenvolvedor Pleno',
+    tipo: 'Autoavaliação',
+    status: 'Ativa',
+    periodoInicio: '2026-07-06',
+    periodoFim: '2026-09-04',
+    publicoLabel: 'Cargo Desenvolvedor Pleno',
+    habilidades: ['1', '2', '3', '4', '9', '10', '11', '12', '14', '18', '21', '22', '23', '50', '51', '52', '53', '54', '56', '59', '60', '61', '62', '63', '64', '65', '66', '68', '69', '70', '74', '75', '76', '77', '83', '86', '87', '88', '91', '92', '95', '98', '104', '107', '147', '148', '149', '150', '151', '152', '153'],
+    participantes: [
+      { colaboradorId: '10', status: 'Não iniciada', visualizada: false, respostas: [] },
+      { colaboradorId: '23', status: 'Não iniciada', visualizada: false, respostas: [] },
+      { colaboradorId: '26', status: 'Não iniciada', visualizada: false, respostas: [] },
+      { colaboradorId: '29', status: 'Não iniciada', visualizada: false, respostas: [] },
+    ],
+  },
 ];
 
 // Histórico de avaliações
@@ -4147,10 +4169,11 @@ export function getHabilidadesAvaliadasColaborador(
   return new Map(Array.from(resultado.entries()).map(([id, v]) => [id, v.nivel]));
 }
 
-// ─── Dados exclusivos das telas de teste (João Silva, id='10') ────────────────
+// ─── Dados de João Silva (id='10') — Meu Perfil / Minha Carreira ──────────────
 
 // Matriz do cargo de João (replica c2 + extensão com novas habilidades).
-// Usada apenas pelas telas de teste — não afeta habilidadesCargoData nem Ana Silva.
+// Usada por Meu Perfil e Minha Carreira (via minhaCarreiraShared.tsx) — não
+// afeta habilidadesCargoData nem Ana Silva, que seguem a matriz oficial do cargo.
 // Distribuição João vs esta matriz: 5 ACIMA | 8 NO | 6 ABAIXO | 4 SEM
 export const joaoHabilidadesCargoMatriz: JoaoHabilidadeCargoMatriz[] = [
   // Habilidades originais do cargo Desenvolvedor Pleno (c2)
@@ -4198,7 +4221,7 @@ export const joaoHabilidadesCargoMatriz: JoaoHabilidadeCargoMatriz[] = [
 ];
 
 // Histórico de cargos ocupados por João Silva (id='10') — dado simulado,
-// exclusivo da tela de teste "Minha Carreira" (retrospecto "Minha Trajetória").
+// usado em Meu Perfil (retrospecto "Minha Trajetória").
 // Não existe hoje um histórico de cargos por colaborador no restante do
 // sistema; se isso virar feature real, avaliar generalizar por colaboradorId
 // em vez de manter isolado a João. `cargoId: null` marca um cargo anterior à
@@ -4211,194 +4234,4 @@ export const historicoCargosJoaoData: HistoricoCargoJoao[] = [
   { cargoId: null, cargoNome: 'Estagiário de Desenvolvimento', dataInicio: '2022-01' },
   { cargoId: 'c1', dataInicio: '2023-07' },
   { cargoId: 'c2', dataInicio: '2025-07' },
-];
-
-// Cargos de benchmark — usados apenas pelas telas de teste
-export const benchmarkCargosData: BenchmarkCargo[] = [
-  { id: 'CARGO_ATUAL', nome: 'Desenvolvedor Pleno',      area: 'Tecnologia',             cargoBase: 'Desenvolvedor',         senioridade: 'Pleno'  },
-  { id: 'cb1',  nome: 'Analista de Dados Sênior',       area: 'Dados e Analytics',       cargoBase: 'Analista de Dados',     senioridade: 'Sênior' },
-  { id: 'cb7',  nome: 'Analista de Dados Pleno',        area: 'Dados e Analytics',       cargoBase: 'Analista de Dados',     senioridade: 'Pleno'  },
-  { id: 'cb10', nome: 'Analista de Dados Júnior',       area: 'Dados e Analytics',       cargoBase: 'Analista de Dados',     senioridade: 'Júnior' },
-  { id: 'cb2',  nome: 'Engenheiro DevOps Pleno',        area: 'Infraestrutura e Cloud',  cargoBase: 'Engenheiro DevOps',     senioridade: 'Pleno'  },
-  { id: 'cb8',  nome: 'Engenheiro DevOps Sênior',       area: 'Infraestrutura e Cloud',  cargoBase: 'Engenheiro DevOps',     senioridade: 'Sênior' },
-  { id: 'cb11', nome: 'Engenheiro DevOps Júnior',       area: 'Infraestrutura e Cloud',  cargoBase: 'Engenheiro DevOps',     senioridade: 'Júnior' },
-  { id: 'cb12', nome: 'Arquiteto de Soluções Pleno',    area: 'Arquitetura',             cargoBase: 'Arquiteto de Soluções', senioridade: 'Pleno'  },
-  { id: 'cb3',  nome: 'Arquiteto de Soluções',          area: 'Arquitetura',             cargoBase: 'Arquiteto de Soluções', senioridade: 'Sênior' },
-  { id: 'cb4',  nome: 'Analista de Segurança Sênior',   area: 'Segurança da Informação', cargoBase: 'Analista de Segurança', senioridade: 'Sênior' },
-  { id: 'cb9',  nome: 'Analista de Segurança Pleno',    area: 'Segurança da Informação', cargoBase: 'Analista de Segurança', senioridade: 'Pleno'  },
-  { id: 'cb13', nome: 'Analista de Segurança Júnior',   area: 'Segurança da Informação', cargoBase: 'Analista de Segurança', senioridade: 'Júnior' },
-  { id: 'cb14', nome: 'Tech Lead Pleno',                area: 'Liderança Técnica',       cargoBase: 'Tech Lead',             senioridade: 'Pleno'  },
-  { id: 'cb5',  nome: 'Tech Lead',                      area: 'Liderança Técnica',       cargoBase: 'Tech Lead',             senioridade: 'Sênior' },
-  { id: 'cb6',  nome: 'Product Manager',                area: 'Produto',                 cargoBase: 'Product Manager',       senioridade: 'Sênior' },
-  { id: 'cb16', nome: 'Product Manager Pleno',          area: 'Produto',                 cargoBase: 'Product Manager',       senioridade: 'Pleno'  },
-  { id: 'cb15', nome: 'Product Manager Júnior',         area: 'Produto',                 cargoBase: 'Product Manager',       senioridade: 'Júnior' },
-];
-
-// Matrizes de habilidades dos cargos de benchmark — usadas apenas pelas telas de teste
-export const habilidadesCargoDataBenchmark: HabilidadeCargoBenchmark[] = [
-  // cb1 — Analista de Dados Sênior
-  { cargoId: 'cb1', habilidadeId: '65',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb1', habilidadeId: '66',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb1', habilidadeId: '67',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb1', habilidadeId: '62',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb1', habilidadeId: '64',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb1', habilidadeId: '4',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb1', habilidadeId: '83',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb1', habilidadeId: '91',  nivelEsperado: 'Básico' },
-
-  // cb2 — Engenheiro DevOps Pleno
-  { cargoId: 'cb2', habilidadeId: '53',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb2', habilidadeId: '54',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb2', habilidadeId: '55',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb2', habilidadeId: '56',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb2', habilidadeId: '58',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb2', habilidadeId: '69',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb2', habilidadeId: '92',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb2', habilidadeId: '18',  nivelEsperado: 'Intermediário' },
-
-  // cb3 — Arquiteto de Soluções
-  { cargoId: 'cb3', habilidadeId: '59',  nivelEsperado: 'Especialista' },
-  { cargoId: 'cb3', habilidadeId: '60',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb3', habilidadeId: '61',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb3', habilidadeId: '2',   nivelEsperado: 'Avançado' },
-  { cargoId: 'cb3', habilidadeId: '56',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb3', habilidadeId: '63',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb3', habilidadeId: '83',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb3', habilidadeId: '95',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb3', habilidadeId: '87',  nivelEsperado: 'Básico' },
-
-  // cb4 — Analista de Segurança Sênior
-  { cargoId: 'cb4', habilidadeId: '68',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb4', habilidadeId: '69',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb4', habilidadeId: '70',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb4', habilidadeId: '53',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb4', habilidadeId: '56',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb4', habilidadeId: '82',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb4', habilidadeId: '95',  nivelEsperado: 'Básico' },
-
-  // cb5 — Tech Lead
-  { cargoId: 'cb5', habilidadeId: '86',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb5', habilidadeId: '87',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb5', habilidadeId: '88',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb5', habilidadeId: '1',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb5', habilidadeId: '2',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb5', habilidadeId: '59',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb5', habilidadeId: '91',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb5', habilidadeId: '95',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb5', habilidadeId: '83',  nivelEsperado: 'Avançado' },
-
-  // cb6 — Product Manager
-  { cargoId: 'cb6', habilidadeId: '104', nivelEsperado: 'Avançado' },
-  { cargoId: 'cb6', habilidadeId: '91',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb6', habilidadeId: '83',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb6', habilidadeId: '95',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb6', habilidadeId: '87',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb6', habilidadeId: '98',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb6', habilidadeId: '92',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb6', habilidadeId: '107', nivelEsperado: 'Básico' },
-
-  // cb7 — Analista de Dados Pleno (mesmo cargoBase que cb1, nível mais baixo)
-  { cargoId: 'cb7', habilidadeId: '65',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb7', habilidadeId: '66',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb7', habilidadeId: '67',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb7', habilidadeId: '62',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb7', habilidadeId: '4',   nivelEsperado: 'Básico' },
-  { cargoId: 'cb7', habilidadeId: '91',  nivelEsperado: 'Básico' },
-
-  // cb8 — Engenheiro DevOps Sênior (mesmo cargoBase que cb2, nível mais alto)
-  { cargoId: 'cb8', habilidadeId: '53',  nivelEsperado: 'Especialista' },
-  { cargoId: 'cb8', habilidadeId: '54',  nivelEsperado: 'Especialista' },
-  { cargoId: 'cb8', habilidadeId: '55',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb8', habilidadeId: '56',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb8', habilidadeId: '58',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb8', habilidadeId: '69',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb8', habilidadeId: '92',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb8', habilidadeId: '18',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb8', habilidadeId: '80',  nivelEsperado: 'Intermediário' },
-
-  // cb9 — Analista de Segurança Pleno (mesmo cargoBase que cb4, nível mais baixo)
-  { cargoId: 'cb9', habilidadeId: '68',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb9', habilidadeId: '69',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb9', habilidadeId: '70',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb9', habilidadeId: '53',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb9', habilidadeId: '56',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb9', habilidadeId: '82',  nivelEsperado: 'Básico' },
-
-  // cb10 — Analista de Dados Júnior (★ = não avaliado por João)
-  { cargoId: 'cb10', habilidadeId: '65',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '66',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '4',   nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '67',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb10', habilidadeId: '64',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb10', habilidadeId: '91',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '98',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '9',   nivelEsperado: 'Básico' },
-  { cargoId: 'cb10', habilidadeId: '107', nivelEsperado: 'Básico' },        // ★
-
-  // cb11 — Engenheiro DevOps Júnior (★ = não avaliado por João)
-  { cargoId: 'cb11', habilidadeId: '53',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb11', habilidadeId: '54',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb11', habilidadeId: '56',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb11', habilidadeId: '55',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb11', habilidadeId: '58',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb11', habilidadeId: '80',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb11', habilidadeId: '18',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb11', habilidadeId: '92',  nivelEsperado: 'Básico' },
-
-  // cb12 — Arquiteto de Soluções Pleno (★ = não avaliado por João)
-  { cargoId: 'cb12', habilidadeId: '59',  nivelEsperado: 'Avançado' },
-  { cargoId: 'cb12', habilidadeId: '60',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb12', habilidadeId: '2',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb12', habilidadeId: '56',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb12', habilidadeId: '61',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb12', habilidadeId: '63',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb12', habilidadeId: '83',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb12', habilidadeId: '64',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb12', habilidadeId: '58',  nivelEsperado: 'Básico' },        // ★
-
-  // cb13 — Analista de Segurança Júnior (★ = não avaliado por João)
-  { cargoId: 'cb13', habilidadeId: '68',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb13', habilidadeId: '69',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb13', habilidadeId: '70',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb13', habilidadeId: '56',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb13', habilidadeId: '82',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb13', habilidadeId: '9',   nivelEsperado: 'Básico' },
-  { cargoId: 'cb13', habilidadeId: '80',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb13', habilidadeId: '18',  nivelEsperado: 'Básico' },
-
-  // cb14 — Tech Lead Pleno (★ = não avaliado por João)
-  { cargoId: 'cb14', habilidadeId: '86',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '87',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '88',  nivelEsperado: 'Intermediário' }, // ★
-  { cargoId: 'cb14', habilidadeId: '1',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '2',   nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '59',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '91',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '95',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb14', habilidadeId: '83',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb14', habilidadeId: '14',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb14', habilidadeId: '89',  nivelEsperado: 'Básico' },        // ★
-
-  // cb15 — Product Manager Júnior (★ = não avaliado por João)
-  { cargoId: 'cb15', habilidadeId: '104', nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '91',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '83',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '95',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '98',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '107', nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb15', habilidadeId: '9',   nivelEsperado: 'Básico' },
-  { cargoId: 'cb15', habilidadeId: '97',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb15', habilidadeId: '105', nivelEsperado: 'Básico' },        // ★
-
-  // cb16 — Product Manager Pleno (★ = não avaliado por João)
-  { cargoId: 'cb16', habilidadeId: '104', nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb16', habilidadeId: '91',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb16', habilidadeId: '83',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb16', habilidadeId: '95',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb16', habilidadeId: '87',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb16', habilidadeId: '98',  nivelEsperado: 'Intermediário' },
-  { cargoId: 'cb16', habilidadeId: '92',  nivelEsperado: 'Básico' },
-  { cargoId: 'cb16', habilidadeId: '107', nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb16', habilidadeId: '97',  nivelEsperado: 'Básico' },        // ★
-  { cargoId: 'cb16', habilidadeId: '105', nivelEsperado: 'Básico' },        // ★
 ];

@@ -10,12 +10,6 @@ import {
   Layers,
   UserCircle,
   TrendingUp,
-  FlaskConical,
-  Target,
-  PieChart,
-  Gauge,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,8 +32,6 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ top: 0, left: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<number | null>(null);
-  // Sempre inicia fechado — não precisa persistir entre reloads.
-  const [isTestesOpen, setIsTestesOpen] = useState(false);
 
   const menuItemsAdmin = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -53,12 +45,6 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     { id: 'meu-perfil', label: 'Meu Perfil', icon: UserCircle },
     { id: 'minhas-avaliacoes', label: 'Minhas Avaliações', icon: ClipboardCheck },
     { id: 'minha-carreira', label: 'Minha Carreira', icon: TrendingUp },
-  ];
-
-  const menuItemsTestes = [
-    { id: 'testes/radar',                   label: 'Radar de Competências',   icon: Target   },
-    { id: 'testes/perfil-doughnut',         label: 'Aderência — Doughnut',    icon: PieChart },
-    { id: 'testes/perfil-aderencia-geral',  label: 'Cobertura vs. Aderência', icon: Gauge    },
   ];
 
   const menuItems = viewMode === 'admin' ? menuItemsAdmin : menuItemsColaborador;
@@ -113,12 +99,9 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
     };
   }, []);
 
-  // Encontrar o label do item hover (inclui itens de teste no modo colaborador)
-  const allCurrentItems = viewMode === 'colaborador'
-    ? [...menuItemsColaborador, ...menuItemsTestes]
-    : menuItemsAdmin;
+  // Encontrar o label do item hover
   const hoveredItemLabel = hoveredItem
-    ? allCurrentItems.find(item => item.id === hoveredItem)?.label
+    ? menuItems.find(item => item.id === hoveredItem)?.label
     : null;
 
   return (
@@ -186,67 +169,6 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
               );
             })}
           </ul>
-
-          {/* Grupo "Testes" — apenas no modo colaborador */}
-          {viewMode === 'colaborador' && (
-            <>
-              <div className={`${isCollapsed ? 'px-4' : 'px-3'} mt-2 pt-3 pb-1 border-t border-gray-200`}>
-                {!isCollapsed ? (
-                  <button
-                    onClick={() => setIsTestesOpen((prev) => !prev)}
-                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors gap-3 px-3 py-2.5 ${
-                      isTestesOpen
-                        ? 'bg-[var(--brand-50)]'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                    aria-expanded={isTestesOpen}
-                    aria-controls="sidebar-testes-group"
-                  >
-                    <FlaskConical className={`w-5 h-5 flex-shrink-0 ${isTestesOpen ? 'text-[var(--brand-600)]' : 'text-gray-700'}`} />
-                    <span className={`flex-1 text-left whitespace-nowrap ${isTestesOpen ? 'text-[var(--brand-700)] font-medium' : 'text-gray-700'}`}>
-                      Testes
-                    </span>
-                    {isTestesOpen ? (
-                      <ChevronDown className="w-4 h-4 flex-shrink-0 text-[var(--brand-600)]" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-700" />
-                    )}
-                  </button>
-                ) : null}
-              </div>
-              <ul id="sidebar-testes-group" className={`space-y-1 ${isCollapsed ? 'px-4' : 'px-3'} ${!isCollapsed && !isTestesOpen ? 'hidden' : ''}`}>
-                {menuItemsTestes.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = selectedItem === item.id;
-                  return (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => handleMenuItemClick(item.id)}
-                        onMouseEnter={(e) => handleMouseEnter(item.id, e)}
-                        onMouseLeave={handleMouseLeave}
-                        className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
-                          isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'
-                        } ${
-                          isActive
-                            ? 'bg-[var(--brand-50)]'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                        aria-label={item.label}
-                        aria-current={isActive ? 'page' : undefined}
-                      >
-                        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--brand-600)]' : 'text-gray-700'}`} />
-                        {!isCollapsed && (
-                          <span className={isActive ? 'text-[var(--brand-700)] font-medium' : 'text-gray-700'}>
-                            {item.label}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
         </nav>
       </aside>
 

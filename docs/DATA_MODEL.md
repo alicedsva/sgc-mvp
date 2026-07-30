@@ -253,30 +253,27 @@ completas de 5 níveis cada — ver explicação em Habilidade acima.
 
 ---
 
-## Dados exclusivos de telas de teste (`/testes/*`)
+## Dados exclusivos de João Silva (Meu Perfil / Minha Carreira)
 
-Estas quatro entidades **não** fazem parte do fluxo oficial de produto — elas
-existem apenas para alimentar protótipos em `src/app/pages/testes/`. Antes de
-promover qualquer uma delas para uma rota oficial, é obrigatório seguir o
-protocolo de promoção (`.claude/rules/06-integridade-de-dados.md`): comparar
-contra a fonte oficial, resolver divergências naquele momento, e atualizar
-este documento.
+Estas duas entidades existem só para o colaborador João Silva (id `10`) — não
+existe hoje equivalente para nenhum outro colaborador do sistema. Não são
+dado de teste: são consumidas por rotas oficiais do Colaborador.
 
-### Matriz de Habilidades de João (teste)
-Cópia estendida da matriz do cargo de João Silva (colaborador id `10`), usada
-só nas telas de teste de "Minha Carreira" — não afeta `habilidadesCargoData`
-real nem outros colaboradores.
+### JoaoHabilidadeCargoMatriz
+Cópia estendida da matriz do cargo atual de João Silva (`joaoHabilidadesCargoMatriz`
+em `mockData.ts`) — não afeta `habilidadesCargoData` real nem outros
+colaboradores (ex: Ana Silva continua na matriz oficial do cargo).
 
-### Histórico de Cargos de João (teste)
-Histórico de progressão de cargos de João Silva. Conceito não existe hoje
-para nenhum outro colaborador do sistema.
+**Usado em:** `minhaCarreiraShared.tsx` (via `matrizParaCargo`/`enriquecerMatriz`),
+consumido por `MinhaCarreiraPage` e `ColaboradorView.tsx` (Meu Perfil).
 
-### Cargo de Benchmark (teste)
-Cargos fictícios de outras áreas/empresas, usados só para a tela de teste de
-benchmark de mercado. `area` e `cargoBase` são rótulos livres, não FKs.
+### HistoricoCargoJoao
+Histórico de progressão de cargos de João Silva (`historicoCargosJoaoData`
+em `mockData.ts`). Conceito não existe hoje para nenhum outro colaborador do
+sistema — se isso virar feature real, avaliar generalizar por `colaboradorId`.
 
-### HabilidadeCargo de Benchmark (teste)
-Matriz de habilidades dos cargos de benchmark acima.
+**Usado em:** `ColaboradorView.tsx` (retrospecto "Minha Trajetória", Meu Perfil),
+`MinhaCarreiraPage` (Evolução profissional).
 
 ---
 
