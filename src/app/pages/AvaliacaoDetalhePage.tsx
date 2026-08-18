@@ -8,8 +8,10 @@ import {
   cargosData,
   habilidadesData,
   competenciasData,
+  HOJE_SIMULADO,
 } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
+import { calcularStatusEfetivo, formatPeriodoAvaliacao, getStatusAvaliacaoLabel } from '../utils/avaliacoes';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -47,13 +49,6 @@ const nivelToNota: Record<string, number> = {
   // nunca deixar cair no fallback `?? 1` abaixo (mostraria como "Básico").
   'nao_sei': 0,
 };
-
-function formatPeriodo(inicio: string, fim: string): string {
-  const [yi, mi, di] = inicio.split('-');
-  const [yf, mf, df] = fim.split('-');
-  if (yi === yf) return `${di}/${mi} - ${df}/${mf}/${yf}`;
-  return `${di}/${mi}/${yi} - ${df}/${mf}/${yf}`;
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -117,7 +112,7 @@ export default function AvaliacaoDetalhePage() {
 // ─── Rascunho view (prévia somente-leitura) ───────────────────────────────────
 
 function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
-  const periodo = formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim);
+  const periodo = formatPeriodoAvaliacao(avaliacao);
 
   const grupos = useMemo(() => {
     if (!avaliacao.habilidades?.length) return [];
@@ -212,7 +207,7 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   const [drawerParticipante, setDrawerParticipante] = useState<ParticipanteDisplay | null>(null);
   const [currentPageParticipantes, setCurrentPageParticipantes] = useState(1);
 
-  const periodo = formatPeriodo(avaliacao.periodoInicio, avaliacao.periodoFim);
+  const periodo = formatPeriodoAvaliacao(avaliacao);
 
   const participantesDisplay = useMemo((): ParticipanteDisplay[] => {
     return avaliacao.participantes.map((p) => {
@@ -306,8 +301,19 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
     },
   ];
 
+  // Status EFETIVO (calculado), nunca avaliacao.status bruto — com
+  // modoPrazo/periodoInicio agendável, 'Ativa' gravado pode já estar
+  // 'Pendente' ou 'Expirada' na prática (ver calcularStatusEfetivo).
+  const statusEfetivo = calcularStatusEfetivo(avaliacao, HOJE_SIMULADO);
+  // Cores de Pendente/Expirada aqui são uma extensão não documentada em
+  // 02-design-system.md (que só cobre Rascunho/Ativa/Encerrada) — reaproveita
+  // azul (Pendente, no espírito de "Em andamento" já usado para participante)
+  // e cinza (Expirada, mesmo tom de Encerrada/estado neutro). Vale
+  // oficializar no design system quando o padrão for confirmado.
   const statusClass =
-    avaliacao.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700';
+    statusEfetivo === 'Ativa' ? 'bg-green-100 text-green-800'
+    : statusEfetivo === 'Pendente' ? 'bg-blue-100 text-blue-800'
+    : 'bg-gray-100 text-gray-700'; // Encerrada / Expirada
 
   return (
     <>
@@ -316,7 +322,7 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
         <div className="flex flex-wrap items-center gap-3 mb-2">
           <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusClass}`}>
-            {avaliacao.status}
+            {getStatusAvaliacaoLabel(statusEfetivo)}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">

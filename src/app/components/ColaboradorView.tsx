@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router';
 import { Clock, CalendarClock, AlertCircle, CheckCircle2, Target, ChevronRight } from 'lucide-react';
 import { colaboradoresData, historicoCargosJoaoData, HOJE_SIMULADO } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
-import { getParticipacoesColaborador, getProximaAvaliacaoInfo, estaVencida } from '../utils/avaliacoes';
+import { getParticipacoesColaborador, getProximaAvaliacaoInfo, participanteVencido } from '../utils/avaliacoes';
 import {
   JOAO_ID,
   JOAO_CARGO_ATUAL,
@@ -65,7 +65,7 @@ export function ColaboradorView() {
   const emAberto = minhasParticipacoes.filter(
     ({ participante, avaliacao }) =>
       (participante.status === 'Não iniciada' || participante.status === 'Em andamento') &&
-      !estaVencida(avaliacao.periodoFim, HOJE_SIMULADO)
+      !participanteVencido(avaliacao, participante, HOJE_SIMULADO)
   );
   const avaliacoesEmAberto = emAberto.length;
 

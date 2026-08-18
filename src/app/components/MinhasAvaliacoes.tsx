@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar, CalendarClock, CheckCircle2, Clock, ArrowRight, BookOpen, Eye } from 'lucide-react';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
-import { getParticipacoesColaborador, getProximaAvaliacaoInfo, calcularDiasAteVencimento, calcularDiasDesde, estaVencida, formatData, type ParticipacaoColaborador } from '../utils/avaliacoes';
+import { getParticipacoesColaborador, getProximaAvaliacaoInfo, calcularDiasDesde, participanteVencido, diasAteVencimentoParticipante, formatPrazoParticipante, formatData, type ParticipacaoColaborador } from '../utils/avaliacoes';
 import { JOAO_ID } from '../pages/minhaCarreiraShared';
 import { HOJE_SIMULADO, habilidadesData } from '../data/mockData';
 import type { Avaliacao, TipoHabilidade } from '../../data/schema';
@@ -134,20 +134,21 @@ export function MinhasAvaliacoes() {
   // (mesma regra de estaVencida usada por getProximaAvaliacaoInfo e
   // ColaboradorView.tsx).
   const naoIniciadas = participacoes.filter(
-    p => p.participante.status === 'Não iniciada' && !estaVencida(p.avaliacao.periodoFim, HOJE_SIMULADO)
+    p => p.participante.status === 'Não iniciada' && !participanteVencido(p.avaliacao, p.participante, HOJE_SIMULADO)
   );
   const emAndamento = participacoes.filter(
-    p => p.participante.status === 'Em andamento' && !estaVencida(p.avaliacao.periodoFim, HOJE_SIMULADO)
+    p => p.participante.status === 'Em andamento' && !participanteVencido(p.avaliacao, p.participante, HOJE_SIMULADO)
   );
   const concluidas = participacoes.filter(p => p.participante.status === 'Concluída');
   // Expiradas: tanto as já gravadas como tal no mock quanto as que só agora,
   // por prazo vencido, deixam de contar como abertas — as duas se comportam
-  // igual no Histórico.
+  // igual no Histórico. Participante em modoPrazo 'indefinido' nunca entra
+  // aqui (participanteVencido é sempre false sem prazo definido).
   const expiradasGravadas = participacoes.filter(p => p.participante.status === 'Expirada');
   const expiradasPorPrazo = participacoes.filter(
     p =>
       (p.participante.status === 'Não iniciada' || p.participante.status === 'Em andamento') &&
-      estaVencida(p.avaliacao.periodoFim, HOJE_SIMULADO)
+      participanteVencido(p.avaliacao, p.participante, HOJE_SIMULADO)
   );
 
   // Filtro de tipo + urgência do grid "Avaliações em aberto" — os dois grupos
@@ -158,10 +159,11 @@ export function MinhasAvaliacoes() {
   const [filtroUrgencia, setFiltroUrgencia] = useState<'todas' | 'urgente' | 'sem-urgencia'>('todas');
 
   const avaliacoesAbertasFiltradas = [...naoIniciadas, ...emAndamento]
-    .filter(({ avaliacao }) => {
+    .filter(({ avaliacao, participante }) => {
       const matchTipo = filtroTipo === 'todas' || tiposDaAvaliacao(avaliacao).includes(filtroTipo);
-      const dias = calcularDiasAteVencimento(avaliacao.periodoFim, HOJE_SIMULADO);
-      const urgente = dias <= 10;
+      const dias = diasAteVencimentoParticipante(avaliacao, participante, HOJE_SIMULADO);
+      // Sem prazo definido (modoPrazo 'indefinido') nunca é "urgente".
+      const urgente = dias !== null && dias <= 10;
       const matchUrgencia = filtroUrgencia === 'todas' || (filtroUrgencia === 'urgente' ? urgente : !urgente);
       return matchTipo && matchUrgencia;
     })
@@ -369,8 +371,8 @@ export function MinhasAvaliacoes() {
               // Urgência do PRÓPRIO prazo desta avaliação — cada card calcula
               // a sua badge conforme o seu periodoFim, não mais só a mais
               // urgente de todas.
-              const diasCard = calcularDiasAteVencimento(avaliacao.periodoFim, HOJE_SIMULADO);
-              const badgeUrgencia = badgeUrgenciaCard(diasCard);
+              const diasCard = diasAteVencimentoParticipante(avaliacao, participante, HOJE_SIMULADO);
+              const badgeUrgencia = diasCard !== null ? badgeUrgenciaCard(diasCard) : null;
               const isNova = isAvaliacaoNova(participante, avaliacao.periodoInicio, HOJE_SIMULADO);
               return (
                 <div
@@ -415,7 +417,7 @@ export function MinhasAvaliacoes() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span>Prazo: {formatData(avaliacao.periodoFim)}</span>
+                      <span>Prazo: {formatPrazoParticipante(avaliacao, participante)}</span>
                     </div>
                   </div>
 

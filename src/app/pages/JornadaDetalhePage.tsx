@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, ClipboardCheck } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, colaboradoresData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
 import type { Cargo, HabilidadeCargo, NivelNome } from '../../data/schema';
@@ -581,6 +581,17 @@ function JornadaDetalheContent() {
                         Ativar jornada
                       </>
                     )}
+                  </button>
+                  <div className="my-1 border-t border-gray-100" />
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/avaliacoes/nova', { state: { jornadaPreSelecionada: jornadaId } });
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Criar avaliação para esta matriz
                   </button>
                   <div className="my-1 border-t border-gray-100" />
                   <button

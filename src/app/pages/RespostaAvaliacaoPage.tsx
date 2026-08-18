@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { AlertCircle, ArrowLeft, ArrowRight, Calendar, Check, ListChecks, Save } from 'lucide-react';
-import { habilidadesData, getCorFromPeso, HOJE_SIMULADO } from '../data/mockData';
-import { getNiveisHabilidade, formatData } from '../utils/avaliacoes';
+import { AlertCircle, ArrowLeft, ArrowRight, Calendar, ListChecks, Save } from 'lucide-react';
+import { habilidadesData, HOJE_SIMULADO } from '../data/mockData';
+import { formatPrazoParticipante } from '../utils/avaliacoes';
 import { JOAO_ID } from './minhaCarreiraShared';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
+import { NiveisHabilidadeCards } from '../components/avaliacoes/NiveisHabilidadeCards';
+import { PainelLateralCompetencias } from '../components/avaliacoes/PainelLateralCompetencias';
 import type { NivelNome } from '../../data/schema';
 import { toast } from 'sonner';
 
@@ -26,8 +28,6 @@ import { toast } from 'sonner';
 // de handleSalvarRascunho no formato antigo) e sai direto, sem indicador
 // automático permanente na tela nem diálogo de confirmação separado.
 
-const SEM_CONHECIMENTO = 'nao_sei';
-
 interface CompetenciaGrupo {
   id: string;
   nome: string;
@@ -42,7 +42,7 @@ export default function RespostaAvaliacaoPage() {
 
   // Sem "!" — avaliacaoId inválido na URL ou colaborador fora dos
   // participantes não pode quebrar a tela (ver estado de erro depois de
-  // todos os hooks, mesmo padrão do antigo RespostaAvaliacao.tsx).
+  // todos os hooks, logo abaixo).
   const avaliacao = avaliacoes.find(a => a.id === avaliacaoId);
   const participanteAtual = avaliacao?.participantes.find(p => p.colaboradorId === JOAO_ID);
 
@@ -85,22 +85,12 @@ export default function RespostaAvaliacaoPage() {
   const competenciaAtual = habilidadeAtual
     ? competencias.find(c => c.id === habilidadeAtual.competenciaId)
     : undefined;
-  // Ordem de progressão (peso crescente) explícita — sem o nome do nível
-  // como pista, a ordem crescente de dificuldade é o único sinal restante.
-  const niveisHabilidade = habilidadeAtual
-    ? [...getNiveisHabilidade(habilidadeAtual)].sort((a, b) => a.peso - b.peso)
-    : [];
   const eUltimaHabilidade = indiceAtual === ordemHabilidades.length - 1;
-  // Índice da primeira habilidade ainda não respondida na sequência — a
-  // lista lateral só permite clicar em habilidades já respondidas (revisar/
-  // editar) ou nesta aqui (a próxima a alcançar); as posteriores ficam
-  // desabilitadas para não deixar pular habilidades fora de ordem.
-  const primeiroNaoRespondidoIndex = ordemHabilidades.findIndex(h => !respostas[h.id]);
 
   // Estado de erro — avaliacaoId inválido na URL ou colaborador fora dos
   // participantes desta avaliação. Depois de todos os hooks (nunca antes —
-  // regra dos hooks), mesmo texto/estrutura do antigo RespostaAvaliacao.tsx,
-  // adaptado ao shell fullscreen (sem Layout/Sidebar em volta).
+  // regra dos hooks), renderizado dentro do próprio shell fullscreen (sem
+  // Layout/Sidebar em volta).
   if (!avaliacao || !participanteAtual) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -172,10 +162,9 @@ export default function RespostaAvaliacaoPage() {
   };
 
   // Envio final: bloqueia com toast.error se houver habilidade sem resposta
-  // — nunca permite envio parcial (mesmo comportamento do antigo
-  // RespostaAvaliacao.tsx). Só chama responderAvaliacao(enviar: true) —
-  // que marca o participante como 'Concluída' no Context — quando 100% das
-  // habilidades foram respondidas.
+  // — nunca permite envio parcial. Só chama responderAvaliacao(enviar: true)
+  // — que marca o participante como 'Concluída' no Context — quando 100%
+  // das habilidades foram respondidas.
   const handleEnviar = () => {
     if (respondidas < totalHabilidades) {
       toast.error('Por favor, avalie todas as habilidades antes de enviar.');
@@ -199,7 +188,7 @@ export default function RespostaAvaliacaoPage() {
           <div className="min-w-0 flex items-baseline gap-2">
             <p className="text-sm font-semibold text-gray-900 truncate">{avaliacao.nome}</p>
             <span className="text-gray-300 flex-shrink-0">•</span>
-            <p className="text-sm text-gray-500 flex-shrink-0">Prazo: {formatData(avaliacao.periodoFim)}</p>
+            <p className="text-sm text-gray-500 flex-shrink-0">Prazo: {formatPrazoParticipante(avaliacao, participanteAtual)}</p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
@@ -237,7 +226,7 @@ export default function RespostaAvaliacaoPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
                 <Calendar className="w-4 h-4 text-gray-400" />
-                Prazo de entrega: {formatData(avaliacao.periodoFim)}
+                Prazo de entrega: {formatPrazoParticipante(avaliacao, participanteAtual)}
               </span>
             </div>
 
@@ -319,73 +308,15 @@ export default function RespostaAvaliacaoPage() {
                   <p className="text-sm text-gray-600 mt-1">{habilidadeAtual.descricao}</p>
                 </div>
 
-                {/* Lista de níveis — radio próprio, sem <label>. Nome do nível
-                    propositalmente omitido nas opções abaixo — só o critério
-                    é mostrado (ver comentário no topo do arquivo).
-                    flex-1 + overflow-y-auto: preenche o espaço restante do painel (altura fixa
-                    pelo wrapper acima) e rola internamente se o conteúdo não couber, em vez de
-                    esticar o card. min-h-0 é necessário para o overflow funcionar dentro de flex-col. */}
-                <div role="radiogroup" aria-label={`Nível para ${habilidadeAtual.nome}`} className="space-y-2 flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1">
-                  <div
-                    className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors ${
-                      respostas[habilidadeAtual.id] === SEM_CONHECIMENTO ? 'border-gray-400 bg-gray-100' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={respostas[habilidadeAtual.id] === SEM_CONHECIMENTO}
-                      onClick={() => handleNivelChange(habilidadeAtual.id, SEM_CONHECIMENTO)}
-                      className={`w-4 h-4 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center cursor-pointer ${
-                        respostas[habilidadeAtual.id] === SEM_CONHECIMENTO ? 'border-gray-500' : 'border-gray-300'
-                      }`}
-                    >
-                      {respostas[habilidadeAtual.id] === SEM_CONHECIMENTO && (
-                        <span className="w-2 h-2 rounded-full bg-gray-500" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNivelChange(habilidadeAtual.id, SEM_CONHECIMENTO)}
-                      className="text-left cursor-pointer flex-1"
-                    >
-                      <p className={`text-sm ${respostas[habilidadeAtual.id] === SEM_CONHECIMENTO ? 'text-gray-900 font-medium' : 'text-gray-700 font-medium'}`}>
-                        Sem conhecimento
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">Ainda não teve contato ou não sabe avaliar seu nível atual.</p>
-                    </button>
-                  </div>
-
-                  {niveisHabilidade.map((nivel) => {
-                    const isSelected = respostas[habilidadeAtual.id] === nivel.nome;
-                    const cor = getCorFromPeso(nivel.peso);
-                    return (
-                      <div
-                        key={nivel.id}
-                        className="flex items-start gap-3 p-3 rounded-lg border-2 transition-colors"
-                        style={{ borderColor: isSelected ? cor : '#e5e7eb', backgroundColor: isSelected ? cor + '0D' : 'transparent' }}
-                      >
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          onClick={() => handleNivelChange(habilidadeAtual.id, nivel.nome)}
-                          className="w-4 h-4 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center cursor-pointer"
-                          style={{ borderColor: isSelected ? cor : '#d1d5db' }}
-                        >
-                          {isSelected && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cor }} />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleNivelChange(habilidadeAtual.id, nivel.nome)}
-                          className="text-left cursor-pointer flex-1"
-                        >
-                          <p className="text-sm" style={{ color: isSelected ? cor : '#374151' }}>{nivel.criterio}</p>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* Lista de níveis — extraída para NiveisHabilidadeCards.tsx,
+                    reusada também pelo preview do questionário (Etapa
+                    Revisão do cadastro de avaliação). flex-1 + overflow-y-auto
+                    do componente preenche o espaço restante do painel. */}
+                <NiveisHabilidadeCards
+                  habilidade={habilidadeAtual}
+                  respostaAtual={respostas[habilidadeAtual.id]}
+                  onSelecionar={(nivel) => handleNivelChange(habilidadeAtual.id, nivel)}
+                />
 
                 {/* Navegação sequencial */}
                 <div className="flex items-center justify-between gap-3 mt-6 pt-4 border-t border-gray-200">
@@ -422,58 +353,20 @@ export default function RespostaAvaliacaoPage() {
                 </div>
               </div>
 
-              {/* Painel lateral — navegação por competência. lg:h-full (nunca
-                  max-h independente) para garantir a MESMA altura do painel
-                  principal, ambos lidos do wrapper acima. */}
-              <div className="w-full lg:w-72 flex-shrink-0 lg:h-full bg-white border border-gray-200 rounded-lg p-4 lg:overflow-y-auto scrollbar-thin">
-                <div className="space-y-4">
-                  {competencias.map((competencia) => (
-                    <div key={competencia.id}>
-                      <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-                        {competencia.nome}
-                      </p>
-                      <div className="space-y-0.5">
-                        {competencia.habilidades.map((habilidade) => {
-                          const respondida = !!respostas[habilidade.id];
-                          const isAtual = habilidade.id === habilidadeAtual.id;
-                          // Acessível se já respondida (revisar/editar) ou se é
-                          // exatamente a próxima não respondida na sequência —
-                          // habilidades futuras ainda não alcançadas ficam
-                          // bloqueadas, nunca permitem pular fora de ordem.
-                          const indice = ordemHabilidades.findIndex(h => h.id === habilidade.id);
-                          const podeAcessar = respondida || indice === primeiroNaoRespondidoIndex;
-                          return (
-                            <button
-                              key={habilidade.id}
-                              type="button"
-                              onClick={() => podeAcessar && irPara(habilidade.id)}
-                              disabled={!podeAcessar}
-                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors ${
-                                isAtual ? 'bg-[var(--brand-50)]' : podeAcessar ? 'hover:bg-gray-50' : 'cursor-not-allowed'
-                              }`}
-                            >
-                              <span
-                                className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center border-2 ${
-                                  respondida ? 'border-[var(--brand-400)] bg-[var(--brand-400)]' : 'border-gray-300'
-                                }`}
-                              >
-                                {respondida && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-                              </span>
-                              <span
-                                className={`text-xs truncate ${
-                                  isAtual ? 'text-[var(--brand-700)] font-medium' : podeAcessar ? 'text-gray-700' : 'text-gray-400'
-                                }`}
-                              >
-                                {habilidade.nome}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Painel lateral — extraído para PainelLateralCompetencias.tsx,
+                  reusado também pelo preview do questionário. lg:h-full
+                  (nunca max-h independente) garante a MESMA altura do painel
+                  principal, ambos lidos do wrapper acima. restringirOrdem
+                  trava habilidades futuras aqui (fluxo real, progresso de
+                  verdade a proteger) — o preview não passa essa prop. */}
+              <PainelLateralCompetencias
+                competencias={competencias}
+                habilidadeAtualId={habilidadeAtual.id}
+                onSelecionar={irPara}
+                respostas={respostas}
+                restringirOrdem
+                ordemHabilidades={ordemHabilidades}
+              />
             </div>
         </div>
       ) : null}

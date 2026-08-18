@@ -26,6 +26,7 @@ interface CarreirasContextType {
   vincularColaborador: (jornadaId: string, colaboradorId: string) => void;
   desvincularColaborador: (jornadaId: string, colaboradorId: string) => void;
   getColaboradoresPorJornada: (jornadaId: string) => string[];
+  getHabilidadesAgregadasDaJornada: (jornadaId: string) => string[];
 }
 
 const CarreirasContext = createContext<CarreirasContextType | undefined>(undefined);
@@ -253,6 +254,18 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
   const getColaboradoresPorJornada = (jornadaId: string): string[] =>
     vinculos.filter(v => v.jornadaId === jornadaId).map(v => v.colaboradorId);
 
+  // Habilidades únicas de TODOS os cargos de uma jornada — generaliza a lógica
+  // que já existia inline em JornadaDetalhePage.tsx (hidratação da matriz).
+  // Fonte única para o wizard de avaliação (Caminho "Por Jornada") não
+  // duplicar essa conta.
+  const getHabilidadesAgregadasDaJornada = (jornadaId: string): string[] => {
+    const cargoIds = new Set(cargos.filter(c => c.jornadaId === jornadaId).map(c => c.id));
+    const idsUnicos = new Set(
+      habilidadesCargo.filter(h => cargoIds.has(h.cargoId)).map(h => h.habilidadeId)
+    );
+    return Array.from(idsUnicos);
+  };
+
   return (
     <CarreirasContext.Provider
       value={{
@@ -274,6 +287,7 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
         vincularColaborador,
         desvincularColaborador,
         getColaboradoresPorJornada,
+        getHabilidadesAgregadasDaJornada,
       }}
     >
       {children}

@@ -10,6 +10,8 @@ import HabilidadesPage from "./pages/HabilidadesPage";
 import HabilidadeDetalhePage from "./pages/HabilidadeDetalhePage";
 import PerfisListPage from "./pages/PerfisListPage";
 import AvaliacoesPage from "./pages/AvaliacoesPage";
+import CriarAvaliacaoPage from "./pages/CriarAvaliacaoPage";
+import EditarAvaliacaoRascunhoPage from "./pages/EditarAvaliacaoRascunhoPage";
 import AvaliacaoDetalhePage from "./pages/AvaliacaoDetalhePage";
 import MeuPerfilPage from "./pages/MeuPerfilPage";
 import MinhasAvaliacoesPage from "./pages/MinhasAvaliacoesPage";
@@ -39,7 +41,9 @@ export const router = createBrowserRouter([
       { path: "carreiras/:carreiraId/jornadas/:jornadaId/editar", Component: EditarJornadaPage },
       { path: "carreiras/:carreiraId/jornadas/:jornadaId/cargos/:cargoId", Component: ConfigurarCargoPage },
       { path: "avaliacoes", Component: AvaliacoesPage },
+      { path: "avaliacoes/nova", Component: CriarAvaliacaoPage },
       { path: "avaliacoes/:id", Component: AvaliacaoDetalhePage },
+      { path: "avaliacoes/:id/editar", Component: EditarAvaliacaoRascunhoPage },
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },
       { path: "minhas-avaliacoes/resultado/:avaliacaoId", Component: ResultadoAvaliacaoPage },

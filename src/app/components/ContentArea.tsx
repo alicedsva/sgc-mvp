@@ -4,7 +4,8 @@ import { useCompetencias } from '../context/CompetenciasContext';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
-import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData } from '../data/mockData';
+import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
+import { formatPeriodoAvaliacao, calcularStatusEfetivo, getStatusAvaliacaoLabel } from '../utils/avaliacoes';
 import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
@@ -18,7 +19,6 @@ import { ColaboradorView } from './ColaboradorView';
 import { MinhasAvaliacoes } from './MinhasAvaliacoes';
 import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
-import { NovaAvaliacaoDrawer, NovaAvaliacaoFormData } from './avaliacoes/NovaAvaliacaoDrawer';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
 import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,41 +32,6 @@ interface ContentAreaProps {
 // Gerências reais (derivadas de colaboradoresData) — nunca lista fixa, para
 // que público-alvo de Avaliações sempre reflita as gerências que existem de
 // fato no sistema. Mesmo padrão já usado em DashboardPage.tsx.
-const GERENCIAS_REAIS = Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort();
-
-// Formata o rótulo de público-alvo de uma Avaliação a partir das gerências
-// selecionadas, seguindo o padrão observado nos dados reais (publicoLabel é
-// texto livre, não FK — ver schema.ts).
-function formatPublicoLabel(gerencias: string[]): string {
-  if (gerencias.length === 0 || gerencias.length >= GERENCIAS_REAIS.length) return 'Todos os colaboradores';
-  if (gerencias.length === 1) return `Gerência ${gerencias[0]}`;
-  if (gerencias.length === 2) return `Gerências ${gerencias[0]} e ${gerencias[1]}`;
-  return `Gerências ${gerencias.slice(0, -1).join(', ')} e ${gerencias[gerencias.length - 1]}`;
-}
-
-// Caminho inverso de formatPublicoLabel — usado só para pré-popular o
-// formulário de edição a partir do publicoLabel já salvo. É best-effort:
-// round-trip perfeito para rótulos gerados por formatPublicoLabel; rótulos
-// fora desse padrão (ex: o outlier histórico 'Cargo Desenvolvedor Pleno')
-// resultam em nenhuma gerência pré-marcada.
-function parsePublicoLabelParaGerencias(label: string): string[] {
-  if (label === 'Todos os colaboradores') return [...GERENCIAS_REAIS];
-  const semPrefixo = label.replace(/^Gerências?\s+/, '');
-  if (semPrefixo === label) return [];
-  return semPrefixo
-    .split(/,\s*| e /)
-    .map(s => s.trim())
-    .filter(nome => GERENCIAS_REAIS.includes(nome));
-}
-
-// IDs dos colaboradores no público-alvo — usado para montar/recalcular
-// Avaliacao.participantes a partir das gerências selecionadas no formulário.
-function idsColaboradoresAlvo(gerencias: string[]): string[] {
-  const todos = gerencias.length === 0 || gerencias.length >= GERENCIAS_REAIS.length;
-  return colaboradoresData
-    .filter(c => todos || gerencias.includes(c.gerencia))
-    .map(c => c.id);
-}
 
 export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: ContentAreaProps) {
   // ========== ALL HOOKS MUST BE DECLARED FIRST (before any early returns) ==========
@@ -128,18 +93,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   const [buscaAvaliacao, setBuscaAvaliacao] = useState('');
   const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
   const [itemsPerPageAvaliacoes, setItemsPerPageAvaliacoes] = useState(10);
-  const [avaliacaoFormData, setAvaliacaoFormData] = useState({
-    nome: '',
-    descricao: '',
-    competencias: [] as string[],
-    habilidades: [] as string[],
-    gerencias: [] as string[],
-    dataInicio: '',
-    dataFim: '',
-  });
-  
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isNovaAvaliacaoOpen, setIsNovaAvaliacaoOpen] = useState(false);
 
   // Reset da paginação quando filtros de Competências mudarem
   useEffect(() => {
@@ -247,7 +201,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   // tratamento já aplicado a Carreiras).
   const {
     avaliacoes: avaliacoesData,
-    adicionarAvaliacao,
     atualizarAvaliacao,
   } = useAvaliacoes();
 
@@ -1736,10 +1689,23 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           item.nome.toLowerCase().includes(buscaAvaliacao.toLowerCase()) ||
           item.tipo.toLowerCase().includes(buscaAvaliacao.toLowerCase());
         
-        // Filtro de status
-        const matchStatus = statusFilterAvaliacoes === 'todas' || 
-          item.status.toLowerCase() === statusFilterAvaliacoes.toLowerCase();
-        
+        // Filtro de status — "Agendadas" e "Ativas" comparam o status
+        // CALCULADO ('Pendente'/'Ativa'), nunca o campo bruto item.status
+        // (que fica 'Ativa' até a data chegar — ver calcularStatusEfetivo),
+        // senão as duas se sobrepõem e uma avaliação agendada aparece nos
+        // dois filtros ao mesmo tempo, inconsistente com o badge da linha.
+        // Rascunho/Encerrada não têm esse problema — calcularStatusEfetivo
+        // sempre repassa esses dois direto, sem recalcular (só 'Ativa' bruto
+        // pode virar 'Pendente'/'Expirada'/'Ativa' calculado) — por isso
+        // continuam comparando o campo bruto, sem mudança.
+        const statusEfetivoItem = () => calcularStatusEfetivo(item, HOJE_SIMULADO);
+        const matchStatus = statusFilterAvaliacoes === 'todas'
+          || (statusFilterAvaliacoes === 'agendada'
+            ? statusEfetivoItem() === 'Pendente'
+            : statusFilterAvaliacoes === 'ativa'
+            ? statusEfetivoItem() === 'Ativa'
+            : item.status.toLowerCase() === statusFilterAvaliacoes.toLowerCase());
+
         return matchBusca && matchStatus;
       });
     };
@@ -1819,7 +1785,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           </button>
         ),
         render: (_value, row) => (
-          <span className="text-sm text-gray-700">{formatDataCurta(row.periodoInicio)} - {formatDataLonga(row.periodoFim)}</span>
+          <span className="text-sm text-gray-700">{formatPeriodoAvaliacao(row as Avaliacao)}</span>
         ),
       },
       {
@@ -1863,19 +1829,26 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             )}
           </button>
         ),
-        render: (value) => (
-          <span
-            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-              value === 'Ativa'
-                ? 'bg-green-100 text-green-800'
-                : value === 'Encerrada'
-                ? 'bg-gray-100 text-gray-700'
-                : 'bg-yellow-100 text-yellow-800'
-            }`}
-          >
-            {value}
-          </span>
-        ),
+        render: (_value, row) => {
+          // Status CALCULADO, nunca o campo bruto — mesma fonte usada pelo
+          // filtro "Agendadas" acima e por AvaliacaoDetalhePage.tsx, para
+          // nunca divergir (calcularStatusEfetivo). Cores de Pendente/
+          // Expirada seguem a mesma extensão não documentada já usada em
+          // AvaliacaoDetalhePage.tsx (azul/cinza).
+          const statusEfetivo = calcularStatusEfetivo(row as Avaliacao, HOJE_SIMULADO);
+          const statusClass =
+            statusEfetivo === 'Ativa' ? 'bg-green-100 text-green-800'
+            : statusEfetivo === 'Pendente' ? 'bg-blue-100 text-blue-800'
+            : statusEfetivo === 'Rascunho' ? 'bg-yellow-100 text-yellow-800'
+            : 'bg-gray-100 text-gray-700'; // Encerrada / Expirada
+          return (
+            <span
+              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${statusClass}`}
+            >
+              {getStatusAvaliacaoLabel(statusEfetivo)}
+            </span>
+          );
+        },
       },
     ];
 
@@ -1890,23 +1863,14 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         label: 'Editar',
         icon: <Edit className="w-4 h-4" />,
         onClick: (row) => {
-          setSelectedRow(row);
-          const habilidadesSelecionadas: string[] = row.habilidades || [];
-          const competenciasDerivadas = Array.from(new Set(
-            habilidadesSelecionadas
-              .map((hId: string) => habilidadesData.find((h) => h.id === hId)?.competenciaId)
-              .filter((cId): cId is string => !!cId)
-          ));
-          setAvaliacaoFormData({
-            nome: row.nome,
-            descricao: row.descricao || '',
-            competencias: competenciasDerivadas,
-            habilidades: habilidadesSelecionadas,
-            gerencias: parsePublicoLabelParaGerencias(row.publicoLabel),
-            dataInicio: row.periodoInicio || '',
-            dataFim: row.periodoFim || '',
-          });
-          setIsDrawerOpen(true);
+          // Rascunho sem participantes: página de edição completa. Já
+          // materializada (tem participantes): modal enxuto, só prorrogação.
+          if ((row as Avaliacao).participantes.length === 0) {
+            navigate(`/avaliacoes/${row.id}/editar`);
+          } else {
+            setSelectedRow(row);
+            setIsDrawerOpen(true);
+          }
         },
       },
       {
@@ -1920,102 +1884,15 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       },
     ];
 
-    // Abrir drawer de criação (novo fluxo multi-etapas)
-    const handleOpenCreateDrawer = () => {
-      setIsNovaAvaliacaoOpen(true);
-    };
-
-    // Callbacks do NovaAvaliacaoDrawer
-    const formatDataCurta = (d: string) =>
-      d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
-    const formatDataLonga = (d: string) =>
-      d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-
-    const handleNovaAvaliacaoRascunho = (data: NovaAvaliacaoFormData) => {
-      const newAvaliacao: Avaliacao = {
-        id: generateId('avaliacao'),
-        nome: data.nome,
-        tipo: 'Autoavaliação',
-        status: 'Rascunho',
-        periodoInicio: data.dataInicio,
-        periodoFim: data.dataFim,
-        publicoLabel: formatPublicoLabel(data.gerencias),
-        descricao: data.descricao,
-        habilidades: data.habilidades,
-        participantes: [],
-      };
-      setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
-      setCurrentPageAvaliacoes(1);
-      adicionarAvaliacao(newAvaliacao);
-      toast.success('Avaliação criada como rascunho!');
-    };
-
-    const handleNovaAvaliacaoAtivar = (data: NovaAvaliacaoFormData) => {
-      const newAvaliacao: Avaliacao = {
-        id: generateId('avaliacao'),
-        nome: data.nome,
-        tipo: 'Autoavaliação',
-        status: 'Ativa',
-        periodoInicio: data.dataInicio,
-        periodoFim: data.dataFim,
-        publicoLabel: formatPublicoLabel(data.gerencias),
-        descricao: data.descricao,
-        habilidades: data.habilidades,
-        participantes: idsColaboradoresAlvo(data.gerencias).map((colaboradorId) => ({
-          colaboradorId,
-          status: 'Não iniciada' as const,
-          visualizada: false,
-          respostas: [],
-        })),
-      };
-      setAvaliacoesSortConfig({ column: 'id', direction: 'desc' });
-      setCurrentPageAvaliacoes(1);
-      adicionarAvaliacao(newAvaliacao);
-      toast.success('Avaliação criada e ativada com sucesso!');
-    };
-
-    // Callbacks do modal de edição
-    const handleEditRascunho = (data: typeof avaliacaoFormData) => {
+    // Prorrogação — único caminho de edição para avaliação já materializada
+    // (participantes.length > 0): periodoFim (datas_fixas), prazoDias
+    // (prazo_em_dias), ou periodoFim+modoPrazo (indefinido definindo um
+    // término pela primeira vez, convertendo para datas_fixas) — tudo
+    // validado em EditarAvaliacaoModal antes de chegar aqui, este handler só
+    // repassa o que ele decidiu para o Context.
+    const handleProrrogarAvaliacao = (updates: Partial<Avaliacao>) => {
       if (!selectedRow) return;
-      atualizarAvaliacao(selectedRow.id, {
-        nome: data.nome,
-        descricao: data.descricao,
-        periodoInicio: data.dataInicio,
-        periodoFim: data.dataFim,
-        publicoLabel: formatPublicoLabel(data.gerencias),
-        habilidades: data.habilidades,
-        status: 'Rascunho',
-        participantes: [],
-      });
-      toast.success('Avaliação salva como rascunho!');
-      setIsDrawerOpen(false);
-      setSelectedRow(null);
-    };
-
-    const handleEditAtivar = (data: typeof avaliacaoFormData) => {
-      if (!selectedRow) return;
-      // Preserva participantes existentes (com respostas/status) que continuam
-      // no público-alvo; remove quem saiu; adiciona quem entrou como novo
-      // participante 'Não iniciada' — nunca descarta respostas já registradas.
-      const idsAlvo = new Set(idsColaboradoresAlvo(data.gerencias));
-      const participantesExistentes: ParticipanteAvaliacao[] = selectedRow.participantes ?? [];
-      const preservados = participantesExistentes.filter((p) => idsAlvo.has(p.colaboradorId));
-      const idsPreservados = new Set(preservados.map((p) => p.colaboradorId));
-      const novos: ParticipanteAvaliacao[] = Array.from(idsAlvo)
-        .filter((id) => !idsPreservados.has(id))
-        .map((colaboradorId) => ({ colaboradorId, status: 'Não iniciada' as const, visualizada: false, respostas: [] }));
-
-      atualizarAvaliacao(selectedRow.id, {
-        nome: data.nome,
-        descricao: data.descricao,
-        periodoInicio: data.dataInicio,
-        periodoFim: data.dataFim,
-        publicoLabel: formatPublicoLabel(data.gerencias),
-        habilidades: data.habilidades,
-        status: 'Ativa',
-        participantes: [...preservados, ...novos],
-      });
-      toast.success('Avaliação ativada com sucesso!');
+      atualizarAvaliacao(selectedRow.id, updates);
       setIsDrawerOpen(false);
       setSelectedRow(null);
     };
@@ -2043,7 +1920,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           <ListingPage
             primaryAction={{
               label: '+ Criar avaliação',
-              onClick: handleOpenCreateDrawer,
+              onClick: () => navigate('/avaliacoes/nova'),
             }}
             columns={avaliacoesColumns}
             data={paginatedData}
@@ -2056,6 +1933,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               options: [
                 { value: 'todas', label: 'Todas' },
                 { value: 'rascunho', label: 'Rascunho' },
+                { value: 'agendada', label: 'Agendadas' },
                 { value: 'ativa', label: 'Ativas' },
                 { value: 'encerrada', label: 'Encerradas' },
               ],
@@ -2082,20 +1960,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               setIsDrawerOpen(false);
               setSelectedRow(null);
             }}
-            onSalvarRascunho={handleEditRascunho}
-            onAtivar={handleEditAtivar}
-            initialData={avaliacaoFormData}
-            competencias={competencias}
-            habilidades={habilidadesData}
-          />
-
-          <NovaAvaliacaoDrawer
-            isOpen={isNovaAvaliacaoOpen}
-            onClose={() => setIsNovaAvaliacaoOpen(false)}
-            onSalvarRascunho={handleNovaAvaliacaoRascunho}
-            onAtivar={handleNovaAvaliacaoAtivar}
-            competencias={competencias}
-            habilidades={habilidadesData}
+            onProrrogar={handleProrrogarAvaliacao}
+            avaliacao={selectedRow as Avaliacao | null}
           />
 
           <ConfirmationModal

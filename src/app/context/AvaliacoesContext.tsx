@@ -23,7 +23,10 @@ const VERSION_KEY = 'carreiras_avaliacoes_mock_version';
 // mockData.ts sofrer alteração estrutural nas avaliações, incremente esta
 // versão para descartar dados antigos salvos no navegador (mesmo padrão de
 // CarreirasContext.tsx).
-const MOCK_DATA_VERSION = '2026-07-28-5';
+// 2026-08-10: Fase 2 — Avaliacao ganhou modoPrazo/prazoDias/origemJornadaId/
+// gerenciasComAutoInclusao e ParticipanteAvaliacao ganhou dataEntrada
+// (obrigatório). Dados antigos no localStorage não têm esses campos.
+const MOCK_DATA_VERSION = '2026-08-10-6';
 
 function loadFromStorage(): Avaliacao[] {
   try {

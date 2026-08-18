@@ -1,18 +1,17 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, AlertCircle, BarChart2, CheckCircle2, Info } from 'lucide-react';
-import { habilidadesData, joaoHabilidadesCargoMatriz, getCorFromPeso, getPesoFromNome } from '../data/mockData';
+import { ArrowLeft, AlertCircle, CheckCircle2, TrendingUp, Info } from 'lucide-react';
+import { habilidadesData, joaoHabilidadesCargoMatriz, getPesoFromNome } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { JOAO_ID, getStatus } from '../pages/minhaCarreiraShared';
+import { getNiveisHabilidade, formatData } from '../utils/avaliacoes';
+import { Accordion, AccordionItem } from './ui/Accordion';
+import { NivelRegua } from './ui/NivelRegua';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 function media(pesos: number[]): number {
   if (pesos.length === 0) return 0;
   return Math.round((pesos.reduce((a, b) => a + b, 0) / pesos.length) * 10) / 10;
-}
-
-// Rótulo amigável para o sentinela 'nao_sei' — nunca exibir o valor cru do
-// campo. Nomes de nível reais passam direto.
-function labelNivelResposta(nivel: string): string {
-  return nivel === 'nao_sei' ? 'Sem conhecimento' : nivel;
 }
 
 export function ResultadoAvaliacao() {
@@ -24,6 +23,16 @@ export function ResultadoAvaliacao() {
   // participantes não pode quebrar a tela (ver estado vazio abaixo).
   const avaliacao = avaliacoes.find(a => a.id === avaliacaoId);
   const participante = avaliacao?.participantes.find(p => p.colaboradorId === JOAO_ID);
+
+  const [abertas, setAbertas] = useState<Set<string>>(new Set());
+  const toggleAberta = (id: string) => {
+    setAbertas(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Estado vazio — mesmo padrão visual já usado em
   // AvaliacaoDetalhePage.tsx/CarreiraDetalhePage.tsx/CompetenciaDetalhePage.tsx
@@ -64,33 +73,51 @@ export function ResultadoAvaliacao() {
     })
     .filter((x): x is { resposta: typeof participante.respostas[number]; habilidade: (typeof habilidadesData)[number] } => x != null);
 
+  // Data da resposta mais recente entre as respostas desta avaliação — string
+  // ISO 'YYYY-MM-DD' ordena corretamente por comparação lexicográfica.
+  const dataRespondida = respostasComHabilidade.length > 0
+    ? respostasComHabilidade.reduce((max, { resposta }) => (resposta.dataResposta > max ? resposta.dataResposta : max), respostasComHabilidade[0].resposta.dataResposta)
+    : null;
+
   // Nível esperado do cargo ATUAL de João, por habilidade — mesma matriz
   // usada em Minha Carreira/Meu Perfil (joaoHabilidadesCargoMatriz), nunca
   // recriada aqui. Habilidades desta avaliação sem entrada na matriz não têm
   // "esperado" para comparar (caso "sem referência").
   const matrizEsperadoMap = new Map(joaoHabilidadesCargoMatriz.map(m => [m.habilidadeId, m.nivelEsperado]));
 
-  // Contagem de gap — reusa getStatus (nivelRespondido desta avaliação vs
-  // nivelEsperado da matriz), nunca enriquecerMatriz (que resolveria
+  // Status por habilidade — reusa getStatus (nivelRespondido desta avaliação
+  // vs nivelEsperado da matriz), nunca enriquecerMatriz (que resolveria
   // nivelAtual pelo histórico entre avaliações, não o que interessa aqui).
-  // Habilidades sem referência na matriz são excluídas do numerador, mesmo
-  // princípio de excluir "sem dado" já usado em calcularAderenciaPorTipo.
-  const habilidadesAbaixoDoEsperado = respostasComHabilidade.filter(({ resposta }) => {
-    const nivelEsperado = matrizEsperadoMap.get(resposta.habilidadeId);
-    return nivelEsperado != null && getStatus(resposta.nivelRespondido, nivelEsperado) === 'abaixo';
-  }).length;
+  // Habilidades sem referência na matriz ficam com status null — contam
+  // apenas no total de "avaliadas", nunca em "no esperado ou acima"/"abaixo".
+  const itensComStatus = respostasComHabilidade.map(item => {
+    const nivelEsperado = matrizEsperadoMap.get(item.resposta.habilidadeId) ?? null;
+    const status = nivelEsperado != null ? getStatus(item.resposta.nivelRespondido, nivelEsperado) : null;
+    return { ...item, nivelEsperado, status };
+  });
 
-  const competenciasMap = new Map<string, { id: string; nome: string; itens: typeof respostasComHabilidade }>();
-  respostasComHabilidade.forEach(item => {
+  const totalAvaliadas = itensComStatus.length;
+  const noOuAcima = itensComStatus.filter(i => i.status === 'no' || i.status === 'acima').length;
+  const abaixoDoEsperado = itensComStatus.filter(i => i.status === 'abaixo').length;
+
+  const competenciasMap = new Map<string, { id: string; nome: string; itens: typeof itensComStatus }>();
+  itensComStatus.forEach(item => {
     const compId = item.habilidade.competenciaId;
     if (!competenciasMap.has(compId)) {
       competenciasMap.set(compId, { id: compId, nome: item.habilidade.competencia, itens: [] });
     }
     competenciasMap.get(compId)!.itens.push(item);
   });
+  // Contagens por status reusam o mesmo campo `status` já calculado em
+  // itensComStatus/getStatus (o mesmo usado pela régua) — nunca recalculadas
+  // do zero aqui. Habilidades sem referência de cargo (status null) não
+  // entram em nenhuma das 3 contagens.
   const competencias = Array.from(competenciasMap.values()).map(comp => ({
     ...comp,
     media: media(comp.itens.map(x => getPesoFromNome(x.resposta.nivelRespondido))),
+    abaixoDoEsperado: comp.itens.filter(i => i.status === 'abaixo').length,
+    noEsperado: comp.itens.filter(i => i.status === 'no').length,
+    acimaDoEsperado: comp.itens.filter(i => i.status === 'acima').length,
   }));
 
   return (
@@ -104,8 +131,12 @@ export function ResultadoAvaliacao() {
           <ArrowLeft className="w-4 h-4" />
           Minhas Avaliações
         </button>
-        <h1 className="text-2xl font-semibold text-gray-900">Resultado da Avaliação</h1>
-        <p className="text-sm text-gray-600 mt-1">{avaliacao.nome}</p>
+        <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
+        {dataRespondida && (
+          <p className="text-sm text-gray-600 mt-1">
+            Avaliação respondida em {formatData(dataRespondida)}
+          </p>
+        )}
       </div>
 
       {/* Cards de resumo */}
@@ -115,15 +146,17 @@ export function ResultadoAvaliacao() {
             <span className="text-base font-semibold text-gray-700">Habilidades avaliadas</span>
             <CheckCircle2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{respostasComHabilidade.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{totalAvaliadas}</p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-gray-700">Competências avaliadas</span>
-            <BarChart2 className="w-5 h-5 text-[var(--brand-600)] flex-shrink-0" />
+            <span className="text-base font-semibold text-gray-700">No esperado ou acima</span>
+            <div className="p-2 rounded-lg bg-green-100 flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-green-800" />
+            </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{competencias.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{noOuAcima}</p>
         </div>
 
         {/* Wrapper colorido de ícone — exceção documentada em
@@ -132,12 +165,12 @@ export function ResultadoAvaliacao() {
             gap real contra o cargo atual. */}
         <div className="bg-white border border-gray-200 rounded-lg p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-gray-700">Habilidades abaixo do esperado</span>
+            <span className="text-base font-semibold text-gray-700">Abaixo do esperado</span>
             <div className="p-2 rounded-lg bg-amber-100 flex-shrink-0">
               <AlertCircle className="w-5 h-5 text-amber-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{habilidadesAbaixoDoEsperado}</p>
+          <p className="text-3xl font-bold text-gray-900">{abaixoDoEsperado}</p>
         </div>
       </div>
 
@@ -151,58 +184,70 @@ export function ResultadoAvaliacao() {
 
       {/* Resultados por competência */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Resultados por Competência</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Resultados da avaliação</h2>
 
-        {competencias.map((competencia) => (
-          <div key={competencia.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            {/* Header da competência */}
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-medium text-gray-900">{competencia.nome}</h3>
-                  <p className="text-sm text-gray-500">{competencia.itens.length} habilidades</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-semibold text-[var(--brand-600)]">{competencia.media}</div>
-                  <div className="text-xs text-gray-500">Média da autoavaliação</div>
-                  <div className="text-xs text-gray-400">escala de 1 a 5</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Lista de habilidades */}
-            <div className="p-5 space-y-3">
-              {competencia.itens.map(({ habilidade, resposta }) => {
-                const nivelEsperado = matrizEsperadoMap.get(habilidade.id);
-                const status = nivelEsperado != null ? getStatus(resposta.nivelRespondido, nivelEsperado) : null;
-                return (
-                  <div key={habilidade.id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-900">{habilidade.nome}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {nivelEsperado != null ? (
-                        <span className={`text-xs font-medium ${status === 'abaixo' ? 'text-amber-600' : 'text-[var(--brand-600)]'}`}>
-                          Esperado: {nivelEsperado}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">Sem referência para seu cargo atual</span>
-                      )}
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          resposta.nivelRespondido === 'nao_sei' ? 'bg-gray-100 text-gray-600' : 'text-white'
-                        }`}
-                        style={resposta.nivelRespondido === 'nao_sei' ? {} : { backgroundColor: getCorFromPeso(getPesoFromNome(resposta.nivelRespondido)) }}
-                      >
-                        {labelNivelResposta(resposta.nivelRespondido)}
-                      </span>
-                    </div>
+        <Accordion>
+          {competencias.map(competencia => (
+            <AccordionItem
+              key={competencia.id}
+              id={competencia.id}
+              isOpen={abertas.has(competencia.id)}
+              onToggle={toggleAberta}
+              trigger={
+                <div className="flex items-center justify-between w-full pr-2 text-left">
+                  <div>
+                    <h3 className="text-sm md:text-base font-medium text-gray-900">{competencia.nome}</h3>
+                    <p className="text-xs md:text-sm text-gray-500">{competencia.itens.length} habilidades</p>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+                  <p className="text-xs text-gray-500 whitespace-nowrap ml-4">
+                    Abaixo do esperado ({competencia.abaixoDoEsperado}) · Esperado ({competencia.noEsperado}) · Acima do esperado ({competencia.acimaDoEsperado})
+                  </p>
+                </div>
+              }
+              content={
+                <div className="p-4 md:p-5 bg-white divide-y divide-gray-100">
+                  {competencia.itens.map(({ habilidade, resposta, nivelEsperado, status }) => {
+                    const niveisAplicaveis = getNiveisHabilidade(habilidade).map(n => ({ nome: n.nome, peso: n.peso, criterio: n.criterio }));
+                    const nivelVoce = resposta.nivelRespondido === 'nao_sei' ? null : resposta.nivelRespondido;
+                    return (
+                      <div key={habilidade.id} className="py-4 first:pt-0 last:pb-0">
+                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                          <span className="text-sm font-medium text-gray-900">{habilidade.nome}</span>
+                          {nivelEsperado == null && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              Sem referência para seu cargo
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Esta habilidade foi avaliada, mas não faz parte da matriz de habilidades esperadas para o seu cargo atual. Por isso, não há um nível esperado para comparação.
+                                </TooltipContent>
+                              </Tooltip>
+                            </span>
+                          )}
+                          {resposta.nivelRespondido === 'nao_sei' && (
+                            <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-600">
+                              Sem conhecimento
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-3">
+                          <NivelRegua
+                            niveis={niveisAplicaveis}
+                            nivelVoce={nivelVoce}
+                            nivelEsperado={nivelEsperado}
+                            status={status}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              }
+            />
+          ))}
+        </Accordion>
       </div>
     </div>
   );

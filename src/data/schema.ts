@@ -151,26 +151,61 @@ export interface ParticipanteAvaliacao {
   respostas: RespostaAvaliacao[];
   /** Se o colaborador já abriu esta avaliação (clicou em "Iniciar avaliação"/"Continuar avaliação") ao menos uma vez. Controla o badge "Nova" — nunca reconstruir esse estado a partir de outro campo. */
   visualizada: boolean;
+  /** 'YYYY-MM-DD' — data em que este participante foi materializado na avaliação (ativação, ou entrada tardia por edição de público-alvo). Base do prazo individual no modoPrazo 'prazo_em_dias'; sem efeito em 'indefinido' (sem prazo individual) — ver calcularPrazoParticipante em utils/avaliacoes.ts. */
+  dataEntrada: string;
 }
 
 export type TipoAvaliacao = 'Autoavaliação';
-export type StatusAvaliacao = 'Rascunho' | 'Ativa' | 'Encerrada';
+/**
+ * 'Pendente' e 'Expirada' nunca são gravados por ação direta do Admin — são
+ * produzidos por calcularStatusEfetivo (utils/avaliacoes.ts) a partir de
+ * periodoInicio/periodoFim comparados a HOJE_SIMULADO. O campo Avaliacao.status
+ * grava apenas o que é decisão explícita ('Rascunho', 'Ativa' ao ativar,
+ * 'Encerrada' ao encerrar manualmente) — mas o union inclui os 5 valores porque
+ * telas que exibem status devem sempre usar calcularStatusEfetivo, nunca o
+ * campo bruto, e o tipo de retorno dessa função é este mesmo union.
+ */
+export type StatusAvaliacao = 'Rascunho' | 'Ativa' | 'Encerrada' | 'Pendente' | 'Expirada';
+
+/**
+ * Como o prazo de resposta da avaliação é definido — ver
+ * calcularStatusEfetivo/calcularPrazoParticipante em utils/avaliacoes.ts.
+ * 'indefinido' — sem periodoFim nem prazoDias; a avaliação fica disponível
+ * até ser Encerrada manualmente pelo Admin (mesmo comportamento de
+ * "nunca expira sozinha" de 'prazo_em_dias', mas sem nenhum prazo por
+ * participante — calcularPrazoParticipante retorna undefined nesse modo).
+ */
+export type ModoPrazoAvaliacao = 'datas_fixas' | 'prazo_em_dias' | 'indefinido';
 
 export interface Avaliacao {
   id: string;
   nome: string;
   tipo: TipoAvaliacao;
   status: StatusAvaliacao;
-  /** 'YYYY-MM-DD' */
+  modoPrazo: ModoPrazoAvaliacao;
+  /** 'YYYY-MM-DD'. Pode ser futura (avaliação nasce 'Pendente' até essa data). Vazia enquanto a avaliação está em 'Rascunho' — só é gravada no momento da ativação (data real de publicação, inclusive no modo 'indefinido', que nunca fica vazio depois de Ativa). */
   periodoInicio: string;
-  /** 'YYYY-MM-DD' */
-  periodoFim: string;
+  /** 'YYYY-MM-DD'. Só usado quando modoPrazo === 'datas_fixas' — nesse modo é o prazo de todos os participantes. Ausente quando modoPrazo === 'prazo_em_dias' ou 'indefinido'. */
+  periodoFim?: string;
+  /** Só usado quando modoPrazo === 'prazo_em_dias' — dias corridos a partir de ParticipanteAvaliacao.dataEntrada para aquele participante vencer. Ausente quando modoPrazo === 'datas_fixas' ou 'indefinido'. */
+  prazoDias?: number;
   /** Texto livre descrevendo o público-alvo — NÃO é FK. */
   publicoLabel: string;
   descricao?: string;
   /** FK -> Habilidade.id */
   habilidades?: string[];
   participantes: ParticipanteAvaliacao[];
+  /** FK -> Jornada.id. Presente quando a avaliação nasceu do Caminho 1 ("Por Jornada") do wizard — mantém o vínculo para a edição não abrir como público-alvo livre. Ausente quando criada por "Por Público-alvo" ou por rascunho antigo pré-Fase 2. */
+  origemJornadaId?: string;
+  /**
+   * Texto livre (nome de gerência, mesmo valor de Colaborador.gerencia) — só
+   * populado no Caminho "Por Público-alvo", quando uma gerência é marcada
+   * INTEIRA e o Admin ativa "incluir automaticamente novos colaboradores desta
+   * gerência". Registra a INTENÇÃO apenas — nenhum mecanismo no sistema reage
+   * a este campo hoje (não há fluxo de criar/editar colaborador para disparar
+   * a inclusão); o efeito real depende de integração futura com o RM.
+   */
+  gerenciasComAutoInclusao?: string[];
 }
 
 // ─── Histórico de avaliação (registro legado, fora do fluxo de Avaliacao) ──

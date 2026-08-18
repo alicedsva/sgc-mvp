@@ -19,6 +19,7 @@ import {
   getPesoFromNome,
   HOJE_SIMULADO,
 } from '../data/mockData';
+import { calcularStatusEfetivo, formatPeriodoAvaliacao } from '../utils/avaliacoes';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -275,13 +276,6 @@ const AVALIACOES_VARIACAO_30D = -8;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatPeriodo(inicio: string, fim: string): string {
-  const [yi, mi, di] = inicio.split('-');
-  const [yf, mf, df] = fim.split('-');
-  if (yi === yf) return `${di}/${mi} – ${df}/${mf}/${yf}`;
-  return `${di}/${mi}/${yi} – ${df}/${mf}/${yf}`;
-}
-
 function getBarColor(cobertura: number): string {
   if (cobertura >= 70) return '#009FC2';
   if (cobertura >= 50) return '#33BFDF';
@@ -526,11 +520,11 @@ export default function DashboardPage() {
   // gerencias/jornadas, então filtroGerencias e filtroJornadas não afetam esta seção.
   const avaliacoesAtivas = useMemo(() =>
     avaliacoesData
-      .filter(a => a.status === 'Ativa')
+      .filter(a => calcularStatusEfetivo(a, HOJE_SIMULADO) === 'Ativa')
       .map(a => ({
         id: a.id,
         nome: a.nome,
-        periodo: formatPeriodo(a.periodoInicio, a.periodoFim),
+        periodo: formatPeriodoAvaliacao(a),
         respondidos: a.participantes.filter(p => p.status === 'Concluída').length,
         total: a.participantes.length,
       })),

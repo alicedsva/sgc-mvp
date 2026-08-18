@@ -1,9 +1,11 @@
 # Minhas Avaliações & Responder Avaliação — documentação de handoff
 
-> Gerado a partir de leitura direta do código-fonte em 2026-07-27. Todo trecho
-> de código citado abaixo foi conferido contra o arquivo real no momento da
-> escrita — nada aqui foi descrito de memória. Se o código mudar depois desta
-> data, este documento pode ficar desatualizado; confira sempre contra a fonte.
+> Gerado a partir de leitura direta do código-fonte em 2026-07-27, revisado e
+> corrigido em 2026-07-31 contra o estado atual do código (ver Apêndice). Todo
+> trecho de código citado abaixo foi conferido contra o arquivo real no
+> momento da escrita — nada aqui foi descrito de memória. Se o código mudar
+> depois desta data, este documento pode ficar desatualizado; confira sempre
+> contra a fonte.
 >
 > Escopo: telas **Minhas Avaliações** (listagem) e **Responder Avaliação**
 > (formulário de resposta), ambas do perfil Colaborador. A tela de
@@ -80,8 +82,8 @@ avaliação como um todo tinha `periodoFim` maior.
 Se o prazo (`periodoFim`) passa e o colaborador não enviou resposta, o status
 efetivo do participante é `Expirada`, calculado dinamicamente — nunca gravado
 manualmente. Fonte única: `estaVencida(periodoFim, hoje)`
-(`utils/avaliacoes.ts:66-68`), reusada por `MinhasAvaliacoes.tsx` (linhas
-132-147) e por `getProximaAvaliacaoInfo`. Uma avaliação "Não iniciada"/"Em
+(`utils/avaliacoes.ts:80-82`), reusada por `MinhasAvaliacoes.tsx` (linhas
+136-151) e por `getProximaAvaliacaoInfo`. Uma avaliação "Não iniciada"/"Em
 andamento" cujo prazo já passou sai de "Avaliações em aberto" e migra para o
 Histórico como `Expirada` (mesmo tratamento visual da que já vinha gravada
 assim no mock — `expiradasGravadas` e `expiradasPorPrazo` viram a mesma linha
@@ -100,13 +102,13 @@ function isAvaliacaoNova(participante, periodoInicio, hoje) {
 }
 ```
 
-(`MinhasAvaliacoes.tsx:96-100`). O badge desaparece quando o que acontecer
+(`MinhasAvaliacoes.tsx:102-104`). O badge desaparece quando o que acontecer
 primeiro: o colaborador clica em "Iniciar avaliação"/"Continuar avaliação"
 (`marcarComoVisualizada` grava `visualizada: true` — `AvaliacoesContext.tsx:91-101`,
 chamado em `handleResponderClick`), ou os 5 dias expiram (cálculo automático,
 sem gravação). Avaliações com badge "Nova" ativo aparecem **sempre primeiro**
 na lista (`.sort((a, b) => Number(bNova) - Number(aNova))`,
-`MinhasAvaliacoes.tsx:164-168`).
+`MinhasAvaliacoes.tsx:168-172`).
 
 ### 2.5 Sistema de urgência (prazo)
 
@@ -122,16 +124,19 @@ Limiares reais (`bandaUrgencia`, `MinhasAvaliacoes.tsx:31-36`):
 | 1 dia | vermelho | "Vence amanhã" |
 | 0 dias | vermelho | "Vence hoje" |
 
-**Atenção — dois conjuntos de cor distintos para a mesma banda**, ambos
-derivados do mesmo limiar mas com tokens diferentes:
+A mesma cor de texto é reaproveitada em dois lugares (nunca dois tons de
+vermelho/amarelo divergentes) — só a borda do badge por card é um elemento
+próprio, mais claro, no estilo outline:
 - Card-resumo "Próxima avaliação encerra em" (`corUrgenciaDias`,
-  `MinhasAvaliacoes.tsx:43-48`): `text-red-400` (vermelho) / `text-yellow-500`
+  `MinhasAvaliacoes.tsx:50-52`, que delega a `corUrgencia` em
+  `MinhasAvaliacoes.tsx:44-48`): `text-red-600` (vermelho) / `text-yellow-600`
   (amarelo) / `text-[var(--brand-600)]` (neutro).
 - Badge de contagem regressiva por card (`badgeUrgenciaCard`,
-  `MinhasAvaliacoes.tsx:54-62`): `border-red-300 text-red-700` (vermelho) /
-  `border-yellow-400 text-yellow-800` (amarelo).
+  `MinhasAvaliacoes.tsx:59-66`): `border-red-300` (vermelho) /
+  `border-yellow-400` (amarelo), texto na mesma cor de `corUrgencia` (não é
+  um segundo tom fixo separado — reusa a mesma função, só a borda muda).
 
-O filtro "Urgente"/"Sem urgência" usa `dias <= 10` (`MinhasAvaliacoes.tsx:160`),
+O filtro "Urgente"/"Sem urgência" usa `dias <= 10` (`MinhasAvaliacoes.tsx:164`),
 coerente com o corte "sem badge" acima de 10 dias.
 
 ### 2.6 Tipo de avaliação (Técnica/Comportamental)
@@ -176,7 +181,7 @@ interface em `schema.ts`) e não deve ser simplificada.
 ### 3.1 Cabeçalho
 
 Título "Minhas Avaliações" + subtítulo "Responda suas avaliações e acompanhe
-seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
+seus resultados" (`MinhasAvaliacoes.tsx:276-281`).
 
 ### 3.2 Cards de métrica (topo, nesta ordem)
 
@@ -185,7 +190,7 @@ seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
 2. **Próxima avaliação encerra em** — dias + nome da avaliação
    correspondente (texto secundário, `line-clamp-1`), cor do texto/ícone
    conforme a faixa de urgência (regra 2.5, via `corUrgenciaDias`). Fonte:
-   `getProximaAvaliacaoInfo` (`utils/avaliacoes.ts:75-94`) — mesma função
+   `getProximaAvaliacaoInfo` (`utils/avaliacoes.ts:89-108`) — mesma função
    usada por `ColaboradorView.tsx` (Meu Perfil), para as duas telas nunca
    divergirem.
 3. **Avaliações concluídas** — `concluidas.length`, ícone `CheckCircle2`
@@ -194,7 +199,7 @@ seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
 ### 3.3 Seção "Avaliações em aberto"
 
 - Título solto na página (`<h2>`, sem container envolvendo a seção inteira).
-- Container único de filtros (`MinhasAvaliacoes.tsx:314-351`):
+- Container único de filtros (`MinhasAvaliacoes.tsx:318-355`):
   - **Filtro de tipo**: chips "Todas"/"Técnica"/"Comportamental" (seleção
     única, `filtroTipo`).
   - **Filtro de urgência**: chips "Todas"/"Urgente"/"Sem urgência"
@@ -206,7 +211,7 @@ seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
 - Grid de cards (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`), sem
   wrapper próprio além do grid em si.
 
-**Cada card contém** (`MinhasAvaliacoes.tsx:371-440`):
+**Cada card contém** (`MinhasAvaliacoes.tsx:376-443`):
 - Badge(s) de tipo (canto superior esquerdo, ver regra 2.6).
 - Badge de urgência (canto superior direito) e/ou badge "Nova" (mesma
   região) — ver regras 2.4/2.5.
@@ -225,10 +230,10 @@ seus resultados" (`MinhasAvaliacoes.tsx:272-277`).
 ### 3.4 Histórico de Avaliações
 
 - Título "Histórico de avaliações" fora do container de filtro
-  (`MinhasAvaliacoes.tsx:450-452`).
+  (`MinhasAvaliacoes.tsx:454-456`).
 - `ListingPage` (mesmo componente usado pelo Admin) com busca por nome +
   chips de status ("Todas"/"Concluída"/"Expirada").
-- Colunas (`historicoColumns`, linhas 226-252): **Avaliação realizada**
+- Colunas (`historicoColumns`, linhas 230-256): **Avaliação realizada**
   (nome) · **Conclusão** (`ultimaDataResposta`, nunca `periodoFim`; "—"
   quando `Expirada` sem resposta) · **Habilidades** (quantidade) · **Status**
   (badge `Concluída` verde / `Expirada` cinza).
@@ -271,9 +276,12 @@ nome/prazo, uma segunda barra repetiria a informação.
 
 ### 4.2 Etapa de Instruções
 
-Card único (`bg-white border border-gray-200 rounded-lg`), sem painel
-lateral de competências — decisão deliberada para não fazer *spoiler* do
-conteúdo da avaliação antes do colaborador começar:
+Card único (`bg-white border border-gray-200 rounded-lg`, `max-w-xl`),
+centralizado na viewport inteira (`flex-1 flex items-center justify-center`,
+já que não há Header/Sidebar nesta rota) — largura deliberadamente reduzida
+em vez de ocupar a tela toda, sem painel lateral de competências — decisão
+deliberada para não fazer *spoiler* do conteúdo da avaliação antes do
+colaborador começar:
 - Badge do tipo da avaliação (`avaliacao.tipo`, ex. "Autoavaliação").
 - Nome da avaliação (`<h1>`) + meta: ícone `ListChecks` + "N habilidades",
   ícone `Calendar` + "Prazo de entrega: DD/MM/AAAA".
@@ -306,11 +314,17 @@ de forma independente):
   Comportamental) + descrição, depois a lista de opções de nível (4.4), e
   navegação "Anterior"/"Próxima habilidade" fixa na base do card
   (`flex flex-col` + a lista de opções em `flex-1 min-h-0 overflow-y-auto` —
-  o card nunca estica, a lista rola internamente se não couber).
+  o card nunca estica, a lista rola internamente se não couber). "Próxima
+  habilidade" fica `disabled` enquanto a habilidade atual não tiver resposta
+  (`disabled={!respostas[habilidadeAtual.id]}`,
+  `RespostaAvaliacaoPage.tsx:415`) — não é possível avançar sem responder a
+  atual; na última habilidade este botão vira "Enviar avaliação" (ver 4.6).
 - **Painel lateral** (direita, `w-72`): lista de todas as habilidades
   agrupadas por competência, cada uma com indicador de respondida (check
-  verde) ou pendente, e a habilidade atual destacada
-  (`bg-[var(--brand-50)]`). Navegação restrita à ordem: `podeAcessar =
+  branco sobre círculo de cor de marca, `border-[var(--brand-400)]
+  bg-[var(--brand-400)]` — **não é mais verde**, correção em relação a uma
+  versão anterior deste documento) ou pendente, e a habilidade atual
+  destacada (`bg-[var(--brand-50)]`). Navegação restrita à ordem: `podeAcessar =
   respondida || indice === primeiroNaoRespondidoIndex` — só é possível
   clicar em uma habilidade já respondida (revisar/editar) ou na próxima
   ainda não respondida na sequência; as posteriores ficam `disabled`
@@ -338,11 +352,16 @@ do critério em vez do rótulo:
 - Radio próprio (`role="radio"`, `button`, sem `<label>`) — não usa
   `<input type="radio">` nativo.
 
-### 4.5 Header — ação única "Salvar e sair"
+### 4.5 Header — ação única "Salvar e sair" (rótulo dinâmico)
 
 Substituiu os antigos botões separados "Salvar rascunho" (rodapé) + "Voltar"
 (cabeçalho). Um único botão no header, à direita, estilo secundário
 (`border-gray-300 text-gray-700`):
+- **Rótulo muda conforme o progresso**: `{respondidas > 0 ? 'Salvar e sair' :
+  'Sair'}` (`RespostaAvaliacaoPage.tsx:210`) — antes de qualquer resposta o
+  botão mostra só "Sair" (nada para salvar ainda); assim que a primeira
+  seleção é feita, passa a "Salvar e sair". Mesmo botão físico, mesmo
+  `onClick` (`handleSalvarESair`) nos dois estados — só o texto muda.
 - **Mecânica de dado inalterada**: cada seleção de nível já chama
   `responderAvaliacao(..., enviar: false)` imediatamente (`handleNivelChange`)
   — persistência real via `AvaliacoesContext`/`localStorage`, não é um
@@ -397,6 +416,15 @@ formato antigo e foi portado integralmente para o novo.
 - Tela de **Resultado da Avaliação** (pós-resposta): fora do escopo deste
   documento.
 
+## Ver também — Design System
+
+Material de apoio visual complementar a este handoff escrito, com os
+componentes reais renderizados (não mockup): `/design-system/minhas-avaliacoes`
+e `/design-system/responder-avaliacao` (rotas confirmadas em
+`DesignSystemPage.tsx` — o slug de cada seção é sempre o último segmento do
+`SectionId`, via `SECTION_TO_SLUG`/`SLUG_TO_SECTION`,
+`DesignSystemPage.tsx:150-156`).
+
 ## Apêndice — Correções em relação ao rascunho
 
 | # | Seção do rascunho | Divergência | Correção aplicada |
@@ -409,10 +437,21 @@ formato antigo e foi portado integralmente para o novo.
 | 6 | — | Nenhuma menção a comportamento sem tratamento de erro | Adicionada seção 4.7 sobre `avaliacaoId`/participante inválido |
 | 7 | 4.3 (painel lateral) | Dizia que clicar em qualquer habilidade navega direto para ela, sem passar pelas anteriores | Real: `podeAcessar = respondida \|\| indice === primeiroNaoRespondidoIndex` restringe a navegação à ordem — só habilidade já respondida ou a próxima pendente são clicáveis |
 
-Nenhum código morto foi encontrado nos arquivos revisados (só 3 comentários
-históricos citando arquivos já removidos — `routes.ts`,
-`RespostaAvaliacaoPage.tsx:13`, `MinhaCarreiraPage.tsx:520` — mantidos de
-propósito como contexto, não quebram nada).
+### Revisão de 2026-07-31
 
-Documentado no Design System (`DesignSystemPage.tsx`, seção "Responder
-Avaliação" em Especificação de Telas → Colaborador) em 2026-07-30.
+Segunda auditoria completa contra o código real (não contra o rascunho original
+desta vez, contra a própria versão de 2026-07-27 do handoff). Achados:
+
+| # | Seção | Divergência | Correção aplicada |
+|---|---|---|---|
+| 8 | 4.3 (painel lateral) | Dizia "check verde" para indicador de respondida | Real: `border-[var(--brand-400)] bg-[var(--brand-400)]` — cor de marca, não verde |
+| 9 | 4.5 (header) | Não mencionava que o rótulo do botão muda | Real: `{respondidas > 0 ? 'Salvar e sair' : 'Sair'}` (`RespostaAvaliacaoPage.tsx:210`) — só vira "Salvar e sair" após a primeira resposta |
+| 10 | 4.3 (navegação) | Não mencionava que "Próxima habilidade" fica desabilitado sem resposta na atual | Adicionado: `disabled={!respostas[habilidadeAtual.id]}` (`RespostaAvaliacaoPage.tsx:415`) |
+| 11 | 4.2 (instruções) | Não descrevia o layout do card (centralizado, `max-w-xl`) | Adicionado à descrição da etapa |
+| 12 | 2.3, 2.4, 3.1–3.4, 4.3 | Praticamente todas as citações de linha de `MinhasAvaliacoes.tsx` e `utils/avaliacoes.ts` estavam desatualizadas (comentários explicativos adicionados aos arquivos deslocaram tudo abaixo deles) | Todas as citações de linha reconferidas e corrigidas contra o código de 2026-07-31 |
+| 13 | 2.5 | Descrevia "dois conjuntos de tokens de cor distintos" entre o card-resumo e o badge por card | Real: `badgeUrgenciaCard` reusa a mesma função `corUrgencia` do card-resumo para o texto — só a borda (`border-red-300`/`border-yellow-400`) é própria do badge. Não são dois tons de vermelho/amarelo diferentes, é a mesma cor reaproveitada |
+| 14 | Apêndice (nota de código morto) | Citava 3 comentários órfãos referenciando `RespostaAvaliacao.tsx` (deletado) em `routes.ts`, `RespostaAvaliacaoPage.tsx:13` e `MinhaCarreiraPage.tsx:520` | Localização estava errada (os 3 comentários reais estavam em `RespostaAvaliacaoPage.tsx:45,102,176`, não na linha 13, e não havia nada equivalente em `MinhaCarreiraPage.tsx:520`) — **e os 3 comentários no código foram corrigidos nesta revisão** (removida a referência ao arquivo deletado, mantido o contexto útil restante) |
+| 15 | — | Nenhuma referência concreta ao Design System como material de apoio | Adicionada seção "Ver também — Design System" com as rotas `/design-system/minhas-avaliacoes` e `/design-system/responder-avaliacao` |
+
+Nenhum código morto adicional foi encontrado nos arquivos revisados nesta
+passada.

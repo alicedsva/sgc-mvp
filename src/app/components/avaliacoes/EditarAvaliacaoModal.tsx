@@ -1,119 +1,75 @@
-import { useState, useMemo, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { getCompetenciaNome, colaboradoresData } from '../../data/mockData';
-
-// Gerências reais (derivadas de colaboradoresData) — nunca lista fixa.
-// Mesmo padrão usado em DashboardPage.tsx e ContentArea.tsx.
-const GERENCIAS = Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort();
-
-export interface EditarAvaliacaoFormData {
-  nome: string;
-  descricao: string;
-  competencias: string[];
-  habilidades: string[];
-  gerencias: string[];
-  dataInicio: string;
-  dataFim: string;
-}
+import { HOJE_SIMULADO, type Avaliacao } from '../../data/mockData';
+import { calcularPrazoParticipante } from '../../utils/avaliacoes';
 
 interface EditarAvaliacaoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSalvarRascunho: (data: EditarAvaliacaoFormData) => void;
-  onAtivar: (data: EditarAvaliacaoFormData) => void;
-  initialData: EditarAvaliacaoFormData;
-  competencias: { id: string; nome: string; status: string }[];
-  habilidades: { id: string; nome: string; competencia: string; competenciaId?: string; status?: string }[];
+  /** Prorrogação de uma avaliação já materializada: periodoFim (datas_fixas), prazoDias (prazo_em_dias), ou periodoFim+modoPrazo:'datas_fixas' (indefinido definindo um término pela primeira vez). Avaliação Rascunho não passa por aqui — vai para avaliacoes/:id/editar (EditarAvaliacaoRascunhoPage). */
+  onProrrogar: (updates: Partial<Avaliacao>) => void;
+  avaliacao: Avaliacao | null;
 }
 
-export function EditarAvaliacaoModal({
-  isOpen, onClose, onSalvarRascunho, onAtivar, initialData, competencias, habilidades,
-}: EditarAvaliacaoModalProps) {
-  const [formData, setFormData] = useState<EditarAvaliacaoFormData>(initialData);
-  const [buscaCompetencia, setBuscaCompetencia] = useState('');
-  const [buscaHabilidade, setBuscaHabilidade] = useState('');
+export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }: EditarAvaliacaoModalProps) {
+  const [novoPeriodoFim, setNovoPeriodoFim] = useState('');
+  const [novoPrazoDias, setNovoPrazoDias] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      setFormData(initialData);
-      setBuscaCompetencia('');
-      setBuscaHabilidade('');
+    if (isOpen && avaliacao) {
+      setNovoPeriodoFim(avaliacao.periodoFim ?? '');
+      setNovoPrazoDias(avaliacao.prazoDias != null ? String(avaliacao.prazoDias) : '');
     }
-  }, [isOpen]);
+  }, [isOpen, avaliacao]);
 
-  const competenciasAtivas = useMemo(
-    () => competencias.filter(c => c.status === 'Ativa'),
-    [competencias],
-  );
+  if (!isOpen || !avaliacao) return null;
 
-  const competenciasVisiveis = useMemo(() => {
-    if (!buscaCompetencia.trim()) return competenciasAtivas;
-    const q = buscaCompetencia.toLowerCase();
-    return competenciasAtivas.filter(c => c.nome.toLowerCase().includes(q));
-  }, [competenciasAtivas, buscaCompetencia]);
+  // Validação de prorrogação (e também da 1ª definição de término em
+  // 'indefinido'): novo prazo precisa deixar o participante mais próximo do
+  // vencimento com pelo menos D+1 em relação a HOJE_SIMULADO — nunca
+  // prorrogar "para trás" ou para hoje mesmo.
+  const validarProrrogacao = (): boolean => {
+    const amanha = new Date(HOJE_SIMULADO);
+    amanha.setUTCDate(amanha.getUTCDate() + 1);
 
-  const habilidadesVisiveis = useMemo(() => {
-    const base = formData.competencias.length === 0
-      ? habilidades.filter(h => !h.status || h.status === 'Ativa')
-      : habilidades.filter(h => (!h.status || h.status === 'Ativa') && formData.competencias.includes(h.competenciaId ?? ''));
-    if (!buscaHabilidade.trim()) return base;
-    const q = buscaHabilidade.toLowerCase();
-    return base.filter(h => h.nome.toLowerCase().includes(q));
-  }, [habilidades, formData.competencias, buscaHabilidade]);
-
-  if (!isOpen) return null;
-
-  const handleToggleCompetencia = (idComp: string) => {
-    const isRemoving = formData.competencias.includes(idComp);
-    const novasCompetencias = isRemoving
-      ? formData.competencias.filter(c => c !== idComp)
-      : [...formData.competencias, idComp];
-
-    let novasHabilidades = formData.habilidades;
-    if (isRemoving) {
-      const ids = new Set(habilidades.filter(h => h.competenciaId === idComp).map(h => h.id));
-      novasHabilidades = formData.habilidades.filter(id => !ids.has(id));
+    if (avaliacao.modoPrazo === 'datas_fixas' || avaliacao.modoPrazo === 'indefinido') {
+      // 'indefinido': periodoFim ainda não existe, todo participante vence
+      // junto na nova data — mesma checagem simples de 'datas_fixas'.
+      if (!novoPeriodoFim) { toast.error('Selecione a data de término'); return false; }
+      if (new Date(novoPeriodoFim).getTime() < amanha.getTime()) {
+        toast.error('A nova data precisa ser pelo menos amanhã');
+        return false;
+      }
+      return true;
     }
-
-    setFormData({ ...formData, competencias: novasCompetencias, habilidades: novasHabilidades });
-  };
-
-  const handleToggleHabilidade = (id: string) => {
-    setFormData({
-      ...formData,
-      habilidades: formData.habilidades.includes(id)
-        ? formData.habilidades.filter(h => h !== id)
-        : [...formData.habilidades, id],
-    });
-  };
-
-  const handleToggleGerencia = (nome: string) => {
-    if (nome === '__todas__') {
-      setFormData({
-        ...formData,
-        gerencias: formData.gerencias.length === GERENCIAS.length ? [] : [...GERENCIAS],
-      });
-      return;
+    // prazo_em_dias — o participante mais próximo do vencimento é o que
+    // entrou primeiro (dataEntrada mais antiga); confere o prazo dele com o
+    // prazoDias novo.
+    const dias = Number(novoPrazoDias);
+    if (!novoPrazoDias || dias <= 0) { toast.error('Informe um prazo em dias válido'); return false; }
+    const avaliacaoSimulada: Avaliacao = { ...avaliacao, prazoDias: dias };
+    const prazosEfetivos = avaliacao.participantes.map(p => calcularPrazoParticipante(avaliacaoSimulada, p)!);
+    const prazoMaisProximo = prazosEfetivos.reduce((min, atual) => (atual < min ? atual : min));
+    if (new Date(prazoMaisProximo).getTime() < amanha.getTime()) {
+      toast.error('Esse prazo deixaria participantes com vencimento antes de amanhã');
+      return false;
     }
-    setFormData({
-      ...formData,
-      gerencias: formData.gerencias.includes(nome)
-        ? formData.gerencias.filter(g => g !== nome)
-        : [...formData.gerencias, nome],
-    });
-  };
-
-  const validate = () => {
-    if (!formData.nome.trim()) { toast.error('Preencha o nome da avaliação'); return false; }
     return true;
   };
 
-  const validateFull = () => {
-    if (!validate()) return false;
-    if (!formData.dataInicio) { toast.error('Selecione a data de início'); return false; }
-    if (!formData.dataFim) { toast.error('Selecione a data de término'); return false; }
-    return true;
+  const handleSalvarProrrogacao = () => {
+    if (!validarProrrogacao()) return;
+    if (avaliacao.modoPrazo === 'indefinido') {
+      // Definindo um término pela 1ª vez — converte para 'datas_fixas'.
+      onProrrogar({ periodoFim: novoPeriodoFim, modoPrazo: 'datas_fixas' });
+    } else if (avaliacao.modoPrazo === 'datas_fixas') {
+      onProrrogar({ periodoFim: novoPeriodoFim });
+    } else {
+      onProrrogar({ prazoDias: Number(novoPrazoDias) });
+    }
+    toast.success('Prazo atualizado com sucesso!');
+    onClose();
   };
 
   return (
@@ -121,11 +77,13 @@ export function EditarAvaliacaoModal({
       <div className="fixed inset-0 bg-black/35 z-[200]" onClick={onClose} />
 
       <div className="fixed inset-0 flex items-center justify-center z-[210] p-4 pointer-events-none">
-        <div className="bg-white rounded-xl shadow-2xl w-[672px] h-[720px] flex flex-col pointer-events-auto">
+        <div className="bg-white rounded-xl shadow-2xl w-[480px] flex flex-col pointer-events-auto">
 
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg font-semibold text-gray-900">Editar Avaliação</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {avaliacao.modoPrazo === 'indefinido' ? 'Definir Prazo de Término' : 'Prorrogar Avaliação'}
+            </h2>
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -135,171 +93,58 @@ export function EditarAvaliacaoModal({
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-            {/* Tipo badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
-              <span className="text-xs text-gray-500">Tipo de avaliação:</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                Autoavaliação
-              </span>
+          {/* Conteúdo — só prorrogação, tudo mais congelado */}
+          <div className="px-6 py-5 space-y-5">
+            <div className="flex items-start gap-3 bg-slate-100 border border-slate-300 rounded-lg p-4">
+              <Lock className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-slate-700">
+                {avaliacao.modoPrazo === 'indefinido'
+                  ? 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Você pode definir uma data de término; a avaliação passa a ter prazo fixo a partir disso.'
+                  : 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Só é possível prorrogar o prazo.'}
+              </p>
             </div>
 
-            {/* Nome */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nome da Avaliação <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.nome}
-                onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
-              />
-            </div>
-
-            {/* Descrição */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
-              <textarea
-                value={formData.descricao}
-                onChange={e => setFormData({ ...formData, descricao: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none"
-              />
-            </div>
-
-            {/* Competências */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Competências</label>
-              <input
-                type="text"
-                placeholder="Buscar competência..."
-                value={buscaCompetencia}
-                onChange={e => setBuscaCompetencia(e.target.value)}
-                className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
-              />
-              <div className="max-h-44 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                {competenciasVisiveis.length === 0 ? (
-                  <p className="px-3 py-4 text-sm text-gray-400 text-center">Nenhuma competência encontrada</p>
-                ) : (
-                  competenciasVisiveis.map(c => (
-                    <label key={c.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={formData.competencias.includes(c.id)}
-                        onChange={() => handleToggleCompetencia(c.id)}
-                        className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
-                      />
-                      <span className="text-sm text-gray-800">{c.nome}</span>
-                    </label>
-                  ))
-                )}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Nome</p>
+                <p className="text-sm text-gray-900 font-medium">{avaliacao.nome}</p>
               </div>
-              {formData.competencias.length > 0 && (
-                <p className="mt-1.5 text-xs text-gray-500">
-                  {formData.competencias.length} competência(s) selecionada(s)
-                </p>
-              )}
-            </div>
-
-            {/* Habilidades */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Habilidades
-                <span className="ml-2 text-xs text-gray-400 font-normal">
-                  {formData.competencias.length > 0
-                    ? 'Filtradas pelas competências selecionadas'
-                    : 'Todas as habilidades'}
-                </span>
-              </label>
-              <input
-                type="text"
-                placeholder="Buscar habilidade..."
-                value={buscaHabilidade}
-                onChange={e => setBuscaHabilidade(e.target.value)}
-                className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
-              />
-              <div className="max-h-44 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                {habilidadesVisiveis.length === 0 ? (
-                  <p className="px-3 py-4 text-sm text-gray-400 text-center">Nenhuma habilidade encontrada</p>
-                ) : (
-                  habilidadesVisiveis.map(h => (
-                    <label key={h.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={formData.habilidades.includes(h.id)}
-                        onChange={() => handleToggleHabilidade(h.id)}
-                        className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="text-sm text-gray-800">{h.nome}</span>
-                        <span className="ml-2 text-xs text-gray-400">{h.competenciaId ? getCompetenciaNome(h.competenciaId) : h.competencia}</span>
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
-              {formData.habilidades.length > 0 && (
-                <p className="mt-1.5 text-xs text-gray-500">
-                  {formData.habilidades.length} habilidade(s) selecionada(s)
-                </p>
-              )}
-            </div>
-
-            {/* Público-alvo */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Público-alvo</label>
-              <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 bg-gray-50 sticky top-0 z-10">
-                  <input
-                    type="checkbox"
-                    checked={formData.gerencias.length === GERENCIAS.length}
-                    onChange={() => handleToggleGerencia('__todas__')}
-                    className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)]"
-                  />
-                  <span className="text-sm font-medium text-gray-800">Todas as gerências</span>
-                </label>
-                {GERENCIAS.map(g => (
-                  <label key={g} className="flex items-center gap-3 pl-8 pr-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={formData.gerencias.includes(g)}
-                      onChange={() => handleToggleGerencia(g)}
-                      className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)]"
-                    />
-                    <span className="text-sm text-gray-700">{g}</span>
-                  </label>
-                ))}
+              <div>
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Público-alvo</p>
+                <p className="text-sm text-gray-700">{avaliacao.publicoLabel}</p>
               </div>
             </div>
 
-            {/* Datas */}
-            <div className="grid grid-cols-2 gap-4">
+            {avaliacao.modoPrazo === 'datas_fixas' || avaliacao.modoPrazo === 'indefinido' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Data de Início <span className="text-red-500">*</span>
+                  {avaliacao.modoPrazo === 'indefinido' ? 'Data de término' : 'Nova data de término'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
-                  value={formData.dataInicio}
-                  onChange={e => setFormData({ ...formData, dataInicio: e.target.value })}
+                  value={novoPeriodoFim}
+                  onChange={e => setNovoPeriodoFim(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                 />
+                <p className="text-xs text-gray-500 mt-1">Precisa ser pelo menos amanhã.</p>
               </div>
+            ) : (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Data de Término <span className="text-red-500">*</span>
+                  Novo prazo (dias) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="date"
-                  value={formData.dataFim}
-                  onChange={e => setFormData({ ...formData, dataFim: e.target.value })}
+                  type="number"
+                  min={1}
+                  value={novoPrazoDias}
+                  onChange={e => setNovoPrazoDias(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Contado a partir da data de entrada de cada participante — precisa deixar todo mundo com vencimento a partir de amanhã.
+                </p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -311,22 +156,13 @@ export function EditarAvaliacaoModal({
             >
               Cancelar
             </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => { if (validate()) onSalvarRascunho(formData); }}
-                className="px-4 py-2 text-sm font-medium text-[var(--brand-600)] border border-[var(--brand-600)] rounded-lg hover:bg-[var(--brand-50)] transition-colors"
-              >
-                Salvar rascunho
-              </button>
-              <button
-                type="button"
-                onClick={() => { if (validateFull()) onAtivar(formData); }}
-                className="px-4 py-2 text-sm font-medium text-white bg-[var(--brand-600)] rounded-lg hover:bg-[var(--brand-700)] transition-colors"
-              >
-                Ativar avaliação
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleSalvarProrrogacao}
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--brand-600)] rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+            >
+              {avaliacao.modoPrazo === 'indefinido' ? 'Definir prazo' : 'Salvar prorrogação'}
+            </button>
           </div>
         </div>
       </div>

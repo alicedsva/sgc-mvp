@@ -3448,7 +3448,7 @@ function SecaoFormularios() {
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">Wizard — formulário em etapas</h2>
         <p className="text-xs text-gray-500 mb-4">
-          Usado na criação de avaliações. Estrutura copiada de <code className="font-mono bg-gray-100 px-1 rounded">NovaAvaliacaoDrawer.tsx</code>.
+          Usado na criação de avaliações. Estrutura copiada de <code className="font-mono bg-gray-100 px-1 rounded">FormularioAvaliacao.tsx</code>.
         </p>
 
         {/* Stepper demo — etapa 2 ativa (1 completa, 3 e 4 inativas) */}
