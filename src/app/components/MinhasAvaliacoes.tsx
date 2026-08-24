@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar, CalendarClock, CheckCircle2, Clock, ArrowRight, BookOpen, Eye } from 'lucide-react';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
-import { getParticipacoesColaborador, getProximaAvaliacaoInfo, calcularDiasDesde, participanteVencido, diasAteVencimentoParticipante, formatPrazoParticipante, formatData, type ParticipacaoColaborador } from '../utils/avaliacoes';
+import { getParticipacoesColaborador, getProximaAvaliacaoInfo, calcularDiasDesde, participanteVencido, diasAteVencimentoParticipante, formatPrazoParticipante, formatData, getStatusParticipanteBadgeClass, type ParticipacaoColaborador } from '../utils/avaliacoes';
 import { JOAO_ID } from '../pages/minhaCarreiraShared';
 import { HOJE_SIMULADO, habilidadesData } from '../data/mockData';
 import type { Avaliacao, TipoHabilidade } from '../../data/schema';
@@ -248,9 +248,7 @@ export function MinhasAvaliacoes() {
       label: 'Status',
       width: '15%',
       render: (value: 'Concluída' | 'Expirada') => (
-        <span className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
-          value === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-        }`}>
+        <span className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${getStatusParticipanteBadgeClass(value)}`}>
           {value}
         </span>
       ),

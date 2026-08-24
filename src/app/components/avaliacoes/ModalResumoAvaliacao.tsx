@@ -50,7 +50,7 @@ export function ModalResumoAvaliacao({ onClose, avaliacao }: ModalResumoAvaliaca
           <div className="text-center mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">{titulo}</h3>
             <p className="text-sm text-gray-600">
-              <span className="font-medium text-gray-900">{avaliacao.nome}</span> — {corpo}
+              <span className="font-medium text-gray-900">{avaliacao.nome}</span>: {corpo}
             </p>
           </div>
 

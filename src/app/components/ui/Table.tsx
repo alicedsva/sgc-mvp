@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { ReactNode } from 'react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu';
 
 export interface Column {
   key: string;
@@ -77,10 +78,24 @@ export function Table({ columns, data, actions, pagination, onRowClick }: TableP
     return pages;
   };
 
+  // table-layout: fixed só quando TODA coluna configurada já define width —
+  // com table-fixed, o navegador decide a largura de cada coluna pelas
+  // células da primeira linha (thead) e para de considerar o conteúdo; uma
+  // coluna sem width nesse modo não "encolhe pro conteúdo" como antes, ela
+  // some no rateio igual entre as colunas sem width, o que pode deformar
+  // tabelas que nunca foram desenhadas para isso. Aplicar condicionalmente
+  // preserva table-layout: auto (comportamento de sempre) para qualquer
+  // tabela que ainda não definiu width em todas as colunas — nenhuma tabela
+  // existente muda de layout só por essa mudança. Sem isso (table-layout:
+  // auto), um `width` em % é só um palpite inicial: célula com conteúdo
+  // grande (ex: Descrição) força a coluna a crescer além do previsto e gera
+  // scroll horizontal infinito — motivo real desta mudança.
+  const colunasComWidthCompleto = columns.length > 0 && columns.every(column => !!column.width);
+
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className={`w-full ${colunasComWidthCompleto ? 'table-fixed' : ''}`}>
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               {columns.map((column) => (
@@ -121,7 +136,17 @@ export function Table({ columns, data, actions, pagination, onRowClick }: TableP
                         : row[column.key]}
                     </td>
                   ))}
-                  {actions && actions.length > 0 && (
+                  {/* A partir de 4 ações configuradas para a tabela, vira menu
+                      de contexto (MoreVertical) — abaixo disso continuam
+                      ícones soltos. Decisão pelo tamanho de `actions` (o
+                      conjunto TOTAL configurado), nunca pela contagem de
+                      ações visíveis linha a linha (`show`): se decidisse por
+                      linha, duas linhas da MESMA coluna poderiam renderizar
+                      modos diferentes (uma com ícones, outra com menu) só
+                      porque uma ação condicional não se aplica àquela linha
+                      — inconsistência visual dentro da mesma coluna. Ver
+                      02-design-system.md > Tabelas > Menu de ações. */}
+                  {actions && actions.length > 0 && actions.length < 4 && (
                     <td className="px-3 md:px-6 py-3 md:py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {actions
@@ -173,6 +198,54 @@ export function Table({ columns, data, actions, pagination, onRowClick }: TableP
                               </button>
                             );
                           })}
+                      </div>
+                    </td>
+                  )}
+
+                  {actions && actions.length >= 4 && (
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-right">
+                      <div className="flex items-center justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              title="Ações"
+                              className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          {/* onClick aqui, não em cada item: DropdownMenuContent
+                              é renderizado via Portal direto em <body>, fora da
+                              hierarquia real do DOM da <tr> — o clique nele
+                              ainda propaga para o onClick da linha através da
+                              árvore React (delegação de evento de Portal), então
+                              sem este stopPropagation um onRowClick da tabela
+                              disparava junto com a ação escolhida do menu. */}
+                          <DropdownMenuContent
+                            align="end"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {actions
+                              .filter(action => action.show ? action.show(row) : true)
+                              .map((action, actionIndex) => {
+                                const icon = typeof action.icon === 'function' ? action.icon(row) : action.icon;
+                                const label = typeof action.label === 'function' ? action.label(row) : action.label;
+                                const isDisabled = action.disabled ? action.disabled(row) : false;
+                                return (
+                                  <DropdownMenuItem
+                                    key={actionIndex}
+                                    disabled={isDisabled}
+                                    variant={action.variant === 'danger' ? 'destructive' : 'default'}
+                                    onSelect={() => action.onClick(row)}
+                                  >
+                                    {icon}
+                                    {label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   )}

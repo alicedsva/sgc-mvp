@@ -13,6 +13,7 @@ import AvaliacoesPage from "./pages/AvaliacoesPage";
 import CriarAvaliacaoPage from "./pages/CriarAvaliacaoPage";
 import EditarAvaliacaoRascunhoPage from "./pages/EditarAvaliacaoRascunhoPage";
 import AvaliacaoDetalhePage from "./pages/AvaliacaoDetalhePage";
+import ParticipanteResultadoPage from "./pages/ParticipanteResultadoPage";
 import MeuPerfilPage from "./pages/MeuPerfilPage";
 import MinhasAvaliacoesPage from "./pages/MinhasAvaliacoesPage";
 import RespostaAvaliacaoPage from "./pages/RespostaAvaliacaoPage";
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: "avaliacoes", Component: AvaliacoesPage },
       { path: "avaliacoes/nova", Component: CriarAvaliacaoPage },
       { path: "avaliacoes/:id", Component: AvaliacaoDetalhePage },
+      { path: "avaliacoes/:id/participantes/:colaboradorId", Component: ParticipanteResultadoPage },
       { path: "avaliacoes/:id/editar", Component: EditarAvaliacaoRascunhoPage },
       { path: "meu-perfil", Component: MeuPerfilPage },
       { path: "minhas-avaliacoes", Component: MinhasAvaliacoesPage },

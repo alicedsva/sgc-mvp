@@ -95,7 +95,12 @@ export default function CriarAvaliacaoPage() {
       <FormularioAvaliacao
         jornadaPreSelecionada={jornadaPreSelecionada}
         habilidades={habilidadesData}
-        avaliacoesExistentes={avaliacoesData.map(a => ({ nome: a.nome, publicoLabel: a.publicoLabel }))}
+        avaliacoesExistentes={avaliacoesData.map(a => ({
+          nome: a.nome,
+          publicoLabel: a.publicoLabel,
+          jornadaId: a.origemJornadaId,
+          participantesIds: a.participantes.map(p => p.colaboradorId),
+        }))}
         onSalvarRascunho={handleSalvarRascunho}
         onAtivar={handleAtivar}
         isSidebarCollapsed={isSidebarCollapsed}

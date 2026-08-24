@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useHabilidades } from '../context/HabilidadesContext';
 import { niveisDefaultData, getCorFromPeso, competenciasData, getCompetenciaNome } from '../data/mockData';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
+import { StatusBadge } from '../components/ui/StatusBadge';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -250,14 +251,10 @@ export default function HabilidadeDetalhePage() {
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h1 className="text-2xl font-semibold text-gray-900">{habilidade.nome}</h1>
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-              habilidade.status === 'Ativa'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${habilidade.status === 'Ativa' ? 'bg-green-500' : 'bg-gray-400'}`} />
-              {habilidade.status}
-            </span>
+            <StatusBadge
+              label={habilidade.status}
+              colorClass={habilidade.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}
+            />
             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
               habilidade.tipo === 'Técnica'
                 ? 'bg-[var(--brand-100)] text-[var(--brand-800)]'

@@ -5,7 +5,7 @@ import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
 import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
-import { formatPeriodoAvaliacao, calcularStatusEfetivo, getStatusAvaliacaoLabel } from '../utils/avaliacoes';
+import { formatData, calcularStatusEfetivo, getStatusAvaliacaoLabel, getStatusAvaliacaoBadgeClass } from '../utils/avaliacoes';
 import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
@@ -20,7 +20,7 @@ import { MinhasAvaliacoes } from './MinhasAvaliacoes';
 import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle } from 'lucide-react';
+import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
@@ -202,6 +202,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   const {
     avaliacoes: avaliacoesData,
     atualizarAvaliacao,
+    adicionarAvaliacao,
   } = useAvaliacoes();
 
   // ========== EARLY RETURN FOR COLABORADOR VIEW ==========
@@ -1752,7 +1753,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'nome',
         label: 'Nome da Avaliação',
-        width: '35%',
+        width: '17%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('nome')}
@@ -1768,15 +1769,65 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         ),
       },
       {
+        key: 'descricao',
+        label: 'Descrição',
+        width: '20%',
+        render: (_value, row) => {
+          const descricao = (row as Avaliacao).descricao;
+          // Tooltip via atributo title nativo, não o padrão de bolha
+          // group/tip (HelpCircle) usado em CriarJornadaPage.tsx/
+          // EditarJornadaPage.tsx/DesignSystemPage.tsx: aquele padrão é
+          // position: absolute e, nesta tabela, ficaria dentro do
+          // container com overflow-hidden do ListingPage (e do
+          // overflow-x-auto do próprio Table.tsx) — cortaria a bolha em
+          // linhas perto da borda de cima/baixo/direita da tabela. title
+          // nativo nunca é cortado por overflow de ancestral (é renderizado
+          // fora de qualquer contexto de stacking/overflow do CSS) e já é o
+          // padrão usado nesta mesma tabela para os ícones de ação
+          // (Table.tsx, `title={label}`) — mesmo princípio, reaproveitado
+          // aqui para texto truncado por line-clamp.
+          if (!descricao) {
+            return <span className="text-sm text-gray-500">-</span>;
+          }
+          return (
+            // break-words (overflow-wrap: break-word) além do line-clamp-2:
+            // sem isso, uma palavra única bem comprida (sem espaço pro
+            // navegador quebrar a linha) estouraria a largura fixa da
+            // coluna mesmo com table-layout: fixed no Table.tsx — table-fixed
+            // trava a LARGURA da coluna, mas não impede um token sem quebra
+            // de vazar visualmente por cima da célula vizinha se o texto em
+            // si não souber quebrar.
+            <p className="text-sm text-gray-700 line-clamp-2 break-words" title={descricao}>
+              {descricao}
+            </p>
+          );
+        },
+      },
+      {
+        key: 'origem',
+        label: 'Origem',
+        width: '9%',
+        render: (_value, row) => (
+          <span className="text-sm text-gray-700">
+            {(row as Avaliacao).origemJornadaId ? 'Jornada' : 'Público'}
+          </span>
+        ),
+      },
+      {
+        // Sort continua pela mesma chave 'periodo' (compara periodoInicio) —
+        // só o rótulo/coluna mudou de "Período" (Início+Término juntos) para
+        // "Início" isolado; Término e Prazo ganharam colunas próprias logo
+        // a seguir, sem sort (mesmo padrão de Origem/Participantes, que
+        // também não são ordenáveis).
         key: 'periodo',
-        label: 'Período',
-        width: '15%',
+        label: 'Início',
+        width: '8%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('periodo')}
             className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
           >
-            Período
+            Início
             {avaliacoesSortConfig.column === 'periodo' ? (
               avaliacoesSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
             ) : (
@@ -1784,14 +1835,47 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             )}
           </button>
         ),
-        render: (_value, row) => (
-          <span className="text-sm text-gray-700">{formatPeriodoAvaliacao(row as Avaliacao)}</span>
-        ),
+        render: (_value, row) => {
+          const inicio = (row as Avaliacao).periodoInicio;
+          // periodoInicio só é gravado na ativação (schema.ts) — Rascunho
+          // ainda não tem essa data. "-" (hífen simples, nunca travessão/en
+          // dash) para "sem valor" — mesmo tratamento das colunas Término e
+          // Prazo logo abaixo.
+          return inicio
+            ? <span className="text-sm text-gray-700">{formatData(inicio)}</span>
+            : <span className="text-sm text-gray-500">-</span>;
+        },
+      },
+      {
+        key: 'termino',
+        label: 'Término',
+        width: '8%',
+        render: (_value, row) => {
+          const fim = (row as Avaliacao).periodoFim;
+          // "-" (hífen simples, nunca travessão/en dash) para "sem valor" —
+          // mesmo tratamento já usado na coluna Participantes (Rascunho) e
+          // pedido explicitamente aqui, substituindo o "Não definido" por
+          // extenso usado antes.
+          return fim
+            ? <span className="text-sm text-gray-700">{formatData(fim)}</span>
+            : <span className="text-sm text-gray-500">-</span>;
+        },
+      },
+      {
+        key: 'prazo',
+        label: 'Prazo',
+        width: '7%',
+        render: (_value, row) => {
+          const dias = (row as Avaliacao).prazoDias;
+          return dias != null
+            ? <span className="text-sm text-gray-700">{dias} {dias === 1 ? 'dia' : 'dias'}</span>
+            : <span className="text-sm text-gray-500">-</span>;
+        },
       },
       {
         key: 'participantes',
         label: 'Participantes',
-        width: '15%',
+        width: '12%',
         render: (_value, row) => {
           if (row.status === 'Rascunho') {
             return <span className="text-sm text-gray-500">-</span>;
@@ -1815,7 +1899,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'status',
         label: 'Status',
-        width: '12%',
+        width: '9%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('status')}
@@ -1832,18 +1916,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         render: (_value, row) => {
           // Status CALCULADO, nunca o campo bruto — mesma fonte usada pelo
           // filtro "Agendadas" acima e por AvaliacaoDetalhePage.tsx, para
-          // nunca divergir (calcularStatusEfetivo). Cores de Pendente/
-          // Expirada seguem a mesma extensão não documentada já usada em
-          // AvaliacaoDetalhePage.tsx (azul/cinza).
+          // nunca divergir (calcularStatusEfetivo). Cor do badge vem de
+          // getStatusAvaliacaoBadgeClass, fonte única reusada também por
+          // AvaliacaoDetalhePage.tsx e DesignSystemPage.tsx.
           const statusEfetivo = calcularStatusEfetivo(row as Avaliacao, HOJE_SIMULADO);
-          const statusClass =
-            statusEfetivo === 'Ativa' ? 'bg-green-100 text-green-800'
-            : statusEfetivo === 'Pendente' ? 'bg-blue-100 text-blue-800'
-            : statusEfetivo === 'Rascunho' ? 'bg-yellow-100 text-yellow-800'
-            : 'bg-gray-100 text-gray-700'; // Encerrada / Expirada
           return (
             <span
-              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${statusClass}`}
+              className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${getStatusAvaliacaoBadgeClass(statusEfetivo)}`}
             >
               {getStatusAvaliacaoLabel(statusEfetivo)}
             </span>
@@ -1852,7 +1931,62 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       },
     ];
 
-    // Ações da tabela
+    // Nome da cópia — sempre "<nome original> (N)", N começando em 2 e
+    // incrementando até não colidir com nenhum nome já existente (ex: se
+    // "Nome (2)" já existe, a próxima duplicata vira "Nome (3)"). Compara
+    // contra o nome literal de cada avaliação, sem tentar detectar/colapsar
+    // um sufixo "(N)" que o nome original já tivesse — duplicar uma cópia
+    // sempre soma mais um sufixo em cima do nome atual, nunca reescreve o
+    // nome-base.
+    const gerarNomeDuplicado = (nomeOriginal: string): string => {
+      const nomesExistentes = new Set(avaliacoesData.map(a => a.nome));
+      let contador = 2;
+      let candidato = `${nomeOriginal} (${contador})`;
+      while (nomesExistentes.has(candidato)) {
+        contador++;
+        candidato = `${nomeOriginal} (${contador})`;
+      }
+      return candidato;
+    };
+
+    // Duplicar (item 4, sempre disponível): cria um Rascunho novo copiando
+    // nome (com sufixo incrementado), habilidades e o caminho de origem —
+    // Por Jornada copia jornadaId; Por Público-alvo copia só a INDICAÇÃO do
+    // caminho, nunca os colaboradores/gerências (participantes nascem vazios
+    // — novo público a escolher do zero). Prazo (Início/Término/Dias) nunca
+    // é copiado — datas de uma avaliação antiga não fazem sentido temporal
+    // num rascunho novo, fica tudo em branco como numa avaliação nova
+    // (modoPrazo 'indefinido', mesmo estado que montarCamposPrazo produz
+    // quando os 3 campos de prazo estão vazios). Admin cai direto na edição
+    // do rascunho novo (EditarAvaliacaoRascunhoPage) pra revisar/completar
+    // antes de ativar — nunca fica só na listagem.
+    const handleDuplicarAvaliacao = (row: Avaliacao) => {
+      const nomeDuplicado = gerarNomeDuplicado(row.nome);
+      const novaAvaliacao: Avaliacao = {
+        id: generateId('avaliacao'),
+        nome: nomeDuplicado,
+        tipo: row.tipo,
+        status: 'Rascunho',
+        modoPrazo: 'indefinido',
+        periodoInicio: '',
+        periodoFim: undefined,
+        prazoDias: undefined,
+        publicoLabel: row.origemJornadaId ? row.publicoLabel : '',
+        descricao: row.descricao,
+        habilidades: row.habilidades ? [...row.habilidades] : undefined,
+        participantes: [],
+        origemJornadaId: row.origemJornadaId,
+        gerenciasComAutoInclusao: undefined,
+      };
+      adicionarAvaliacao(novaAvaliacao);
+      toast.success(`Avaliação duplicada como rascunho: "${nomeDuplicado}"`);
+      navigate(`/avaliacoes/${novaAvaliacao.id}/editar`);
+    };
+
+    // Ações da tabela — 4 ações (Visualizar/Editar/Encerrar/Duplicar) ⇒ vira
+    // menu de contexto (MoreVertical) na Table.tsx, conforme
+    // 02-design-system.md > Tabelas > Menu de ações (exceção documentada à
+    // regra geral de ícones soltos, válida a partir de 4 ações).
     const avaliacoesActions: InlineAction[] = [
       {
         label: 'Visualizar',
@@ -1876,11 +2010,17 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         label: 'Encerrar',
         icon: <StopCircle className="w-4 h-4" />,
+        variant: 'danger',
         show: (row) => row.status === 'Ativa',
         onClick: (row) => {
           setSelectedRow(row);
           setIsModalOpen(true);
         },
+      },
+      {
+        label: 'Duplicar',
+        icon: <Copy className="w-4 h-4" />,
+        onClick: (row) => handleDuplicarAvaliacao(row as Avaliacao),
       },
     ];
 
@@ -1932,9 +2072,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               onChange: setStatusFilterAvaliacoes,
               options: [
                 { value: 'todas', label: 'Todas' },
+                { value: 'ativa', label: 'Ativas' },
                 { value: 'rascunho', label: 'Rascunho' },
                 { value: 'agendada', label: 'Agendadas' },
-                { value: 'ativa', label: 'Ativas' },
                 { value: 'encerrada', label: 'Encerradas' },
               ],
             }}

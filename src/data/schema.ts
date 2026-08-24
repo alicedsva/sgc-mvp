@@ -170,12 +170,28 @@ export type StatusAvaliacao = 'Rascunho' | 'Ativa' | 'Encerrada' | 'Pendente' | 
 /**
  * Como o prazo de resposta da avaliação é definido — ver
  * calcularStatusEfetivo/calcularPrazoParticipante em utils/avaliacoes.ts.
- * 'indefinido' — sem periodoFim nem prazoDias; a avaliação fica disponível
- * até ser Encerrada manualmente pelo Admin (mesmo comportamento de
- * "nunca expira sozinha" de 'prazo_em_dias', mas sem nenhum prazo por
- * participante — calcularPrazoParticipante retorna undefined nesse modo).
+ * Regra de negócio final (substitui a versão anterior, que tratava Término e
+ * Prazo como mutuamente exclusivos — ver histórico em
+ * docs/HANDOFF-CADASTRO-AVALIACOES.md): periodoFim e prazoDias são campos
+ * INDEPENDENTES, ambos opcionais, que PODEM coexistir na mesma Avaliacao.
+ * modoPrazo continua sendo o valor inferido/gravado que os consumidores
+ * (calcularStatusEfetivo, calcularPrazoParticipante, formatPeriodoAvaliacao,
+ * EditarAvaliacaoModal) usam para despachar por switch — nunca inferido de
+ * novo em tela nenhuma a partir da presença bruta dos campos, sempre lido
+ * deste valor gravado/calculado por montarCamposPrazo.
+ * - 'datas_fixas' — só periodoFim; prazo igual para todos os participantes.
+ * - 'prazo_em_dias' — só prazoDias; prazo individual = dataEntrada + prazoDias.
+ * - 'datas_fixas_com_prazo' — periodoFim E prazoDias juntos (novo — Término
+ *   sempre tem precedência: expira a avaliação inteira quando periodoFim
+ *   passa, mesmo com participantes ainda dentro do prazo individual; o
+ *   prazo de cada participante é o menor entre dataEntrada+prazoDias e
+ *   periodoFim — o que vencer primeiro).
+ * - 'indefinido' — sem periodoFim nem prazoDias; a avaliação fica disponível
+ *   até ser Encerrada manualmente pelo Admin (mesmo comportamento de
+ *   "nunca expira sozinha" de 'prazo_em_dias', mas sem nenhum prazo por
+ *   participante — calcularPrazoParticipante retorna undefined nesse modo).
  */
-export type ModoPrazoAvaliacao = 'datas_fixas' | 'prazo_em_dias' | 'indefinido';
+export type ModoPrazoAvaliacao = 'datas_fixas' | 'prazo_em_dias' | 'datas_fixas_com_prazo' | 'indefinido';
 
 export interface Avaliacao {
   id: string;
@@ -185,9 +201,9 @@ export interface Avaliacao {
   modoPrazo: ModoPrazoAvaliacao;
   /** 'YYYY-MM-DD'. Pode ser futura (avaliação nasce 'Pendente' até essa data). Vazia enquanto a avaliação está em 'Rascunho' — só é gravada no momento da ativação (data real de publicação, inclusive no modo 'indefinido', que nunca fica vazio depois de Ativa). */
   periodoInicio: string;
-  /** 'YYYY-MM-DD'. Só usado quando modoPrazo === 'datas_fixas' — nesse modo é o prazo de todos os participantes. Ausente quando modoPrazo === 'prazo_em_dias' ou 'indefinido'. */
+  /** 'YYYY-MM-DD'. Presente quando modoPrazo === 'datas_fixas' ou 'datas_fixas_com_prazo'. Data-limite igual para todos (ou teto que sempre tem precedência sobre o prazo individual, quando prazoDias também está presente). Ausente em 'prazo_em_dias' e 'indefinido'. */
   periodoFim?: string;
-  /** Só usado quando modoPrazo === 'prazo_em_dias' — dias corridos a partir de ParticipanteAvaliacao.dataEntrada para aquele participante vencer. Ausente quando modoPrazo === 'datas_fixas' ou 'indefinido'. */
+  /** Presente quando modoPrazo === 'prazo_em_dias' ou 'datas_fixas_com_prazo'. Dias corridos a partir de ParticipanteAvaliacao.dataEntrada para aquele participante vencer — mesmo número para todos, mas a data-limite resultante varia por participante conforme a dataEntrada de cada um. Quando periodoFim também está presente, o menor dos dois vence primeiro (ver calcularPrazoParticipante). Ausente em 'datas_fixas' e 'indefinido'. */
   prazoDias?: number;
   /** Texto livre descrevendo o público-alvo — NÃO é FK. */
   publicoLabel: string;

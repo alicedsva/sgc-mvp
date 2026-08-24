@@ -14,6 +14,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { getStatusAvaliacaoBadgeClass, getStatusParticipanteBadgeClass } from '../utils/avaliacoes';
 
 type SectionId =
   | 'home'
@@ -502,14 +503,18 @@ function SecaoEstadosAvaliacao() {
         O Admin gerencia o status da avaliação. O Colaborador tem um estado próprio que reflete
         sua participação naquela avaliação.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta status="documentado" ultimaAtualizacao="19/08/2026" debitosTecnicos={0} alertas={0} />
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
-        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-yellow-800">Divergência interna no DS</p>
-          <p className="text-sm text-yellow-700 mt-1">Badge Encerrada documentada com <code className="font-mono text-xs">text-gray-800</code> nesta seção vs <code className="font-mono text-xs">text-gray-700</code> em SecaoBadgesStatus. O código real usa <code className="font-mono text-xs">text-gray-700</code>. Verificar se foi corrigido.</p>
-        </div>
+      <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
+        <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-[var(--brand-700)]">
+          As cores abaixo vêm de <code className="font-mono text-xs">getStatusAvaliacaoBadgeClass</code> e{' '}
+          <code className="font-mono text-xs">getStatusParticipanteBadgeClass</code> (utils/avaliacoes.ts) — mesma
+          fonte usada por ContentArea.tsx, AvaliacaoDetalhePage.tsx e MinhasAvaliacoes.tsx. A antiga divergência entre
+          esta seção e SecaoBadgesStatus (Encerrada com <code className="font-mono text-xs">text-gray-800</code> vs{' '}
+          <code className="font-mono text-xs">text-gray-700</code>) deixou de ser possível: as duas tabelas chamam a
+          mesma função.
+        </p>
       </div>
 
       {/* Bloco 1 — Status do Admin */}
@@ -528,21 +533,21 @@ function SecaoEstadosAvaliacao() {
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Rascunho</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-yellow-100 text-yellow-800`}>Rascunho</span>
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Rascunho')}`}>Rascunho</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação criada mas não publicada. Não visível para o colaborador.</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Ativa</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-green-100 text-green-800`}>Ativa</span>
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Ativa')}`}>Ativa</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Publicada e disponível para resposta.</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Encerrada</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Encerrada</span>
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Encerrada')}`}>Encerrada</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Período encerrado. Não aceita mais respostas.</td>
               </tr>
@@ -567,28 +572,28 @@ function SecaoEstadosAvaliacao() {
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Não iniciada</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-orange-100 text-orange-800`}>Não iniciada</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Não iniciada')}`}>Não iniciada</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação Ativa + colaborador não começou</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Em andamento</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-blue-100 text-blue-800`}>Em andamento</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Em andamento')}`}>Em andamento</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação Ativa + colaborador iniciou mas não concluiu</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Concluída</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-green-100 text-green-800`}>Concluída</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Concluída')}`}>Concluída</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação Encerrada + colaborador respondeu</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Expirada</td>
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Expirada</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Expirada')}`}>Expirada</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação Encerrada + colaborador não respondeu</td>
               </tr>
@@ -655,16 +660,16 @@ function SecaoBadgesStatus() {
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-yellow-100 text-yellow-800`}>Rascunho</span>
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Rascunho')}`}>Rascunho</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-yellow-100 text-yellow-800</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusAvaliacaoBadgeClass('Rascunho')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliações</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Encerrada</span>
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Encerrada')}`}>Encerrada</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-gray-100 text-gray-700</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusAvaliacaoBadgeClass('Encerrada')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliações</td>
               </tr>
 
@@ -676,30 +681,30 @@ function SecaoBadgesStatus() {
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-orange-100 text-orange-800`}>Não iniciada</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Não iniciada')}`}>Não iniciada</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-orange-100 text-orange-800</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusParticipanteBadgeClass('Não iniciada')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Minhas Avaliações</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-blue-100 text-blue-800`}>Em andamento</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Em andamento')}`}>Em andamento</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-blue-100 text-blue-800</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusParticipanteBadgeClass('Em andamento')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Minhas Avaliações</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-green-100 text-green-800`}>Concluída</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Concluída')}`}>Concluída</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-green-100 text-green-800</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusParticipanteBadgeClass('Concluída')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Minhas Avaliações</td>
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
-                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Expirada</span>
+                  <span className={`${BADGE_BASE} ${getStatusParticipanteBadgeClass('Expirada')}`}>Expirada</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-gray-100 text-gray-700</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusParticipanteBadgeClass('Expirada')</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Minhas Avaliações</td>
               </tr>
 
@@ -1494,20 +1499,12 @@ function SecaoBadges() {
         Badges comunicam estado de forma compacta. Nunca use badges para decoração — cada cor tem
         significado semântico definido.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
-
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
-        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-yellow-800">Divergência interna no DS</p>
-          <p className="text-sm text-yellow-700 mt-1">SecaoEstadosAvaliacao documenta badge Encerrada com <code className="font-mono text-xs">text-gray-800</code>. SecaoBadgesStatus documenta a mesma badge com <code className="font-mono text-xs">text-gray-700</code>. O código real usa <code className="font-mono text-xs">text-gray-700</code>. Verificar se a correção foi aplicada em ambas as seções.</p>
-        </div>
-      </div>
+      <SectionMeta status="documentado" ultimaAtualizacao="19/08/2026" debitosTecnicos={0} alertas={0} />
 
       {/* Bloco 1 — Classe base */}
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Classe base</h2>
-        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">{`// Classe base — aplicar em todos os badges de status
+        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">{`// Classe base — aplicar em todos os badges de status EM TABELA
 className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1
            text-[10px] md:text-xs font-medium rounded-full"
 
@@ -1515,6 +1512,38 @@ className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1
 style={{ backgroundColor: getCorFromPeso(ordem) }}
 className="inline-flex px-2.5 py-1 rounded-full
            text-xs font-medium text-white"`}</pre>
+      </div>
+
+      {/* Bloco 1b — Badge ao lado de H1 (StatusBadge) */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Badge ao lado de H1 — componente StatusBadge</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Estrutura fixa e única para o badge de status que acompanha o título de uma página de
+          detalhe (AvaliacaoDetalhePage, JornadaDetalhePage, HabilidadeDetalhePage). Até
+          19/08/2026 coexistiam dois padrões visuais: este (sem dot, <code className="font-mono text-xs">px-2 py-1</code>)
+          e um com bolinha antes do texto (<code className="font-mono text-xs">w-1.5 h-1.5 rounded-full</code> +{' '}
+          <code className="font-mono text-xs">px-2 py-0.5</code>), usado só nas duas telas citadas. O padrão com dot
+          foi removido — nunca tinha sido documentado aqui, então não havia bloco pra apagar, só
+          código pra alinhar. As duas telas também usavam <code className="font-mono text-xs">text-gray-600</code> para
+          "Desativada" em vez de <code className="font-mono text-xs">bg-red-100 text-red-700</code> (regra "Status de
+          registro" abaixo, sem exceção) — corrigido junto.
+        </p>
+        <div className="border border-gray-200 rounded-lg p-4 flex items-center gap-3 mb-3">
+          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Ativa</span>
+          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Desativada</span>
+          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Rascunho</span>
+        </div>
+        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">{`// components/ui/StatusBadge.tsx — só estrutura, nunca decide a cor
+<StatusBadge
+  label={getStatusAvaliacaoLabel(statusEfetivo)}
+  colorClass={getStatusAvaliacaoBadgeClass(statusEfetivo)}
+/>
+
+// Jornada/Habilidade (StatusRegistro, não passa por utils/avaliacoes.ts)
+<StatusBadge
+  label={jornada.status}
+  colorClass={jornada.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}
+/>`}</pre>
       </div>
 
       {/* Bloco 2 — Status de registro */}

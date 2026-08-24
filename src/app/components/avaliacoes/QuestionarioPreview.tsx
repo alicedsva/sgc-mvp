@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Calendar, Eye, ListChecks, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowRight, Calendar, Eye, Info, ListChecks, X } from 'lucide-react';
 import { habilidadesData } from '../../data/mockData';
 import { NiveisHabilidadeCards } from './NiveisHabilidadeCards';
 import { PainelLateralCompetencias } from './PainelLateralCompetencias';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface CompetenciaGrupo {
   id: string;
@@ -15,6 +16,11 @@ interface QuestionarioPreviewProps {
   tipo: string;
   habilidadesIds: string[];
   prazoLabel: string;
+  /** true quando prazoLabel foi calculado a partir de uma data de entrada
+   * HIPOTÉTICA (hoje), por não haver Data de Início nem colaborador real
+   * ainda — mostra o ícone de Info explicando a simulação (ver
+   * FormularioAvaliacao.tsx, onde isso é calculado). */
+  prazoSimulado?: boolean;
   onClose: () => void;
 }
 
@@ -26,7 +32,7 @@ interface QuestionarioPreviewProps {
 // verdade neste ponto do cadastro (Etapa Revisão), é só uma prévia do que
 // SERIA criado. Overlay sobre a própria página do formulário (nunca uma
 // rota), então fechar não perde nada do que já foi preenchido.
-export default function QuestionarioPreview({ nome, tipo, habilidadesIds, prazoLabel, onClose }: QuestionarioPreviewProps) {
+export default function QuestionarioPreview({ nome, tipo, habilidadesIds, prazoLabel, prazoSimulado, onClose }: QuestionarioPreviewProps) {
   const habilidadesPreview = habilidadesIds
     .map(id => habilidadesData.find(h => h.id === id))
     .filter((h): h is (typeof habilidadesData)[number] => h != null);
@@ -62,6 +68,15 @@ export default function QuestionarioPreview({ nome, tipo, habilidadesIds, prazoL
     if (indiceAtual < ordemHabilidades.length - 1) setHabilidadeAtualId(ordemHabilidades[indiceAtual + 1].id);
   };
 
+  // Esc fecha o preview — mesmo comportamento do botão "Fechar".
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-[300] bg-gray-50 flex flex-col">
       {/* Barra de aviso — sempre visível, em qualquer etapa do preview. */}
@@ -94,7 +109,18 @@ export default function QuestionarioPreview({ nome, tipo, habilidadesIds, prazoL
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
                 <Calendar className="w-4 h-4 text-gray-400" />
-                Prazo de entrega: {prazoLabel}
+                Prazo de resposta: {prazoLabel}
+                {prazoSimulado && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Simulação considerando que o colaborador entraria hoje. A data real vai
+                      variar conforme a data de entrada de cada participante.
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </span>
             </div>
 

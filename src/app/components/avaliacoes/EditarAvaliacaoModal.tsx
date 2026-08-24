@@ -7,7 +7,7 @@ import { calcularPrazoParticipante } from '../../utils/avaliacoes';
 interface EditarAvaliacaoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Prorrogação de uma avaliação já materializada: periodoFim (datas_fixas), prazoDias (prazo_em_dias), ou periodoFim+modoPrazo:'datas_fixas' (indefinido definindo um término pela primeira vez). Avaliação Rascunho não passa por aqui — vai para avaliacoes/:id/editar (EditarAvaliacaoRascunhoPage). */
+  /** Prorrogação de uma avaliação já materializada — Término e Prazo (dias) são campos independentes e podem ser editados juntos (regra de negócio final: ver docs/HANDOFF-CADASTRO-AVALIACOES.md). Avaliação Rascunho não passa por aqui — vai para avaliacoes/:id/editar (EditarAvaliacaoRascunhoPage). */
   onProrrogar: (updates: Partial<Avaliacao>) => void;
   avaliacao: Avaliacao | null;
 }
@@ -25,48 +25,55 @@ export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }
 
   if (!isOpen || !avaliacao) return null;
 
-  // Validação de prorrogação (e também da 1ª definição de término em
-  // 'indefinido'): novo prazo precisa deixar o participante mais próximo do
-  // vencimento com pelo menos D+1 em relação a HOJE_SIMULADO — nunca
-  // prorrogar "para trás" ou para hoje mesmo.
+  const semNenhumTeto = !novoPeriodoFim.trim() && !novoPrazoDias.trim();
+
+  // Validação de prorrogação (e também da 1ª definição de término/prazo em
+  // 'indefinido'): a avaliação já materializada não pode voltar a ficar sem
+  // teto nenhum (isso exigiria zerar os dois campos), e qualquer teto novo
+  // precisa deixar o participante mais próximo do vencimento com pelo menos
+  // D+1 em relação a HOJE_SIMULADO — nunca prorrogar "para trás" ou para
+  // hoje mesmo. Quando os dois campos estão preenchidos, o prazo efetivo de
+  // cada participante é o menor entre dataEntrada+prazoDias e periodoFim
+  // (mesma regra de calcularPrazoParticipante em utils/avaliacoes.ts).
   const validarProrrogacao = (): boolean => {
     const amanha = new Date(HOJE_SIMULADO);
     amanha.setUTCDate(amanha.getUTCDate() + 1);
 
-    if (avaliacao.modoPrazo === 'datas_fixas' || avaliacao.modoPrazo === 'indefinido') {
-      // 'indefinido': periodoFim ainda não existe, todo participante vence
-      // junto na nova data — mesma checagem simples de 'datas_fixas'.
-      if (!novoPeriodoFim) { toast.error('Selecione a data de término'); return false; }
-      if (new Date(novoPeriodoFim).getTime() < amanha.getTime()) {
-        toast.error('A nova data precisa ser pelo menos amanhã');
+    if (semNenhumTeto) {
+      toast.error('Informe uma Data de Término ou um Prazo em dias');
+      return false;
+    }
+    if (novoPeriodoFim && new Date(novoPeriodoFim).getTime() < amanha.getTime()) {
+      toast.error('A nova data de término precisa ser pelo menos amanhã');
+      return false;
+    }
+    if (novoPrazoDias) {
+      const dias = Number(novoPrazoDias);
+      if (dias <= 0) { toast.error('Informe um prazo em dias válido'); return false; }
+      const avaliacaoSimulada: Avaliacao = {
+        ...avaliacao,
+        prazoDias: dias,
+        periodoFim: novoPeriodoFim || undefined,
+        modoPrazo: novoPeriodoFim ? 'datas_fixas_com_prazo' : 'prazo_em_dias',
+      };
+      const prazosEfetivos = avaliacao.participantes.map(p => calcularPrazoParticipante(avaliacaoSimulada, p)!);
+      const prazoMaisProximo = prazosEfetivos.reduce((min, atual) => (atual < min ? atual : min));
+      if (new Date(prazoMaisProximo).getTime() < amanha.getTime()) {
+        toast.error('Esse prazo deixaria participantes com vencimento antes de amanhã');
         return false;
       }
-      return true;
-    }
-    // prazo_em_dias — o participante mais próximo do vencimento é o que
-    // entrou primeiro (dataEntrada mais antiga); confere o prazo dele com o
-    // prazoDias novo.
-    const dias = Number(novoPrazoDias);
-    if (!novoPrazoDias || dias <= 0) { toast.error('Informe um prazo em dias válido'); return false; }
-    const avaliacaoSimulada: Avaliacao = { ...avaliacao, prazoDias: dias };
-    const prazosEfetivos = avaliacao.participantes.map(p => calcularPrazoParticipante(avaliacaoSimulada, p)!);
-    const prazoMaisProximo = prazosEfetivos.reduce((min, atual) => (atual < min ? atual : min));
-    if (new Date(prazoMaisProximo).getTime() < amanha.getTime()) {
-      toast.error('Esse prazo deixaria participantes com vencimento antes de amanhã');
-      return false;
     }
     return true;
   };
 
   const handleSalvarProrrogacao = () => {
     if (!validarProrrogacao()) return;
-    if (avaliacao.modoPrazo === 'indefinido') {
-      // Definindo um término pela 1ª vez — converte para 'datas_fixas'.
-      onProrrogar({ periodoFim: novoPeriodoFim, modoPrazo: 'datas_fixas' });
-    } else if (avaliacao.modoPrazo === 'datas_fixas') {
-      onProrrogar({ periodoFim: novoPeriodoFim });
+    if (novoPeriodoFim && novoPrazoDias) {
+      onProrrogar({ periodoFim: novoPeriodoFim, prazoDias: Number(novoPrazoDias), modoPrazo: 'datas_fixas_com_prazo' });
+    } else if (novoPeriodoFim) {
+      onProrrogar({ periodoFim: novoPeriodoFim, prazoDias: undefined, modoPrazo: 'datas_fixas' });
     } else {
-      onProrrogar({ prazoDias: Number(novoPrazoDias) });
+      onProrrogar({ prazoDias: Number(novoPrazoDias), periodoFim: undefined, modoPrazo: 'prazo_em_dias' });
     }
     toast.success('Prazo atualizado com sucesso!');
     onClose();
@@ -82,7 +89,7 @@ export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
             <h2 className="text-lg font-semibold text-gray-900">
-              {avaliacao.modoPrazo === 'indefinido' ? 'Definir Prazo de Término' : 'Prorrogar Avaliação'}
+              {avaliacao.modoPrazo === 'indefinido' ? 'Definir Prazo' : 'Prorrogar Avaliação'}
             </h2>
             <button
               onClick={onClose}
@@ -99,8 +106,8 @@ export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }
               <Lock className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-slate-700">
                 {avaliacao.modoPrazo === 'indefinido'
-                  ? 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Você pode definir uma data de término; a avaliação passa a ter prazo fixo a partir disso.'
-                  : 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Só é possível prorrogar o prazo.'}
+                  ? 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Você pode definir uma Data de Término e/ou um Prazo de resposta; os dois podem coexistir.'
+                  : 'Esta avaliação já tem participantes — nome, habilidades e público-alvo não podem mais ser alterados. Você pode prorrogar a Data de Término e/ou o Prazo de resposta; os dois podem coexistir.'}
               </p>
             </div>
 
@@ -115,24 +122,23 @@ export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }
               </div>
             </div>
 
-            {avaliacao.modoPrazo === 'datas_fixas' || avaliacao.modoPrazo === 'indefinido' ? (
+            {/* Término e Prazo (dias) são campos independentes — podem ser
+                editados juntos, um de cada vez, ou usados para definir o
+                campo que ainda não existia (ex: uma avaliação só com Prazo
+                em dias ganhando um Término pela primeira vez). Pelo menos
+                um dos dois precisa continuar preenchido (validarProrrogacao). */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {avaliacao.modoPrazo === 'indefinido' ? 'Data de término' : 'Nova data de término'} <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Término</label>
                 <input
                   type="date"
                   value={novoPeriodoFim}
                   onChange={e => setNovoPeriodoFim(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">Precisa ser pelo menos amanhã.</p>
               </div>
-            ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Novo prazo (dias) <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Prazo de resposta (em dias)</label>
                 <input
                   type="number"
                   min={1}
@@ -140,11 +146,11 @@ export function EditarAvaliacaoModal({ isOpen, onClose, onProrrogar, avaliacao }
                   onChange={e => setNovoPrazoDias(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Contado a partir da data de entrada de cada participante — precisa deixar todo mundo com vencimento a partir de amanhã.
-                </p>
               </div>
-            )}
+            </div>
+            <p className="text-xs text-gray-500">
+              Término precisa ser pelo menos amanhã. Prazo de resposta é contado a partir da data de entrada de cada participante — precisa deixar todo mundo com vencimento a partir de amanhã. Se os dois forem preenchidos, vence o que chegar primeiro.
+            </p>
           </div>
 
           {/* Footer */}

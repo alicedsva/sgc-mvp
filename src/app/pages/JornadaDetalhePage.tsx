@@ -11,6 +11,7 @@ import { HabilidadesSelectionModal } from '../components/templates/HabilidadesSe
 import { ColaboradoresSelectionModal } from '../components/templates/ColaboradoresSelectionModal';
 import { Table, Column, InlineAction } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
@@ -535,14 +536,10 @@ function JornadaDetalheContent() {
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-semibold text-gray-900">{jornada.nome}</h1>
               <span className="text-sm text-gray-400 font-normal">{jornada.tipo}</span>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-                jornada.status === 'Ativa'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${jornada.status === 'Ativa' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                {jornada.status}
-              </span>
+              <StatusBadge
+                label={jornada.status}
+                colorClass={jornada.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}
+              />
             </div>
             <p className="text-sm text-gray-600 mt-2">
               Defina o nível esperado de cada habilidade por cargo.

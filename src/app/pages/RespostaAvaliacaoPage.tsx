@@ -7,6 +7,7 @@ import { JOAO_ID } from './minhaCarreiraShared';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { NiveisHabilidadeCards } from '../components/avaliacoes/NiveisHabilidadeCards';
 import { PainelLateralCompetencias } from '../components/avaliacoes/PainelLateralCompetencias';
+import { LinhaMeta } from '../components/avaliacoes/LinhaMeta';
 import type { NivelNome } from '../../data/schema';
 import { toast } from 'sonner';
 
@@ -185,10 +186,17 @@ export default function RespostaAvaliacaoPage() {
           informação. */}
       {passo === 'perguntas' && (
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+          {/* Título (nome da avaliação) fica fora do LinhaMeta — não é uma
+              "parte" de metadado, é o identificador principal da tela nesse
+              modo fullscreen (equivalente ao H1 que não existe aqui), por
+              isso mantém truncate + peso próprio em vez de entrar no texto
+              corrido do subtítulo. */}
           <div className="min-w-0 flex items-baseline gap-2">
             <p className="text-sm font-semibold text-gray-900 truncate">{avaliacao.nome}</p>
-            <span className="text-gray-300 flex-shrink-0">•</span>
-            <p className="text-sm text-gray-500 flex-shrink-0">Prazo: {formatPrazoParticipante(avaliacao, participanteAtual)}</p>
+            <LinhaMeta
+              className="text-sm text-gray-600 flex-shrink-0"
+              partes={[`Prazo: ${formatPrazoParticipante(avaliacao, participanteAtual)}`]}
+            />
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
@@ -226,7 +234,7 @@ export default function RespostaAvaliacaoPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
                 <Calendar className="w-4 h-4 text-gray-400" />
-                Prazo de entrega: {formatPrazoParticipante(avaliacao, participanteAtual)}
+                Prazo de resposta: {formatPrazoParticipante(avaliacao, participanteAtual)}
               </span>
             </div>
 

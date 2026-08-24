@@ -56,7 +56,10 @@ Antes de criar qualquer página ou componente novo, verifique se um template já
 
 - Nunca usar hex fixo para cores da marca — sempre `var(--brand-X)`
 - Nunca usar outras bibliotecas de ícones além de lucide-react
-- Nunca criar menu de contexto (MoreVertical) em tabelas
+- Nunca criar menu de contexto (MoreVertical) em tabelas com menos de 4 ações
+  — a partir de 4 ações configuradas para a linha, o menu passa a ser o
+  padrão (ver 02-design-system.md > Tabelas > Menu de ações); abaixo disso,
+  ícones soltos continuam obrigatórios
 - Nunca usar breadcrumb — sempre botão de voltar com label
 - Nunca usar `select` nativo — sempre Radix Select
 - Nunca criar badge para fins decorativos

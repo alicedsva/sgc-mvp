@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState, Fragment, type ReactNode } from 'react';
-import { ArrowLeft, Check, ChevronRight, Eye, GitBranch, Users as UsersIcon, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Eye, GitBranch, Users as UsersIcon, AlertTriangle, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { colaboradoresData, cargosData, HOJE_SIMULADO, type Avaliacao } from '../../data/mockData';
 import { useCarreiras } from '../../context/CarreirasContext';
 import { HabilidadesMasterDetail, type HabilidadeItem } from '../templates/HabilidadesMasterDetail';
 import { SeletorGerenciaGranular } from '../templates/SeletorGerenciaGranular';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { ConfirmationModal } from '../templates/ConfirmationModal';
 import QuestionarioPreview from './QuestionarioPreview';
-import { formatPeriodoAvaliacao, formatData } from '../../utils/avaliacoes';
+import { calcularPrazoParticipante, formatPeriodoAvaliacao, formatData, getCarreiraEJornadaNomes, getPrazoPartes } from '../../utils/avaliacoes';
+import { LinhaMeta } from './LinhaMeta';
 import type { ModoPrazoAvaliacao } from '../../../data/schema';
 
 const HOJE_ISO = HOJE_SIMULADO.toISOString().slice(0, 10);
@@ -44,22 +45,26 @@ export interface NovaAvaliacaoFormData {
 }
 
 // Infere o modoPrazo real do schema a partir da combinação preenchida dos 3
-// campos livres da Etapa Prazo — nunca um seletor explícito (decisão desta
-// fase: reabre e substitui o antigo seletor de 3 modos da Fase 1). Tabela:
+// campos livres da Etapa Prazo — nunca um seletor explícito. Regra de
+// negócio final (aprovada pelo time — substitui a versão anterior, que
+// tratava Término e Prazo como mutuamente exclusivos): os 9 casos abaixo.
 //
 // | Início | Término | Dias | Resultado |
 // |--------|---------|------|-----------|
 // | vazio  | vazio   | vazio| indefinido; periodoInicio = dataPublicacao |
+// | preenc.(futuro/hoje)| vazio | vazio| indefinido; periodoInicio = a data informada |
 // | preenc.| preenc. | vazio| datas_fixas |
 // | preenc.| vazio   | preenc.| prazo_em_dias, periodoInicio agendado |
 // | vazio  | vazio   | preenc.| prazo_em_dias; periodoInicio = dataPublicacao |
 // | vazio  | preenc. | vazio| datas_fixas; periodoInicio = dataPublicacao |
-// | preenc.| vazio   | vazio| indefinido, periodoInicio = a data informada
-//   (combinação não coberta pela tabela original — ver nota de ambiguidade
-//   no relatório final: Início sozinho vira "sem prazo, mas agendado para
-//   aquela data", nunca ignorado)
-// | qualquer| preenc.| preenc.| combinação inválida — bloqueada por
-//   validarEtapa antes de chegar aqui, nunca tratada silenciosamente aqui.
+// | vazio  | preenc. | preenc.| datas_fixas_com_prazo; periodoInicio = dataPublicacao |
+// | preenc.| preenc. | preenc.| datas_fixas_com_prazo; periodoInicio = a data informada |
+//
+// Término + Dias juntos (novo — antes bloqueado por validarEtapa) sempre
+// vira 'datas_fixas_com_prazo': o prazo individual de cada participante é o
+// menor entre dataEntrada+prazoDias e periodoFim (ver calcularPrazoParticipante
+// em utils/avaliacoes.ts), e periodoFim tem precedência para expirar a
+// avaliação inteira (ver calcularStatusEfetivo).
 //
 // dataPublicacao ausente = só Salvar Rascunho, sem publicar de fato — os
 // ramos que resolveriam periodoInicio para "agora" ficam com '' mesmo
@@ -79,21 +84,25 @@ export function montarCamposPrazo(data: NovaAvaliacaoFormData, dataPublicacao?: 
   if (!inicio && !fim && !dias) {
     return { modoPrazo: 'indefinido', periodoInicio: dataPublicacao ?? '', periodoFim: undefined, prazoDias: undefined };
   }
-  if (inicio && fim && !dias) {
+  if (fim && dias) {
+    // Término + Prazo juntos, com ou sem Início explícito.
+    return { modoPrazo: 'datas_fixas_com_prazo', periodoInicio: inicio || dataPublicacao || '', periodoFim: fim, prazoDias: Number(dias) };
+  }
+  if (inicio && fim) {
     return { modoPrazo: 'datas_fixas', periodoInicio: inicio, periodoFim: fim, prazoDias: undefined };
   }
-  if (inicio && !fim && dias) {
+  if (inicio && dias) {
     return { modoPrazo: 'prazo_em_dias', periodoInicio: inicio, periodoFim: undefined, prazoDias: Number(dias) };
   }
-  if (!inicio && !fim && dias) {
+  if (dias) {
     return { modoPrazo: 'prazo_em_dias', periodoInicio: dataPublicacao ?? '', periodoFim: undefined, prazoDias: Number(dias) };
   }
-  if (!inicio && fim && !dias) {
+  if (fim) {
     return { modoPrazo: 'datas_fixas', periodoInicio: dataPublicacao ?? '', periodoFim: fim, prazoDias: undefined };
   }
-  // Início preenchido sozinho (fim e dias vazios) — não coberto pela tabela
-  // original; tratado como "sem prazo de término, mas agendado para essa
-  // data" (nunca como "hoje", já que o Admin escolheu uma data explícita).
+  // Início preenchido sozinho (fim e dias vazios) — tratado como "sem prazo
+  // de término, mas agendado para essa data" (nunca como "hoje", já que o
+  // Admin escolheu uma data explícita).
   return { modoPrazo: 'indefinido', periodoInicio: inicio, periodoFim: undefined, prazoDias: undefined };
 }
 
@@ -140,6 +149,19 @@ export function montarFormDeAvaliacao(avaliacao: Avaliacao): NovaAvaliacaoFormDa
 // Rótulo de público-alvo para seleção granular de gerência/colaboradores —
 // mesmo espírito de formatPublicoLabel (ContentArea.tsx), generalizado para
 // o caso "algumas gerências inteiras + colaboradores avulsos".
+//
+// Caminho misto (gerência(s) inteira(s) + avulsos de fora delas) precisa
+// nomear as gerências inteiras explicitamente — bug real encontrado e
+// corrigido em 2026-08-20: antes, esse caso caía direto no fallback
+// genérico "N colaboradores selecionados", uma string que só carrega a
+// CONTAGEM total, sem indicar quem foi selecionado. Isso colide de verdade
+// com qualquer outra seleção — de gerência(s) diferente(s), ou até de
+// indivíduos completamente diferentes — que resulte na mesma contagem total
+// (ex: "Tecnologia inteira (17) + 2 avulsos de Design" = 19 vira
+// "19 colaboradores selecionados", indistinguível de 19 pessoas escolhidas
+// de qualquer outra combinação). Como duplicidadeDetectada (mais abaixo)
+// compara nome + publicoLabelCalculado como string, essa colisão podia
+// mascarar públicos-alvo genuinamente diferentes como se fossem iguais.
 function montarPublicoLabelGranular(selecionados: Set<string>): string {
   if (selecionados.size === 0) return '';
   const colaboradores = colaboradoresData as unknown as { id: string; gerencia: string }[];
@@ -153,28 +175,45 @@ function montarPublicoLabelGranular(selecionados: Set<string>): string {
   const gerenciasInteiras = GERENCIAS.filter(g => porGerencia[g].total > 0 && porGerencia[g].marcados === porGerencia[g].total);
   const totalViaInteiras = gerenciasInteiras.reduce((soma, g) => soma + porGerencia[g].marcados, 0);
 
-  if (totalViaInteiras === selecionados.size && gerenciasInteiras.length > 0) {
+  const labelGerenciasInteiras = (): string => {
     if (gerenciasInteiras.length >= GERENCIAS.length) return 'Todos os colaboradores';
-    if (gerenciasInteiras.length === 1) return `Gerência ${gerenciasInteiras[0]}`;
-    if (gerenciasInteiras.length === 2) return `Gerências ${gerenciasInteiras[0]} e ${gerenciasInteiras[1]}`;
-    return `Gerências ${gerenciasInteiras.slice(0, -1).join(', ')} e ${gerenciasInteiras[gerenciasInteiras.length - 1]}`;
+    if (gerenciasInteiras.length === 1) return gerenciasInteiras[0];
+    if (gerenciasInteiras.length === 2) return `${gerenciasInteiras[0]} e ${gerenciasInteiras[1]}`;
+    return `${gerenciasInteiras.slice(0, -1).join(', ')} e ${gerenciasInteiras[gerenciasInteiras.length - 1]}`;
+  };
+
+  if (totalViaInteiras === selecionados.size && gerenciasInteiras.length > 0) {
+    return labelGerenciasInteiras();
   }
+
+  // Misto: uma ou mais gerências inteiras + avulsos de fora delas.
+  if (gerenciasInteiras.length > 0) {
+    const avulsos = selecionados.size - totalViaInteiras;
+    return `${labelGerenciasInteiras()} + ${avulsos} colaborador${avulsos === 1 ? '' : 'es'} selecionado${avulsos === 1 ? '' : 's'}`;
+  }
+
   return `${selecionados.size} colaborador${selecionados.size === 1 ? '' : 'es'} selecionado${selecionados.size === 1 ? '' : 's'}`;
 }
 
-// Lista somente-leitura dos colaboradores vindos da jornada (Caminho "Por
-// Jornada") — deliberadamente não reaproveita ColaboradoresSelectionModal:
-// aquele modal é construído em torno de seleção por checkbox agrupada por
-// cargo (estado de seleção, "Selecionar todos", footer com ação de
-// confirmação); adaptar isso para uma listagem somente-leitura exigiria
-// simular props de seleção/vínculo que não existem neste contexto. Modal
-// novo, mesma anatomia visual (overlay, header com X, footer com Cancelar).
-function ColaboradoresJornadaModal({
-  isOpen, onClose, jornadaNome, colaboradores,
+// Lista somente-leitura de colaboradores — reaproveitada pelos dois
+// caminhos do wizard (Etapa Identificação e card "Público-alvo" da Revisão,
+// caminho "Por Jornada"; card da Revisão, caminho "Por Público-alvo"):
+// deliberadamente não reaproveita ColaboradoresSelectionModal: aquele modal
+// é construído em torno de seleção por checkbox agrupada por cargo (estado
+// de seleção, "Selecionar todos", footer com ação de confirmação); adaptar
+// isso para uma listagem somente-leitura exigiria simular props de
+// seleção/vínculo que não existem neste contexto. Modal novo, mesma
+// anatomia visual (overlay, header com X, footer com Cancelar).
+// `subtitulo` é opcional — presente só quando faz sentido nomear a origem
+// (nome da jornada, no Caminho "Por Jornada"); ausente no Caminho
+// "Por Público-alvo", onde não há uma única entidade de origem a nomear.
+function ColaboradoresListaModal({
+  isOpen, onClose, titulo, subtitulo, colaboradores,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  jornadaNome: string;
+  titulo: string;
+  subtitulo?: string;
   colaboradores: { id: string; nome: string; cargo: string }[];
 }) {
   if (!isOpen) return null;
@@ -187,8 +226,8 @@ function ColaboradoresJornadaModal({
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Colaboradores da jornada</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{jornadaNome}</p>
+            <h2 className="text-base font-semibold text-gray-900">{titulo}</h2>
+            {subtitulo && <p className="text-xs text-gray-500 mt-0.5">{subtitulo}</p>}
           </div>
           <button
             onClick={onClose}
@@ -232,11 +271,13 @@ function Campo({ children }: { children: ReactNode }) {
 }
 
 interface Etapa {
-  key: 'publico' | 'identificacao' | 'habilidades' | 'prazo' | 'revisao';
+  key: 'publico' | 'colaboradores' | 'identificacao' | 'habilidades' | 'prazo' | 'revisao';
   label: string;
 }
 
-const ETAPAS_CRIACAO: Etapa[] = [
+// Caminho "Por Jornada" — 5 etapas, sem alteração: participantes vêm da
+// matriz da jornada, não há etapa própria de seleção de colaboradores.
+const ETAPAS_CRIACAO_JORNADA: Etapa[] = [
   { key: 'publico', label: 'Público' },
   { key: 'identificacao', label: 'Identificação' },
   { key: 'habilidades', label: 'Habilidades' },
@@ -244,10 +285,27 @@ const ETAPAS_CRIACAO: Etapa[] = [
   { key: 'revisao', label: 'Revisão' },
 ];
 
+// Caminho "Por Público-alvo" — 6 etapas: a seleção de colaboradores/gerências
+// (SeletorGerenciaGranular) tem etapa própria, separada da Identificação (que
+// só cuida de Nome + Descrição). "Colaboradores" fica perto do fim (depois de
+// Prazo, antes de Revisão) — deixou de ser obrigatória para avançar (decisão
+// de produto — Alice, 2026-08-24): o Admin pode montar toda a avaliação e só
+// decidir o público por último, inclusive deixando pra depois (rascunho sem
+// participante nenhum é permitido, só não pode ser ativada assim).
+const ETAPAS_CRIACAO_PUBLICO: Etapa[] = [
+  { key: 'publico', label: 'Público' },
+  { key: 'identificacao', label: 'Identificação' },
+  { key: 'habilidades', label: 'Habilidades' },
+  { key: 'prazo', label: 'Prazo' },
+  { key: 'colaboradores', label: 'Colaboradores' },
+  { key: 'revisao', label: 'Revisão' },
+];
+
 // Edição de Rascunho não repete a escolha de caminho — ela já foi feita na
 // criação e não pode ser trocada (mesma regra fechada que já valia no
 // EditarAvaliacaoModal antes desta migração).
-const ETAPAS_EDICAO: Etapa[] = ETAPAS_CRIACAO.filter(e => e.key !== 'publico');
+const ETAPAS_EDICAO_JORNADA: Etapa[] = ETAPAS_CRIACAO_JORNADA.filter(e => e.key !== 'publico');
+const ETAPAS_EDICAO_PUBLICO: Etapa[] = ETAPAS_CRIACAO_PUBLICO.filter(e => e.key !== 'publico');
 
 interface FormularioAvaliacaoProps {
   /** Presente = modo edição de Rascunho. Ausente = modo criação. */
@@ -255,7 +313,9 @@ interface FormularioAvaliacaoProps {
   /** Pré-seleciona o Caminho "Por Jornada" com esta jornada — vindo do botão "Criar avaliação para esta matriz" (JornadaDetalhePage). Só relevante em modo criação. */
   jornadaPreSelecionada?: string;
   habilidades: { id: string; nome: string; competencia: string; competenciaId?: string; tipo?: 'Técnica' | 'Comportamental'; status?: string }[];
-  avaliacoesExistentes: { nome: string; publicoLabel: string }[];
+  // jornadaId/participantesIds vêm de Avaliacao.origemJornadaId/participantes (schema.ts) —
+  // nenhum campo novo precisou ser adicionado ao schema, os dois já existiam.
+  avaliacoesExistentes: { nome: string; publicoLabel: string; jornadaId?: string; participantesIds: string[] }[];
   onSalvarRascunho: (data: NovaAvaliacaoFormData) => void;
   onAtivar: (data: NovaAvaliacaoFormData) => void;
   isSidebarCollapsed: boolean;
@@ -268,15 +328,43 @@ export function FormularioAvaliacao({
   onSalvarRascunho, onAtivar, isSidebarCollapsed, breadcrumbLabel, onCancelar,
 }: FormularioAvaliacaoProps) {
   const modoEdicao = !!avaliacaoExistente;
-  const etapas = modoEdicao ? ETAPAS_EDICAO : ETAPAS_CRIACAO;
 
-  const { jornadas, getHabilidadesAgregadasDaJornada, getColaboradoresPorJornada } = useCarreiras();
+  const { jornadas, carreiras, getHabilidadesAgregadasDaJornada, getColaboradoresPorJornada } = useCarreiras();
   const jornadasAtivas = useMemo(() => jornadas.filter(j => j.status === 'Ativa'), [jornadas]);
+  const carreirasAtivas = useMemo(() => carreiras.filter(c => c.status === 'Ativa'), [carreiras]);
 
-  const [currentStepKey, setCurrentStepKey] = useState<Etapa['key']>(etapas[0].key);
   const [formData, setFormData] = useState<NovaAvaliacaoFormData>(() =>
     avaliacaoExistente ? montarFormDeAvaliacao(avaliacaoExistente) : montarFormVazio(jornadaPreSelecionada)
   );
+
+  // Filtro de Carreira acima do select de Jornada (Caminho "Por Jornada",
+  // criação) — não é campo do schema/Avaliacao, só um recorte de UI para
+  // reduzir a lista de ~27 jornadas de 18 carreiras misturadas. Pré-carregado
+  // com a carreira da jornada, quando ela já chega pronta (botão "Criar
+  // avaliação para esta matriz").
+  const [carreiraFiltroId, setCarreiraFiltroId] = useState<string>(() =>
+    jornadaPreSelecionada ? jornadas.find(j => j.id === jornadaPreSelecionada)?.carreiraId ?? '' : ''
+  );
+  const jornadasFiltradasPorCarreira = useMemo(
+    () => (carreiraFiltroId ? jornadasAtivas.filter(j => j.carreiraId === carreiraFiltroId) : []),
+    [jornadasAtivas, carreiraFiltroId],
+  );
+
+  // Quantidade e ordem de etapas dependem do caminho escolhido — Por
+  // Jornada continua com 5, Por Público-alvo ganhou a etapa "Colaboradores"
+  // e passou a 6. O stepper (renderizado a partir desta lista) reflete isso
+  // automaticamente. Enquanto o caminho ainda não foi escolhido (etapa
+  // "Público", caminho null), usa a variante de 5 etapas como base — o
+  // primeiro item ('publico') é igual nas duas, então isso não afeta a
+  // etapa atual, só a contagem do stepper até a escolha ser feita.
+  const etapas = useMemo(() => {
+    if (modoEdicao) {
+      return formData.caminho === 'publico' ? ETAPAS_EDICAO_PUBLICO : ETAPAS_EDICAO_JORNADA;
+    }
+    return formData.caminho === 'publico' ? ETAPAS_CRIACAO_PUBLICO : ETAPAS_CRIACAO_JORNADA;
+  }, [modoEdicao, formData.caminho]);
+
+  const [currentStepKey, setCurrentStepKey] = useState<Etapa['key']>(etapas[0].key);
   // Preview do questionário — overlay sobre a própria página, nunca uma
   // rota, então fechar preserva o formData exatamente como estava.
   const [previewAberto, setPreviewAberto] = useState(false);
@@ -320,17 +408,33 @@ export function FormularioAvaliacao({
 
   // Duplicidade nome + público-alvo — aviso, nunca bloqueio (regra fechada).
   // Compara formData.nome (trim + case-insensitive) contra avaliacoesExistentes[].nome
-  // e formData.publicoLabelCalculado (string já formatada, ex: "Jornada: X" ou
-  // o label granular de gerência/colaboradores) contra avaliacoesExistentes[].publicoLabel
-  // — nunca compara jornadaId/colaboradoresSelecionados diretamente.
+  // — igual a antes — mas o "público" agora é comparado pelos participantes reais,
+  // nunca mais pelo texto de publicoLabelCalculado (que pode colidir: duas seleções
+  // diferentes podem gerar o mesmo texto, ex: fallback genérico "N colaboradores
+  // selecionados" — ver comentário de montarPublicoLabelGranular acima).
+  // Caminho Jornada: mesmo jornadaId. Caminho Público-alvo: mesmo conjunto de IDs de
+  // colaboradores selecionados (comparação de conjunto — ordem não importa).
+  // publicoLabelCalculado continua sendo só o texto exibido na tela, não entra mais
+  // nesta comparação.
   const duplicidadeDetectada = useMemo(() => {
-    if (!formData.nome.trim() || !formData.publicoLabelCalculado) return false;
-    return avaliacoesExistentes.some(
-      a => a.nome.trim().toLowerCase() === formData.nome.trim().toLowerCase()
-        && a.publicoLabel === formData.publicoLabelCalculado
-        && (!avaliacaoExistente || a.nome !== avaliacaoExistente.nome)
-    );
-  }, [avaliacoesExistentes, formData.nome, formData.publicoLabelCalculado, avaliacaoExistente]);
+    if (!formData.nome.trim() || !formData.caminho) return false;
+    const nomeIgual = (a: { nome: string }) =>
+      a.nome.trim().toLowerCase() === formData.nome.trim().toLowerCase()
+      && (!avaliacaoExistente || a.nome !== avaliacaoExistente.nome);
+
+    if (formData.caminho === 'jornada') {
+      if (!formData.jornadaId) return false;
+      return avaliacoesExistentes.some(a => nomeIgual(a) && a.jornadaId === formData.jornadaId);
+    }
+
+    const selecionados = new Set(formData.colaboradoresSelecionados);
+    if (selecionados.size === 0) return false;
+    return avaliacoesExistentes.some(a => {
+      if (!nomeIgual(a)) return false;
+      if (a.participantesIds.length !== selecionados.size) return false;
+      return a.participantesIds.every(id => selecionados.has(id));
+    });
+  }, [avaliacoesExistentes, formData.nome, formData.caminho, formData.jornadaId, formData.colaboradoresSelecionados, avaliacaoExistente]);
 
   // Redação contextual ao caminho escolhido — mesmo vocabulário já usado na
   // etapa (jornada vs. público-alvo). Fonte única para as duas exibições
@@ -371,12 +475,32 @@ export function FormularioAvaliacao({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Trocar a Carreira reseta a Jornada (e tudo que dependia dela) — uma
+  // jornada de outra carreira não é uma opção válida de qualquer forma, já
+  // que o select de Jornada só lista jornadasFiltradasPorCarreira.
+  const handleSelecionarCarreira = (carreiraId: string) => {
+    setCarreiraFiltroId(carreiraId);
+    setFormData(prev => ({
+      ...prev,
+      jornadaId: '',
+      habilidades: [],
+      participantesIds: [],
+      publicoLabelCalculado: '',
+    }));
+  };
+
   const handleSelecionarCaminho = (caminho: CaminhoAvaliacao) => {
     setFormData({ ...formData, caminho });
   };
 
   const colaboradoresSelecionadosSet = new Set(formData.colaboradoresSelecionados);
   const gerenciasAutoInclusaoSet = new Set(formData.gerenciasComAutoInclusao);
+
+  // Colaboradores deixou de ser obrigatório para avançar (item 2 — Alice,
+  // 2026-08-24): um rascunho pode existir sem nenhum participante. Mas
+  // ativar/publicar sem ninguém não faz sentido — trava só o botão final,
+  // nunca a navegação entre etapas.
+  const semColaboradoresSelecionados = formData.caminho === 'publico' && formData.colaboradoresSelecionados.length === 0;
 
   const handleChangeColaboradoresSelecionados = (next: Set<string>) => {
     const ids = Array.from(next);
@@ -420,6 +544,29 @@ export function FormularioAvaliacao({
     [formData.participantesIds],
   );
 
+  // Mesma resolução id → nome/cargo acima, mas para o Caminho "Por
+  // Público-alvo" — a lista já está disponível direto no estado do
+  // formulário (colaboradoresSelecionados), sem depender de jornadaId.
+  // Reaproveitada pelo mesmo ColaboradoresListaModal do Caminho "Por Jornada".
+  const colaboradoresSelecionadosModal = useMemo(
+    () =>
+      formData.colaboradoresSelecionados
+        .map(id => colaboradoresData.find(c => c.id === id))
+        .filter((c): c is NonNullable<typeof c> => Boolean(c))
+        .map(c => ({ id: c.id, nome: c.nome, cargo: cargosData.find(cg => cg.id === c.cargoId)?.cargoRM ?? c.cargo })),
+    [formData.colaboradoresSelecionados],
+  );
+
+  // Carreira + Jornada do Caminho "Por Jornada" — mesma função compartilhada
+  // usada pelo header de AvaliacaoDetalhePage.tsx (getMetaOrigem), aqui
+  // alimentada pelos arrays ao vivo de useCarreiras() (não jornadasData/
+  // carreirasData de mockData) para refletir qualquer edição feita no
+  // Context. Usado só pelo card "Público-alvo" da Etapa Revisão.
+  const carreiraEJornada = useMemo(
+    () => getCarreiraEJornadaNomes(formData.jornadaId, jornadas, carreiras),
+    [formData.jornadaId, jornadas, carreiras],
+  );
+
   // Botão de ativação — texto e comportamento dependem só da Data de Início
   // bruta (não do modo inferido): futura = agendamento (sem confirmação
   // imediata); vazia ou hoje = publicação imediata (com confirmação).
@@ -446,6 +593,12 @@ export function FormularioAvaliacao({
           { titulo: 'Por Jornada de Carreira', texto: 'Habilidades e participantes vêm automaticamente da matriz da jornada escolhida.' },
           { titulo: 'Por Público-alvo', texto: 'Você monta manualmente, escolhendo gerências e colaboradores específicos.' },
         ],
+      };
+    }
+    if (currentStepKey === 'colaboradores') {
+      return {
+        titulo: 'Escolhendo os participantes',
+        texto: 'Selecione gerências inteiras, colaboradores específicos, ou os dois. Dá pra marcar uma gerência completa e ainda adicionar colaboradores avulsos de outras áreas.',
       };
     }
     if (currentStepKey === 'identificacao') {
@@ -480,11 +633,10 @@ export function FormularioAvaliacao({
       return {
         titulo: 'Como o prazo funciona',
         itens: [
-          { titulo: 'Início e Término', texto: <>Todos os participantes têm o mesmo prazo fixo.</> },
-          { titulo: 'Início e Prazo em dias', texto: <>O prazo é individual: cada participante tem esse número de dias a partir da data em que entrou na avaliação.</> },
-          { titulo: 'Só Prazo em dias', texto: <>A contagem começa na data em que a avaliação for publicada.</> },
-          { titulo: 'Nenhum campo preenchido', texto: <>A avaliação fica disponível indefinidamente, sem data de término, até você encerrar manualmente.</> },
-          { titulo: 'Combinação inválida', texto: <><Campo>Término</Campo> e <Campo>Prazo</Campo> não podem ser preenchidos juntos, escolha um dos dois.</> },
+          { titulo: 'Início', texto: <>Controla a partir de quando a avaliação fica disponível para os participantes.</> },
+          { titulo: 'Término', texto: <>Sempre corta tudo: quando chega, a avaliação some para todo mundo, mesmo que o <Campo>Prazo de resposta</Campo> individual de alguém ainda não tenha vencido.</> },
+          { titulo: 'Prazo de resposta', texto: <>É o mesmo número de dias para todos, mas a data-limite de cada participante varia: é contada a partir da data em que ele entrou na avaliação.</> },
+          { titulo: 'Sem Data de Início', texto: <>A avaliação some para rascunho, invisível para os colaboradores, até você publicá-la.</> },
         ],
       };
     }
@@ -505,13 +657,61 @@ export function FormularioAvaliacao({
   // Preview "como ficaria se ativado agora" — mesma inferência usada de fato
   // na hora de ativar (montarCamposPrazo), só que sempre com dataPublicacao
   // preenchida (hoje), para os campos em branco já mostrarem o resultado
-  // real. Fonte única de texto de prazo do wizard — reaproveita
-  // formatPeriodoAvaliacao (utils/avaliacoes.ts), a mesma função usada por
+  // real. Fonte única de texto de prazo do card de Revisão e do aviso do
+  // modal de confirmação — reaproveita formatPeriodoAvaliacao
+  // (utils/avaliacoes.ts), a mesma função usada por
   // ContentArea.tsx/AvaliacaoDetalhePage.tsx/DashboardPage.tsx para
-  // avaliações já reais — evita a divergência antiga entre o texto da
-  // Revisão e o do preview do questionário (eram 2 implementações à mão).
+  // avaliações já reais.
   const prazoPreview = montarCamposPrazo(formData, HOJE_ISO);
   const prazoTextoUnificado = formatPeriodoAvaliacao(prazoPreview);
+
+  // Prazo de resposta exibido no preview do QUESTIONÁRIO (visão do
+  // colaborador) — sempre uma DATA-LIMITE (ou "-"/"Sem prazo definido"),
+  // nunca a regra por extenso acima (essa é só para o Admin no card de
+  // Revisão). Reaproveita calcularPrazoParticipante (utils/avaliacoes.ts),
+  // a MESMA função que calcula o prazo individual real do colaborador em
+  // RespostaAvaliacaoPage.tsx — nunca reimplementar essa fórmula aqui.
+  const nenhumCampoDePrazoPreenchido =
+    !formData.dataInicio.trim() && !formData.dataFim.trim() && !formData.prazoDias.trim();
+  // dataEntrada do participante hipotético do preview: a própria Data de
+  // Início quando preenchida (base REAL — um colaborador presente no
+  // lançamento tem dataEntrada = periodoInicio), senão hoje — hipotético,
+  // só para existir uma data-base a simular (ver prazoQuestionarioSimulado
+  // logo abaixo, que sinaliza esse caso na tela).
+  const dataEntradaSimuladaQuestionario = formData.dataInicio.trim() || HOJE_ISO;
+  const prazoQuestionarioCalculado = nenhumCampoDePrazoPreenchido
+    ? undefined
+    : calcularPrazoParticipante(prazoPreview, { dataEntrada: dataEntradaSimuladaQuestionario });
+  const prazoQuestionarioLabel = nenhumCampoDePrazoPreenchido
+    ? '-'
+    : prazoQuestionarioCalculado != null
+      ? formatData(prazoQuestionarioCalculado)
+      : 'Sem prazo definido';
+  // Ícone de simulação: só quando o resultado depende de uma data de
+  // ENTRADA hipotética — Prazo em dias preenchido sem Data de Início ainda
+  // (a data-limite real só é conhecida quando um colaborador de verdade
+  // entrar). Em 'datas_fixas' puro (só Término, sem Dias) o prazo é sempre
+  // a própria Data de Término — real e igual para todos, independente de
+  // quando cada um entra — por isso não simula nada mesmo sem Início.
+  const prazoQuestionarioSimulado =
+    !nenhumCampoDePrazoPreenchido && !formData.dataInicio.trim() && Boolean(formData.prazoDias.trim());
+
+  // Aviso não-bloqueante (item 6): quando os 3 campos de prazo estão
+  // preenchidos e o Término cai antes de Início + Prazo(dias), o Término
+  // sempre tem precedência (ver calcularPrazoParticipante/modoPrazo
+  // 'datas_fixas_com_prazo' em schema.ts) — o Prazo em dias nunca chega a
+  // valer de fato para nenhum participante, porque mesmo o caso mais
+  // favorável (quem entra no primeiro dia) já é cortado pelo Término antes
+  // de completar os dias configurados.
+  const prazoTerminoCortaAntesDoPrazoDias = useMemo(() => {
+    const inicio = formData.dataInicio.trim();
+    const fim = formData.dataFim.trim();
+    const dias = formData.prazoDias.trim();
+    if (!inicio || !fim || !dias || Number(dias) <= 0) return false;
+    const dataLimitePorDias = new Date(inicio);
+    dataLimitePorDias.setUTCDate(dataLimitePorDias.getUTCDate() + Number(dias));
+    return new Date(fim).getTime() < dataLimitePorDias.getTime();
+  }, [formData.dataInicio, formData.dataFim, formData.prazoDias]);
 
   const validarEtapa = (etapa: Etapa['key']): boolean => {
     if (etapa === 'publico' && !formData.caminho) {
@@ -521,19 +721,13 @@ export function FormularioAvaliacao({
     if (etapa === 'identificacao') {
       if (!formData.nome.trim()) { toast.error('Preencha o nome da avaliação'); return false; }
       if (formData.caminho === 'jornada' && !formData.jornadaId) { toast.error('Selecione uma jornada de carreira'); return false; }
-      if (formData.caminho === 'publico' && formData.colaboradoresSelecionados.length === 0) {
-        toast.error('Selecione ao menos um colaborador ou gerência');
-        return false;
-      }
     }
     if (etapa === 'prazo') {
       const inicio = formData.dataInicio.trim();
       const fim = formData.dataFim.trim();
       const dias = formData.prazoDias.trim();
-      if (fim && dias) {
-        toast.error('Preencha Data de Término OU Prazo em dias, não os dois');
-        return false;
-      }
+      // Término + Prazo juntos agora é uma combinação válida (ver
+      // montarCamposPrazo) — não bloquear mais.
       if (inicio && inicio < HOJE_ISO) {
         toast.error('A Data de Início não pode ser no passado');
         return false;
@@ -577,6 +771,7 @@ export function FormularioAvaliacao({
   // publicação IMEDIATA (hoje/sem Início) passa pelo ConfirmationModal
   // (confirmarPublicacaoImediata), porque é irreversível na hora.
   const handleAtivar = () => {
+    if (semColaboradoresSelecionados) return;
     if (!validarEtapa('identificacao')) return;
     if (!validarEtapa('prazo')) return;
     if (dataInicioFutura) {
@@ -658,10 +853,13 @@ export function FormularioAvaliacao({
                   if (currentStepKey === 'publico') {
                     return { titulo: 'Como você quer definir o público desta avaliação?', apoio: null as string | null };
                   }
+                  if (currentStepKey === 'colaboradores') {
+                    return { titulo: 'Quem vai participar desta avaliação?', apoio: 'Escolha por gerência, por colaboradores específicos, ou os dois' };
+                  }
                   if (currentStepKey === 'identificacao') {
                     return formData.caminho === 'jornada'
                       ? { titulo: 'Qual jornada de carreira será avaliada?', apoio: 'As habilidades avaliadas virão da matriz dessa jornada' }
-                      : { titulo: 'Quem vai participar desta avaliação?', apoio: 'Escolha por gerência, por colaboradores específicos, ou os dois' };
+                      : { titulo: 'Como esta avaliação vai se chamar?', apoio: 'Dê um nome e, se quiser, uma descrição para o objetivo desta avaliação' };
                   }
                   if (currentStepKey === 'habilidades') {
                     return {
@@ -730,10 +928,54 @@ export function FormularioAvaliacao({
                 </div>
               )}
 
-              {/* Etapa — Identificação (público/jornada primeiro, depois nome e descrição) */}
+              {/* Etapa — Colaboradores (só Caminho "Por Público-alvo") — só a
+                  seleção granular de gerência/colaboradores, sem nome nem
+                  descrição (isso agora é etapa própria, "Identificação").
+                  Altura flexível — mesmo padrão da Etapa Habilidades logo
+                  abaixo: o wrapper cresce via flex-1 até o espaço disponível
+                  no card (que por sua vez é limitado pela altura real da
+                  tela, via a cadeia h-[calc(100vh-4rem)] no <main>), com um
+                  piso de min-h-[280px] para nunca ficar pequeno demais — se
+                  a tela for baixa demais até pro piso, quem rola é a área de
+                  conteúdo da etapa (overflow-y-auto no container pai), não o
+                  componente. As duas colunas internas (gerências à esquerda,
+                  colaboradores à direita) mantêm cada uma seu próprio scroll,
+                  já implementado dentro de SeletorGerenciaGranular.tsx. */}
+              {currentStepKey === 'colaboradores' && (
+                <div className="flex-1 min-h-[280px] flex flex-col">
+                  <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Público-alvo
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      {colaboradoresSelecionadosSet.size} {colaboradoresSelecionadosSet.size === 1 ? 'colaborador selecionado' : 'colaboradores selecionados'}
+                    </span>
+                  </div>
+                  <SeletorGerenciaGranular
+                    className="flex-1 min-h-0"
+                    gerencias={GERENCIAS}
+                    colaboradores={colaboradoresItems}
+                    selecionados={colaboradoresSelecionadosSet}
+                    onChangeSelecionados={handleChangeColaboradoresSelecionados}
+                    autoInclusao={gerenciasAutoInclusaoSet}
+                    onChangeAutoInclusao={handleChangeAutoInclusao}
+                  />
+                  {duplicidadeDetectada && (
+                    <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mt-3 flex-shrink-0">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-yellow-800">{mensagemDuplicidade}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Etapa — Identificação. Caminho "Por Jornada": seleção da
+                  jornada + nome/descrição. Caminho "Por Público-alvo": só
+                  nome/descrição — a seleção de colaboradores já aconteceu na
+                  etapa anterior ("Colaboradores"). */}
               {currentStepKey === 'identificacao' && (
                 <div className="space-y-5">
-                  {formData.caminho === 'jornada' ? (
+                  {formData.caminho === 'jornada' && (
                     modoEdicao ? (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Jornada de Carreira</label>
@@ -746,20 +988,36 @@ export function FormularioAvaliacao({
                         </p>
                       </div>
                     ) : (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                          Jornada de Carreira <span className="text-red-500">*</span>
-                        </label>
-                        <Select value={formData.jornadaId} onValueChange={handleSelecionarJornada}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione uma jornada" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {jornadasAtivas.map(j => (
-                              <SelectItem key={j.id} value={j.id}>{j.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-5">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            Carreira <span className="text-red-500">*</span>
+                          </label>
+                          <SearchableSelect
+                            className="w-full"
+                            value={carreiraFiltroId}
+                            onValueChange={handleSelecionarCarreira}
+                            options={carreirasAtivas.map(c => ({ value: c.id, label: c.nome }))}
+                            placeholder="Selecione uma carreira"
+                            searchPlaceholder="Buscar carreira..."
+                            emptyMessage="Nenhuma carreira encontrada"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            Jornada de Carreira <span className="text-red-500">*</span>
+                          </label>
+                          <SearchableSelect
+                            className="w-full"
+                            value={formData.jornadaId}
+                            onValueChange={handleSelecionarJornada}
+                            options={jornadasFiltradasPorCarreira.map(j => ({ value: j.id, label: j.nome }))}
+                            placeholder={carreiraFiltroId ? 'Selecione uma jornada' : 'Selecione uma carreira primeiro'}
+                            searchPlaceholder="Buscar jornada..."
+                            emptyMessage="Nenhuma jornada encontrada"
+                            disabled={!carreiraFiltroId}
+                          />
+                        </div>
                         {jornadaSelecionada && (
                           <p className="mt-1.5 text-xs text-gray-500">
                             {formData.habilidades.length} {formData.habilidades.length === 1 ? 'habilidade pré-marcada' : 'habilidades pré-marcadas'} da matriz ·{' '}
@@ -780,26 +1038,6 @@ export function FormularioAvaliacao({
                         )}
                       </div>
                     )
-                  ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Público-alvo <span className="text-red-500">*</span>
-                        </label>
-                        <span className="text-xs text-gray-500">
-                          {colaboradoresSelecionadosSet.size} {colaboradoresSelecionadosSet.size === 1 ? 'colaborador selecionado' : 'colaboradores selecionados'}
-                        </span>
-                      </div>
-                      <SeletorGerenciaGranular
-                        className="h-96"
-                        gerencias={GERENCIAS}
-                        colaboradores={colaboradoresItems}
-                        selecionados={colaboradoresSelecionadosSet}
-                        onChangeSelecionados={handleChangeColaboradoresSelecionados}
-                        autoInclusao={gerenciasAutoInclusaoSet}
-                        onChangeAutoInclusao={handleChangeAutoInclusao}
-                      />
-                    </div>
                   )}
 
                   <div>
@@ -813,7 +1051,12 @@ export function FormularioAvaliacao({
                       onChange={e => setFormData({ ...formData, nome: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                     />
-                    {duplicidadeDetectada && (
+                    {/* Só compara duplicidade aqui pelo Caminho "Por Jornada"
+                        (jornadaId já é conhecido nesta etapa) — pelo Caminho
+                        "Por Público-alvo" a seleção de colaboradores só
+                        acontece na etapa "Colaboradores", mais adiante, e é
+                        lá que a duplicidade daquele caminho é checada. */}
+                    {duplicidadeDetectada && formData.caminho === 'jornada' && (
                       <p className="text-sm text-red-600 mt-1">{mensagemDuplicidade}</p>
                     )}
                   </div>
@@ -831,9 +1074,11 @@ export function FormularioAvaliacao({
                 </div>
               )}
 
-              {/* Etapa — Habilidades (master-detail) */}
+              {/* Etapa — Habilidades (master-detail). Mesma altura flexível
+                  com piso de min-h-[280px] descrita na Etapa Colaboradores
+                  acima. */}
               {currentStepKey === 'habilidades' && (
-                <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex-1 min-h-[280px] flex flex-col">
                   <div className="flex items-center justify-between mb-2 flex-shrink-0">
                     <label className="block text-sm font-medium text-gray-700">Habilidades</label>
                     <span className="text-xs text-gray-500">
@@ -850,11 +1095,10 @@ export function FormularioAvaliacao({
                 </div>
               )}
 
-              {/* Etapa — Prazo — 3 campos livres, todos opcionais. Término e
-                  Dias são mutuamente exclusivos: preencher um desabilita o
-                  outro (evita a combinação bloqueada por validarEtapa antes
-                  mesmo de tentar avançar). O modoPrazo real é sempre
-                  inferido dessa combinação — ver montarCamposPrazo. */}
+              {/* Etapa — Prazo — 3 campos livres, todos opcionais e
+                  independentes entre si (Término e Prazo podem coexistir —
+                  regra de negócio final, ver montarCamposPrazo). O modoPrazo
+                  real é sempre inferido dessa combinação. */}
               {currentStepKey === 'prazo' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -872,23 +1116,29 @@ export function FormularioAvaliacao({
                       <input
                         type="date"
                         value={formData.dataFim}
-                        disabled={formData.prazoDias.trim() !== ''}
                         onChange={e => setFormData({ ...formData, dataFim: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Prazo (dias)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Prazo de resposta (em dias)</label>
                       <input
                         type="number"
                         min={1}
                         value={formData.prazoDias}
-                        disabled={formData.dataFim.trim() !== ''}
                         onChange={e => setFormData({ ...formData, prazoDias: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent disabled:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                       />
                     </div>
                   </div>
+                  {prazoTerminoCortaAntesDoPrazoDias && (
+                    <div className="flex items-start gap-3 bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4">
+                      <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-gray-700">
+                        A Data de Término chega antes do Prazo de resposta terminar. Como o Término sempre prevalece, nenhum participante terá os {formData.prazoDias.trim()} {Number(formData.prazoDias.trim()) === 1 ? 'dia completo' : 'dias completos'} de prazo.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -915,9 +1165,28 @@ export function FormularioAvaliacao({
                   <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                     <div>
                       <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Público-alvo</p>
-                      <p className="text-sm text-gray-700">{formData.publicoLabelCalculado || 'Não definido'}</p>
+                      {formData.caminho === 'jornada' && carreiraEJornada ? (
+                        <>
+                          <p className="text-sm text-gray-700">Carreira: {carreiraEJornada.carreira}</p>
+                          <p className="text-sm text-gray-700">Jornada: {carreiraEJornada.jornada}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-700">{formData.publicoLabelCalculado || 'Não definido'}</p>
+                      )}
                       <p className="text-xs text-gray-500 mt-0.5">
                         {participantesAtuais.length} {participantesAtuais.length === 1 ? 'participante' : 'participantes'}
+                        {participantesAtuais.length > 0 && (
+                          <>
+                            {' · '}
+                            <button
+                              type="button"
+                              onClick={() => setModalColaboradoresAberto(true)}
+                              className="text-xs font-medium text-[var(--brand-600)] hover:underline"
+                            >
+                              Ver colaboradores
+                            </button>
+                          </>
+                        )}
                       </p>
                     </div>
                     <div>
@@ -949,9 +1218,18 @@ export function FormularioAvaliacao({
                   <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                     <div>
                       <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Prazo</p>
-                      <p className="text-sm text-gray-700">{prazoTextoUnificado}</p>
+                      <LinhaMeta className="text-sm text-gray-700" partes={getPrazoPartes(prazoPreview)} />
                     </div>
                   </div>
+
+                  {semColaboradoresSelecionados && (
+                    <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-yellow-800">
+                        Sem colaboradores selecionados, esta avaliação só pode ser salva como rascunho: a publicação fica indisponível até você selecionar ao menos um participante na etapa Colaboradores.
+                      </p>
+                    </div>
+                  )}
 
                   {duplicidadeDetectada && (
                     <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
@@ -964,22 +1242,32 @@ export function FormularioAvaliacao({
             </div>
           </div>
 
-          {/* Coluna direita — dica, card com altura natural (hugging content,
-              não força mais h-full pra ocupar a coluna inteira), fundo
-              bg-gray-50. Na prática todas as 5 etapas retornam um objeto
-              dica não-nulo hoje (Revisão inclusive, desde que ganhou dica
-              própria) — o guard `dica &&` abaixo é defensivo, não existe
-              etapa "sem dica" atualmente. Cabeçalho: emoji 🧭 solto (sem
-              wrapper/container, sem bg) empilhado acima do título — mesmo
-              padrão validado na página de teste TesteStepperPage.tsx. Lista
-              sem bolinha numerada — o número é prefixo de texto no próprio
-              mini-título ("1. Texto"), nunca um elemento separado. */}
-          <div className="hidden lg:flex lg:flex-col min-h-0">
+          {/* Coluna direita — dica, fundo bg-gray-50. Na prática todas as 5
+              etapas retornam um objeto dica não-nulo hoje (Revisão inclusive,
+              desde que ganhou dica própria) — o guard `dica &&` abaixo é
+              defensivo, não existe etapa "sem dica" atualmente. Cabeçalho:
+              emoji 🧭 solto (sem wrapper/container, sem bg) empilhado acima
+              do título — mesmo padrão validado na página de teste
+              TesteStepperPage.tsx. Lista sem bolinha numerada — o número é
+              prefixo de texto no próprio mini-título ("1. Texto"), nunca um
+              elemento separado.
+              Altura máxima real (não empurra o rodapé, mesmo com a dica mais
+              longa do fluxo — Prazo, 5 itens): mesmo padrão de
+              overflow-hidden no wrapper + flex-1 min-h-0 overflow-y-auto no
+              card já usado na coluna esquerda (card do stepper/conteúdo) e
+              em SeletorGerenciaGranular/HabilidadesMasterDetail — o wrapper
+              (item do grid, altura já dada pelo stretch da grid) ganha
+              overflow-hidden pra nunca deixar o conteúdo do card "vazar" e
+              esticar a linha do grid além do espaço real disponível; o card
+              em si vira flex-1 min-h-0 (preenche essa altura já contida) com
+              overflow-y-auto, então uma dica maior que o espaço rola só
+              dentro do card. */}
+          <div className="hidden lg:flex lg:flex-col min-h-0 overflow-hidden">
             {dica && (
-              <div className="w-full bg-gray-50 rounded-lg border border-gray-200 overflow-y-auto p-5">
+              <div className="w-full flex-1 min-h-0 bg-gray-50 rounded-lg border border-gray-200 overflow-y-auto p-5">
                 <div className="flex flex-col mb-6">
                   <span className="text-[24px]">🧭</span>
-                  <p className="text-base font-bold text-gray-900 mt-3">{dica.titulo}</p>
+                  <p className="text-base font-semibold text-gray-900 mt-3">{dica.titulo}</p>
                 </div>
                 {dica.texto && <p className="text-sm text-gray-700">{dica.texto}</p>}
                 {dica.itens && (
@@ -1043,7 +1331,10 @@ export function FormularioAvaliacao({
               <button
                 type="button"
                 onClick={handleAtivar}
-                className="px-4 py-2 text-sm font-medium text-white bg-[var(--brand-600)] rounded-lg hover:bg-[var(--brand-700)] transition-colors"
+                disabled={semColaboradoresSelecionados}
+                className={`px-4 py-2 text-sm font-medium text-white bg-[var(--brand-600)] rounded-lg transition-colors ${
+                  semColaboradoresSelecionados ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--brand-700)]'
+                }`}
               >
                 {labelBotaoAtivar}
               </button>
@@ -1058,16 +1349,18 @@ export function FormularioAvaliacao({
         nome={formData.nome}
         tipo="Autoavaliação"
         habilidadesIds={formData.habilidades}
-        prazoLabel={prazoTextoUnificado}
+        prazoLabel={prazoQuestionarioLabel}
+        prazoSimulado={prazoQuestionarioSimulado}
         onClose={() => setPreviewAberto(false)}
       />
     )}
 
-    <ColaboradoresJornadaModal
+    <ColaboradoresListaModal
       isOpen={modalColaboradoresAberto}
       onClose={() => setModalColaboradoresAberto(false)}
-      jornadaNome={jornadaSelecionada?.nome ?? ''}
-      colaboradores={colaboradoresDaJornadaModal}
+      titulo={formData.caminho === 'jornada' ? 'Colaboradores da jornada' : 'Colaboradores selecionados'}
+      subtitulo={formData.caminho === 'jornada' ? jornadaSelecionada?.nome : undefined}
+      colaboradores={formData.caminho === 'jornada' ? colaboradoresDaJornadaModal : colaboradoresSelecionadosModal}
     />
 
     <ConfirmationModal
@@ -1079,6 +1372,8 @@ export function FormularioAvaliacao({
       message={
         prazoPreview.modoPrazo === 'indefinido'
           ? 'A avaliação ficará disponível imediatamente para os participantes, sem prazo de término definido. Continua ativa até você encerrá-la manualmente.'
+          : prazoPreview.modoPrazo === 'datas_fixas_com_prazo'
+          ? `A avaliação ficará disponível imediatamente para os participantes até ${formatData(prazoPreview.periodoFim!)}, mesmo que o prazo individual de algum participante ainda não tenha vencido. ${prazoTextoUnificado}`
           : `A avaliação ficará disponível imediatamente para os participantes. ${prazoTextoUnificado}`
       }
       confirmLabel="Publicar agora"

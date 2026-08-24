@@ -21,7 +21,10 @@ function Command({
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
+        // Mesmo problema de bg-popover/text-popover-foreground documentado em
+        // ui/popover.tsx (token nunca gerado pelo Tailwind v4 neste projeto)
+        // — sem isso o Command fica transparente por dentro do Popover.
+        "bg-white text-gray-900 flex h-full w-full flex-col overflow-hidden rounded-md",
         className,
       )}
       {...props}

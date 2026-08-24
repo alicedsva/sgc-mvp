@@ -183,6 +183,19 @@ export function SeletorGerenciaGranular({
                 </button>
               </div>
 
+              {/* PENDÊNCIA — só protótipo hoje: o toggle grava a intenção em
+                  Avaliacao.gerenciasComAutoInclusao (ver schema.ts), mas
+                  nenhum mecanismo do sistema atua sobre esse campo — não há
+                  fluxo de criar/editar colaborador nesta versão que dispare
+                  "entrou numa gerência com auto-inclusão ligada ⇒ virar
+                  participante". Sem backend real, colaboradores que
+                  "entrarem depois" simplesmente não existem como evento no
+                  sistema. Na versão com backend real, isso precisa de um
+                  mecanismo de verdade (hook de mudança de gerência do
+                  colaborador → adicionar como ParticipanteAvaliacao nas
+                  avaliações Ativas com essa gerência marcada) — não é
+                  suficiente copiar só o visual daqui. Mesma nota em
+                  docs/HANDOFF-CADASTRO-AVALIACOES.md. */}
               {gerenciaAtivaEstado === 'toda' && (
                 <div className="flex items-start gap-3 bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-3 mb-3">
                   <div className="flex-1">

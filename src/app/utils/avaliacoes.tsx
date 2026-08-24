@@ -1,5 +1,8 @@
-import { Avaliacao, ParticipanteAvaliacao, niveisDefaultData } from '../data/mockData';
-import type { Habilidade, StatusAvaliacao } from '../../data/schema';
+import type { ReactNode } from 'react';
+import { Info } from 'lucide-react';
+import { Avaliacao, ParticipanteAvaliacao, niveisDefaultData, colaboradoresData, habilidadesCargoData } from '../data/mockData';
+import type { Habilidade, StatusAvaliacao, StatusParticipacaoAvaliacao, NivelNome } from '../../data/schema';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 
 export interface ParticipacaoColaborador {
   avaliacao: Avaliacao;
@@ -20,6 +23,28 @@ export function formatPeriodo(inicio: string, fim: string): string {
 export function formatData(iso: string): string {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+
+// Carreira + Jornada de uma avaliação "Por Jornada" — cruza jornadaId →
+// carreiraId → nome da carreira pela FK real (nunca um campo denormalizado).
+// Fonte única para AvaliacaoDetalhePage.tsx (header, via jornadasData/
+// carreirasData) e FormularioAvaliacao.tsx (card de Revisão, via os arrays
+// ao vivo de useCarreiras()) — por isso recebe as listas de jornadas/
+// carreiras como parâmetro em vez de importar mockData diretamente: o
+// wizard precisa refletir edições feitas no Context, não só o mock estático.
+// Retorna null quando a jornada referenciada (ou a carreira dela) não existe
+// mais nos dados — FK órfã não deve quebrar a tela, quem chama decide o
+// fallback.
+export function getCarreiraEJornadaNomes(
+  jornadaId: string | undefined,
+  jornadas: { id: string; nome: string; carreiraId: string }[],
+  carreiras: { id: string; nome: string }[]
+): { carreira: string; jornada: string } | null {
+  if (!jornadaId) return null;
+  const jornada = jornadas.find((j) => j.id === jornadaId);
+  const carreira = jornada ? carreiras.find((c) => c.id === jornada.carreiraId) : undefined;
+  if (!jornada || !carreira) return null;
+  return { carreira: carreira.nome, jornada: jornada.nome };
 }
 
 // 'YYYY-MM-DD' + N dias corridos, em aritmética de data pura (UTC) — nunca
@@ -43,13 +68,17 @@ export function calcularStatusEfetivo(avaliacao: Avaliacao, hoje: Date): StatusA
   // por data.
   if (avaliacao.status === 'Rascunho') return 'Rascunho';
   if (new Date(avaliacao.periodoInicio).getTime() > hoje.getTime()) return 'Pendente';
-  // modoPrazo 'prazo_em_dias' e 'indefinido': a avaliação como um todo nunca
+  // Término sempre tem PRECEDÊNCIA sobre Prazo para decidir se a avaliação
+  // INTEIRA já expirou — presente em 'datas_fixas' e 'datas_fixas_com_prazo'
+  // (ver ModoPrazoAvaliacao em schema.ts). Quando periodoFim já passou, a
+  // avaliação vira Expirada independentemente de haver participantes com
+  // data-limite individual (dataEntrada + prazoDias) ainda não vencida.
+  // 'prazo_em_dias' puro e 'indefinido': a avaliação como um todo nunca
   // expira sozinha — em 'prazo_em_dias' só participantes individuais vencem
   // (ver calcularPrazoParticipante); em 'indefinido' ninguém vence, nunca há
-  // prazo — por isso só 'datas_fixas' pode levar a avaliação inteira a
-  // 'Expirada'.
+  // prazo.
   if (
-    avaliacao.modoPrazo === 'datas_fixas' &&
+    (avaliacao.modoPrazo === 'datas_fixas' || avaliacao.modoPrazo === 'datas_fixas_com_prazo') &&
     avaliacao.periodoFim &&
     new Date(avaliacao.periodoFim).getTime() < hoje.getTime()
   ) {
@@ -68,22 +97,61 @@ export function getStatusAvaliacaoLabel(status: StatusAvaliacao): string {
   return status === 'Pendente' ? 'Agendada' : status;
 }
 
+// Cor de badge do status de UMA Avaliação — fonte única para os 5 estados
+// (Rascunho/Pendente/Ativa/Encerrada/Expirada). Sempre chamar com o status
+// EFETIVO (calcularStatusEfetivo), nunca o campo bruto avaliacao.status.
+// Reusada por ContentArea.tsx (listagem Admin) e AvaliacaoDetalhePage.tsx
+// (as duas views), para as três nunca divergirem sobre qual cor cada
+// estado usa.
+export function getStatusAvaliacaoBadgeClass(status: StatusAvaliacao): string {
+  if (status === 'Ativa') return 'bg-green-100 text-green-800';
+  if (status === 'Pendente') return 'bg-blue-100 text-blue-800';
+  if (status === 'Rascunho') return 'bg-yellow-100 text-yellow-800';
+  return 'bg-gray-100 text-gray-700'; // Encerrada / Expirada
+}
+
+// Cor de badge do estado do colaborador numa avaliação
+// (StatusParticipacaoAvaliacao) — fonte única para os 4 estados. Reusada
+// por AvaliacaoDetalhePage.tsx e MinhasAvaliacoes.tsx, para as duas nunca
+// divergirem.
+export function getStatusParticipanteBadgeClass(status: StatusParticipacaoAvaliacao): string {
+  if (status === 'Não iniciada') return 'bg-orange-100 text-orange-800';
+  if (status === 'Em andamento') return 'bg-blue-100 text-blue-800';
+  if (status === 'Concluída') return 'bg-green-100 text-green-800';
+  return 'bg-gray-100 text-gray-700'; // Expirada
+}
+
 // Prazo efetivo de UM participante — fonte única, nunca ler
 // avaliacao.periodoFim diretamente para decidir vencimento/urgência
-// individual (no modo 'prazo_em_dias' cada participante tem um prazo
-// diferente, contado a partir de quando ele entrou na avaliação). Retorna
+// individual (nos modos com prazoDias, cada participante tem uma data-limite
+// diferente, contada a partir de quando ele entrou na avaliação — o número
+// de dias é o mesmo para todos, só a data resultante varia). Retorna
 // undefined no modo 'indefinido' — participante sem data-limite nenhuma.
 // Nunca chamar estaVencida/calcularDiasAteVencimento/formatData direto com
 // esse retorno sem checar undefined primeiro — use os wrappers abaixo
 // (participanteVencido/diasAteVencimentoParticipante/formatPrazoParticipante).
-export function calcularPrazoParticipante(avaliacao: Avaliacao, participante: ParticipanteAvaliacao): string | undefined {
-  if (avaliacao.modoPrazo === 'datas_fixas') {
-    return avaliacao.periodoFim!;
-  }
+// Assinatura em Pick (mesmo espírito de formatPeriodoAvaliacao acima) —
+// permite chamar com uma Avaliacao simulada que ainda não existe de fato
+// (ex.: QuestionarioPreview, dentro do wizard de criação), sem precisar
+// forjar um objeto Avaliacao/ParticipanteAvaliacao completo só para bater
+// com o tipo.
+export function calcularPrazoParticipante(
+  avaliacao: Pick<Avaliacao, 'modoPrazo' | 'periodoFim' | 'prazoDias'>,
+  participante: Pick<ParticipanteAvaliacao, 'dataEntrada'>
+): string | undefined {
   if (avaliacao.modoPrazo === 'indefinido') {
     return undefined;
   }
-  return adicionarDias(participante.dataEntrada, avaliacao.prazoDias!);
+  if (avaliacao.modoPrazo === 'datas_fixas') {
+    return avaliacao.periodoFim!;
+  }
+  const prazoIndividual = adicionarDias(participante.dataEntrada, avaliacao.prazoDias!);
+  if (avaliacao.modoPrazo === 'datas_fixas_com_prazo') {
+    // Término e Prazo juntos — o que vencer primeiro, nunca o Término
+    // ignorando um prazo individual mais curto nem o contrário.
+    return prazoIndividual < avaliacao.periodoFim! ? prazoIndividual : avaliacao.periodoFim!;
+  }
+  return prazoIndividual; // 'prazo_em_dias'
 }
 
 // Texto de período para exibição — única fonte que sabe formatar os 3 modos
@@ -105,10 +173,63 @@ export function formatPeriodoAvaliacao(
       : formatData(avaliacao.periodoInicio);
   }
   if (avaliacao.modoPrazo === 'indefinido') {
-    return `A partir de ${formatData(avaliacao.periodoInicio)} · sem término`;
+    return `A partir de ${formatData(avaliacao.periodoInicio)} – sem término`;
   }
   const dias = avaliacao.prazoDias;
+  if (avaliacao.modoPrazo === 'datas_fixas_com_prazo') {
+    const prazoTxt = dias != null ? `${dias} ${dias === 1 ? 'dia' : 'dias'} de prazo individual` : 'prazo individual a definir';
+    return `A partir de ${formatData(avaliacao.periodoInicio)} · até ${avaliacao.periodoFim ? formatData(avaliacao.periodoFim) : 'A definir'} · ${prazoTxt} (o que vencer primeiro)`;
+  }
   return `A partir de ${formatData(avaliacao.periodoInicio)} · ${dias != null ? `${dias} ${dias === 1 ? 'dia' : 'dias'} de prazo` : 'prazo a definir'}`;
+}
+
+// Partes condicionais do prazo (Início / Término / Prazo de resposta) — cada
+// campo preenchido vira um item próprio (negrito), pra uso dentro de
+// LinhaMeta (separado pelo "·" padrão do componente) — 1, 2 ou 3 partes,
+// dependendo da combinação da avaliação (periodoFim e prazoDias são campos
+// independentes, ver ModoPrazoAvaliacao em schema.ts). Quando nenhuma das
+// três está definida (Rascunho recém-criado, antes de qualquer data), cai no
+// mesmo "A definir" que já existia para esse caso. Extraída de
+// AvaliacaoDetalhePage.tsx (era função local ali) para ser reusada também
+// pelo card "Prazo" da etapa Revisão em FormularioAvaliacao.tsx, que simula
+// uma Avaliacao com os campos já inferidos antes de ela existir de fato —
+// por isso o parâmetro aceita só os 3 campos de prazo (Pick), não a
+// Avaliacao inteira, mesmo espírito de formatPeriodoAvaliacao acima.
+export function getPrazoPartes(
+  avaliacao: Pick<Avaliacao, 'periodoInicio' | 'periodoFim' | 'prazoDias'>
+): ReactNode[] {
+  const partes: ReactNode[] = [];
+  if (avaliacao.periodoInicio) {
+    partes.push(
+      <strong className="font-semibold" key="inicio">
+        Inicia em: {formatData(avaliacao.periodoInicio)}
+      </strong>
+    );
+  }
+  if (avaliacao.periodoFim) {
+    partes.push(
+      <strong className="font-semibold" key="termino">
+        Termina em: {formatData(avaliacao.periodoFim)}
+      </strong>
+    );
+  }
+  if (avaliacao.prazoDias != null) {
+    partes.push(
+      <strong className="font-semibold inline-flex items-center gap-1" key="prazo">
+        Prazo de resposta: {avaliacao.prazoDias} {avaliacao.prazoDias === 1 ? 'dia' : 'dias'}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent>
+            É o mesmo número de dias para todos, mas a data-limite de cada participante varia: é
+            contada a partir da data em que ele entrou na avaliação.
+          </TooltipContent>
+        </Tooltip>
+      </strong>
+    );
+  }
+  return partes.length > 0 ? partes : ['A definir'];
 }
 
 // Wrappers null-safe de calcularPrazoParticipante — fonte única para toda
@@ -128,6 +249,42 @@ export function diasAteVencimentoParticipante(avaliacao: Avaliacao, participante
 export function formatPrazoParticipante(avaliacao: Avaliacao, participante: ParticipanteAvaliacao): string {
   const prazo = calcularPrazoParticipante(avaliacao, participante);
   return prazo != null ? formatData(prazo) : 'Sem prazo definido';
+}
+
+// Nível esperado por habilidade para o cargo ATUAL de um colaborador
+// QUALQUER — fonte única para telas que precisam comparar a resposta de um
+// colaborador arbitrário (não só João) contra o nível esperado do cargo
+// dele. Lê sempre de habilidadesCargoData (fonte real usada pela Matriz do
+// Admin), nunca de joaoHabilidadesCargoMatriz (mock exclusivo das telas de
+// teste de João Silva — ver matrizParaCargo em minhaCarreiraShared.tsx, que
+// é o equivalente já existente mas específico do fluxo Colaborador/João).
+//
+// Distingue os 3 estados documentados em 04-regras-negocio.md/
+// 06-integridade-de-dados.md — nunca colapsar em um só:
+// - 'configurado': há entrada em habilidadesCargoData com um nível real.
+// - 'nao_exigido': há entrada, mas com nivelEsperado = 'not_required' —
+//   decisão EXPLÍCITA do RH de que o cargo não exige essa habilidade.
+// - 'nao_configurado': não há entrada nenhuma — RH ainda não definiu.
+export type NivelEsperadoInfo =
+  | { tipo: 'configurado'; nivel: NivelNome }
+  | { tipo: 'nao_exigido' }
+  | { tipo: 'nao_configurado' };
+
+export function getNivelEsperadoPorColaborador(colaboradorId: string): Map<string, NivelEsperadoInfo> {
+  const map = new Map<string, NivelEsperadoInfo>();
+  const colaborador = colaboradoresData.find(c => c.id === colaboradorId);
+  if (!colaborador) return map;
+  habilidadesCargoData
+    .filter(h => h.cargoId === colaborador.cargoId)
+    .forEach(h => {
+      map.set(
+        h.habilidadeId,
+        h.nivelEsperado === 'not_required'
+          ? { tipo: 'nao_exigido' }
+          : { tipo: 'configurado', nivel: h.nivelEsperado }
+      );
+    });
+  return map;
 }
 
 // Escala de níveis ESPECÍFICA de uma habilidade (habilidade.niveis) — nunca

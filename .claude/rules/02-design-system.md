@@ -157,9 +157,62 @@ Linha não clicável: `transition-colors` (sem hover, sem cursor-pointer)
 
 ### Regras
 - `overflow-hidden` obrigatório no container
-- Ações em linha: máximo 3 ícones, sem `MoreVertical`
+- Ações em linha: ícones soltos até 3 ações — a partir de 4, vira menu de contexto (`MoreVertical`), ver "Menu de ações" abaixo
 - Estado vazio com filtro ativo: mostrar botão "Limpar filtros"
 - Estado vazio sem dados: sem botão de limpar
+
+### Menu de ações (exceção documentada a partir de 4 ações)
+
+Decisão — 2026-08-24: `MoreVertical` era proibido em qualquer circunstância;
+passou a ser permitido quando uma linha de tabela tem **4 ou mais ações
+configuradas**. Abaixo de 4, ícones soltos continuam sendo o padrão — nunca
+trocar por menu só porque "parece mais limpo"; a troca é definida pela
+contagem, não por gosto.
+
+A decisão de qual modo renderizar é pelo tamanho do array de ações
+**configurado para a tabela** (o total, incluindo as condicionais), nunca
+pela contagem de ações visíveis linha a linha. Uma ação condicional (ex:
+"Encerrar" só em `Ativa`) não muda o modo por linha — isso criaria duas
+linhas da mesma coluna renderizando modos diferentes (uma com ícones, outra
+com menu), inconsistência visual dentro da mesma coluna. Implementado de
+forma genérica em `ui/Table.tsx` (`InlineAction[]`): `actions.length < 4` →
+ícones soltos (comportamento antigo, inalterado); `actions.length >= 4` →
+menu. Qualquer tabela que já usa `Table.tsx`/`ListingPage.tsx` (padrão do
+projeto — ver 01-verificacao.md) ganha o comportamento automaticamente ao
+crescer para 4 ações, sem precisar reimplementar nada por tela.
+
+Anatomia (referência: coluna Ações da tabela de Avaliações):
+```
+Trigger:  mesmo botão de "Ação em tabela (ícone)" já documentado acima —
+          p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100
+          hover:text-gray-700 transition-colors
+          ícone: MoreVertical w-4 h-4
+Content:  Radix DropdownMenu (ui/dropdown-menu.tsx) — bg-white, border
+          border-gray-200, rounded-md, shadow-md, align="end" (abre
+          alinhado à direita, sob a coluna Ações)
+Item:     ícone (w-4 h-4) + label, gap-2, text-sm
+          Neutro:     text-gray-900, focus:bg-gray-100
+          Destrutivo: text-red-600 (ícone E texto), focus:bg-red-50 —
+          mesmo tom já usado pela variant="danger" das ações em linha
+          (ícones soltos) em ui/Table.tsx; nunca uma cor destrutiva nova
+Ordem:    mesma ordem em que as ações apareciam como ícones — ações que
+          já existiam antes primeiro, ações novas no fim
+```
+
+Regras:
+- Nunca mais de uma ação destrutiva em vermelho por menu — se houver mais de
+  uma ação sensível, só a mais irreversível (ex: excluir) fica vermelha
+- Item desabilitado: mesmo tratamento geral de estado desabilitado (`opacity-50 cursor-not-allowed`, via `disabled`)
+- `DropdownMenuContent`/cada clique precisam de `stopPropagation` quando a
+  tabela tiver `onRowClick` — o menu é renderizado via Portal fora da `<tr>`,
+  mas o clique ainda propaga para o `onRowClick` da linha pela árvore React
+  (delegação de evento de Portal); sem isso, escolher uma ação também
+  disparava a navegação da linha
+- `bg-popover`/`text-popover-foreground`/`text-destructive` (tokens padrão
+  do shadcn) nunca devem ser usados neste projeto — não geram CSS aqui
+  (`theme.css` não registra esses tokens num bloco `@theme` do Tailwind v4).
+  Usar sempre cores concretas (`bg-white`, `text-gray-900`, `text-red-600`),
+  como em todo o resto do design system
 
 ## Filtros e Pills
 
@@ -176,7 +229,7 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
 - Competências / Habilidades / Carreiras / Jornadas → Todos / Ativas / Desativadas
 - Níveis → Todos / Ativos / Desativados / Arquivados
 - Perfis → Todos / Ativos / Desativados
-- Avaliações Admin → Todas / Rascunho / Ativas / Encerradas
+- Avaliações Admin → Todas / Ativas / Rascunho / Agendadas / Encerradas
 - Avaliações Colaborador → Todos / Não iniciada / Em andamento / Concluída / Expirada
 
 ### Regras

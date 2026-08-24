@@ -995,7 +995,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-03-01',
     periodoFim: '2026-07-31', // corrigido — estava com periodoFim no passado (2026-03-31) enquanto status='Ativa'; alinhado a HOJE_SIMULADO
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 9 participantes
+    // reais são 8 de Tecnologia (17 no total) + 1 de Desenvolvimento —
+    // Tecnologia não fecha inteira. Auditoria completa em 2026-08-20 via
+    // montarPublicoLabelGranular (FormularioAvaliacao.tsx).
+    publicoLabel: '9 colaboradores selecionados',
     habilidades: ['1', '2', '3', '9', '18'],
     participantes: [
       { colaboradorId: '10', status: 'Em andamento', visualizada: true, dataEntrada: '2026-03-01', respostas: [
@@ -1061,7 +1065,12 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-02-15',
     periodoFim: '2026-07-06', // corrigido — estava com periodoFim (2026-02-28) anterior à resposta real mais tardia entre os participantes (2026-07-06)
-    publicoLabel: 'Gerências Recursos Humanos e Operações',
+    // corrigido — publicoLabel dizia 'Recursos Humanos e Operações', mas os
+    // 5 participantes reais são o único colaborador de Recursos Humanos
+    // (gerência inteira, 1/1) + 4 de Tecnologia (avulsos) — não tem ninguém
+    // de Operações. Caso misto (ver montarPublicoLabelGranular). Auditoria
+    // completa em 2026-08-20.
+    publicoLabel: 'Recursos Humanos + 4 colaboradores selecionados',
     habilidades: ['9', '10', '14', '21', '22'],
     participantes: [
       { colaboradorId: '2',  status: 'Concluída', visualizada: true, dataEntrada: '2026-02-15', respostas: [
@@ -1126,7 +1135,10 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-03-05',
     periodoFim: '2026-07-31', // corrigido — periodoFim (2026-03-25) anterior a respostas reais de quem já concluiu (até 2026-07-02); mantém participante ainda 'Não iniciada', então segue Ativa com prazo futuro (mesmo princípio do id=1)
-    publicoLabel: 'Gerência Financeiro',
+    // corrigido — publicoLabel dizia 'Financeiro', mas os 6 participantes
+    // reais são só uma fração da gerência Financeiro (9 no total), não ela
+    // inteira. Auditoria completa em 2026-08-20.
+    publicoLabel: '6 colaboradores selecionados',
     habilidades: ['110', '111', '112'],
     participantes: [
       { colaboradorId: '19', status: 'Concluída', visualizada: true, dataEntrada: '2026-03-05', respostas: [
@@ -1163,7 +1175,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-01-01',
     periodoFim: '2026-07-03', // corrigido — estava com periodoFim (2026-01-31) anterior à resposta real mais tardia entre os participantes (2026-07-03)
-    publicoLabel: 'Gerências Tecnologia e Financeiro',
+    // corrigido — publicoLabel dizia 'Tecnologia e Financeiro', mas os 5
+    // participantes reais são 3 de Tecnologia (17 no total) + 2 de
+    // Financeiro (9 no total) — nenhuma das duas gerências fecha inteira.
+    // Auditoria completa em 2026-08-20.
+    publicoLabel: '5 colaboradores selecionados',
     habilidades: ['65', '66', '67'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2026-01-01', respostas: [
@@ -1203,7 +1219,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-03-20',
     periodoFim: '2026-04-10',
-    publicoLabel: 'Gerências Tecnologia e Produto',
+    publicoLabel: 'Tecnologia e Produto',
     descricao: 'Avaliação do nível de adoção e domínio das metodologias ágeis pelas equipes de tecnologia e produto.',
     habilidades: ['11', '12'],
     participantes: [],
@@ -1218,7 +1234,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-03-01',
     periodoFim: '2026-07-31', // corrigido — periodoFim (2026-03-20) anterior a respostas reais de quem já concluiu (até 2026-07-06); mantém participante ainda 'Não iniciada', então segue Ativa com prazo futuro (mesmo princípio do id=1)
-    publicoLabel: 'Gerências Design e Produto',
+    // corrigido — publicoLabel dizia 'Design e Produto', mas os 5
+    // participantes reais são 3 de Design (6 no total) + 2 de Produto (11 no
+    // total) — nenhuma das duas gerências fecha inteira. Auditoria completa
+    // em 2026-08-20.
+    publicoLabel: '5 colaboradores selecionados',
     habilidades: ['118', '119', '124', '125'],
     participantes: [
       { colaboradorId: '67', status: 'Concluída', visualizada: true, dataEntrada: '2026-03-01', respostas: [
@@ -1258,7 +1278,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-01-15',
     periodoFim: '2026-07-04', // corrigido — periodoFim (2026-02-15) anterior à resposta real mais tardia entre os participantes (2026-07-04)
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 5 participantes
+    // reais são 3 de Infraestrutura (9 no total) + 1 de Segurança (6 no
+    // total) + 1 de Engenharia (8 no total) — nenhuma delas é Tecnologia, e
+    // nenhuma das três fecha inteira. Auditoria completa em 2026-08-20.
+    publicoLabel: '5 colaboradores selecionados',
     habilidades: ['53', '56', '57', '58'],
     participantes: [
       { colaboradorId: '6',  status: 'Concluída', visualizada: true, dataEntrada: '2026-01-15', respostas: [
@@ -1298,7 +1322,10 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-01',
     periodoFim: '2026-06-29', // corrigido — periodoFim (2026-04-30) anterior à resposta real mais tardia entre os participantes (2026-06-29)
-    publicoLabel: 'Gerência Produto',
+    // corrigido — publicoLabel dizia 'Produto', mas os 7 participantes
+    // reais são só uma fração da gerência Produto (11 no total), não ela
+    // inteira. Auditoria completa em 2026-08-20.
+    publicoLabel: '7 colaboradores selecionados',
     habilidades: ['88', '89', '104', '118', '119', '120', '121', '122'],
     participantes: [
       { colaboradorId: '62', status: 'Concluída', visualizada: true, dataEntrada: '2026-04-01', respostas: [
@@ -1364,7 +1391,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-01',
     periodoFim: '2026-07-06', // corrigido — periodoFim (2026-04-30) anterior à resposta real mais tardia entre os participantes (2026-07-06)
-    publicoLabel: 'Gerência Operações',
+    publicoLabel: 'Operações',
     habilidades: ['88', '137', '138', '139', '140', '141'],
     participantes: [
       { colaboradorId: '50', status: 'Concluída', visualizada: true, dataEntrada: '2026-04-01', respostas: [
@@ -1433,7 +1460,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-01',
     periodoFim: '2026-07-06', // corrigido — periodoFim (2026-04-30) anterior à resposta real mais tardia entre os participantes (2026-07-06)
-    publicoLabel: 'Gerência Inovação',
+    publicoLabel: 'Inovação',
     habilidades: ['23', '104', '106', '142', '143', '144', '145', '146'],
     participantes: [
       { colaboradorId: '84', status: 'Concluída', visualizada: true, dataEntrada: '2026-04-01', respostas: [
@@ -1506,7 +1533,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-01',
     periodoFim: '2026-07-06', // corrigido — periodoFim (2026-04-30) anterior à resposta real mais tardia entre os participantes (2026-07-06)
-    publicoLabel: 'Gerência Engenharia',
+    publicoLabel: 'Engenharia',
     habilidades: ['131', '132', '133', '134', '135', '136'],
     participantes: [
       { colaboradorId: '22', status: 'Concluída', visualizada: true, dataEntrada: '2026-04-01', respostas: [
@@ -1581,7 +1608,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-01',
     periodoFim: '2026-07-05', // corrigido — periodoFim (2026-04-30) anterior à resposta real mais tardia entre os participantes (2026-07-05)
-    publicoLabel: 'Gerências Design e Financeiro',
+    // corrigido — publicoLabel dizia 'Design e Financeiro', mas os 2
+    // participantes reais são 1 de Design (6 no total) + 1 de Financeiro (9
+    // no total) — nenhuma das duas gerências fecha inteira. Auditoria
+    // completa em 2026-08-20.
+    publicoLabel: '2 colaboradores selecionados',
     habilidades: ['86', '87', '88', '89', '110', '111', '112', '113', '124', '125', '126', '128'],
     participantes: [
       { colaboradorId: '71', status: 'Concluída', visualizada: true, dataEntrada: '2026-04-01', respostas: [
@@ -1612,7 +1643,13 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-05-01',
     periodoFim: '2026-07-06', // corrigido — periodoFim (2026-05-31) anterior à resposta real mais tardia entre os participantes (2026-07-06)
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 24 participantes
+    // reais são 9 de Tecnologia (17 no total, não inteira) + 8 de
+    // Desenvolvimento (9 no total, não inteira) + 3 de Dados (3 no total —
+    // gerência INTEIRA) + 4 de Segurança (6 no total, não inteira). Caso
+    // misto: Dados fecha inteira, o resto (21 pessoas) são avulsos. Ver
+    // montarPublicoLabelGranular. Auditoria completa em 2026-08-20.
+    publicoLabel: 'Dados + 21 colaboradores selecionados',
     habilidades: ['1', '2', '3', '9', '10', '14', '18', '21', '22', '86', '87', '88'],
     participantes: [
       // c1 — Desenvolvedor Junior
@@ -1865,7 +1902,10 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-05-01',
     periodoFim: '2026-07-05', // corrigido — periodoFim (2026-05-31) anterior à resposta real mais tardia entre os participantes (2026-07-05)
-    publicoLabel: 'Gerência Infraestrutura',
+    // corrigido — publicoLabel dizia 'Infraestrutura', mas os 8
+    // participantes reais são 7 de Infraestrutura (9 no total, não inteira)
+    // + 1 de Segurança. Auditoria completa em 2026-08-20.
+    publicoLabel: '8 colaboradores selecionados',
     habilidades: ['9', '10', '53', '55', '56', '80', '81'],
     participantes: [
       // c5 — Analista de Infraestrutura Junior
@@ -1940,7 +1980,10 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-01',
     periodoFim: '2026-07-05', // corrigido — periodoFim (2026-06-30) anterior à resposta real mais tardia entre os participantes (2026-07-05)
-    publicoLabel: 'Gerência Financeiro',
+    // corrigido — publicoLabel dizia 'Financeiro', mas os 4 participantes
+    // reais são só uma fração da gerência Financeiro (9 no total), não ela
+    // inteira. Auditoria completa em 2026-08-20.
+    publicoLabel: '4 colaboradores selecionados',
     habilidades: ['110', '111', '112', '113', '114', '115', '117'],
     participantes: [
       { colaboradorId: '52', status: 'Concluída', visualizada: true, dataEntrada: '2026-06-01', respostas: [
@@ -1982,7 +2025,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-01',
     periodoFim: '2026-07-01', // corrigido — periodoFim (2026-06-30) anterior à resposta real mais tardia entre os participantes (2026-07-01)
-    publicoLabel: 'Gerências Design e Produto',
+    // corrigido — publicoLabel dizia 'Design e Produto', mas os 5
+    // participantes reais são 3 de Design (6 no total) + 2 de Produto (11 no
+    // total) — nenhuma das duas gerências fecha inteira. Auditoria completa
+    // em 2026-08-20.
+    publicoLabel: '5 colaboradores selecionados',
     habilidades: ['118', '119', '124', '125', '126', '127', '128', '129', '130'],
     participantes: [
       // j17 — Product Designer Junior (c14)
@@ -2045,7 +2092,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2025-10-01',
     periodoFim: '2025-10-31',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['1', '2', '18'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2025-10-01', respostas: [
@@ -2134,7 +2181,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2025-12-01',
     periodoFim: '2025-12-18',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['3', '4', '18'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2025-12-01', respostas: [
@@ -2228,7 +2275,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-02-02',
     periodoFim: '2026-02-20',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['1', '50', '51'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2026-02-02', respostas: [
@@ -2322,7 +2369,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-04-06',
     periodoFim: '2026-04-24',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['9', '10', '21', '22'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2026-04-06', respostas: [
@@ -2431,7 +2478,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-05-11',
     periodoFim: '2026-05-29',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['11', '12'],
     participantes: [
       { colaboradorId: '1',  status: 'Concluída', visualizada: true, dataEntrada: '2026-05-11', respostas: [
@@ -2510,7 +2557,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-01',
     periodoFim: '2026-08-10',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['1', '2', '3', '4', '18'],
     participantes: [
       { colaboradorId: '1',  status: 'Em andamento', visualizada: true, dataEntrada: '2026-06-01', respostas: [
@@ -2566,7 +2613,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-07-01',
     periodoFim: '2026-07-25',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['9', '10', '14', '23'],
     participantes: [
       { colaboradorId: '1',  status: 'Não iniciada', visualizada: true, dataEntrada: '2026-07-01', respostas: [] },
@@ -2625,7 +2672,7 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-20',
     periodoFim: '2026-07-20',
-    publicoLabel: 'Gerência Tecnologia',
+    publicoLabel: 'Tecnologia',
     habilidades: ['74', '11', '12'],
     participantes: [
       { colaboradorId: '1',  status: 'Não iniciada', visualizada: true, dataEntrada: '2026-06-20', respostas: [] },
@@ -2676,7 +2723,15 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-05-15',
     periodoFim: '2026-07-05', // corrigido — periodoFim (2026-05-30) anterior à resposta real mais tardia entre os participantes (2026-07-05)
-    publicoLabel: 'Cargo Desenvolvedor Pleno',
+    // corrigido — 'Cargo Desenvolvedor Pleno' não corresponde a nenhum
+    // caminho real de FormularioAvaliacao.tsx (só "Jornada: X",
+    // "Gerência(s) X"/"Todos os colaboradores" ou "N colaboradores
+    // selecionados" — ver montarPublicoLabelGranular). Os 11 participantes
+    // desta avaliação cobrem 4 gerências diferentes (Tecnologia,
+    // Desenvolvimento, Dados, Segurança — nenhuma delas selecionada por
+    // inteiro), então o formato válido correspondente é "N colaboradores
+    // selecionados".
+    publicoLabel: '11 colaboradores selecionados',
     habilidades: ['1', '2', '3', '4', '9', '10', '11', '12', '14', '18', '21', '22', '23', '50', '51', '52', '53', '54', '56', '59', '60', '61', '62', '63', '64', '65', '66', '68', '69', '70', '74', '75', '76', '77', '83', '86', '87', '88', '91', '92', '95', '98', '104', '107', '147', '148', '149', '150', '151', '152', '153'],
     participantes: [
       // Ana Silva (id='1')
@@ -3045,7 +3100,10 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-27',
     periodoFim: '2026-07-11',
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 9 participantes
+    // reais são só uma fração da gerência Tecnologia (17 no total), não ela
+    // inteira. Auditoria completa em 2026-08-20.
+    publicoLabel: '9 colaboradores selecionados',
     habilidades: ['50', '51'],
     participantes: [
       { colaboradorId: '1',  status: 'Não iniciada', visualizada: true, dataEntrada: '2026-06-27', respostas: [] },
@@ -3081,7 +3139,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-07-05',
     periodoFim: '2026-07-28',
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 9 participantes
+    // reais são só uma fração da gerência Tecnologia (17 no total), não ela
+    // inteira (mesmo grupo real de id 27/29). Auditoria completa em
+    // 2026-08-20.
+    publicoLabel: '9 colaboradores selecionados',
     habilidades: ['21', '22'],
     participantes: [
       { colaboradorId: '1',  status: 'Não iniciada', visualizada: false, dataEntrada: '2026-07-05', respostas: [] },
@@ -3111,7 +3173,11 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-06-25',
     periodoFim: '2026-07-07',
-    publicoLabel: 'Gerência Tecnologia',
+    // corrigido — publicoLabel dizia 'Tecnologia', mas os 9 participantes
+    // reais são só uma fração da gerência Tecnologia (17 no total), não ela
+    // inteira (mesmo grupo real de id 27/28). Auditoria completa em
+    // 2026-08-20.
+    publicoLabel: '9 colaboradores selecionados',
     habilidades: ['4', '86'],
     participantes: [
       { colaboradorId: '1',  status: 'Não iniciada', visualizada: true, dataEntrada: '2026-06-25', respostas: [] },
@@ -3141,7 +3207,13 @@ export const avaliacoesData: Avaliacao[] = [
     modoPrazo: 'datas_fixas',
     periodoInicio: '2026-07-06',
     periodoFim: '2026-09-04',
-    publicoLabel: 'Cargo Desenvolvedor Pleno',
+    // corrigido — mesma razão do id=26 acima ('Cargo X' não é um formato
+    // válido). Os 4 participantes (João Silva, Gustavo Lima, Letícia Costa,
+    // Diego Araújo) são todos da gerência Tecnologia, mas só uma fração dos
+    // colaboradores dessa gerência — não a gerência inteira — então o
+    // formato correto é "N colaboradores selecionados", não "Gerência
+    // Tecnologia".
+    publicoLabel: '4 colaboradores selecionados',
     habilidades: ['1', '2', '3', '4', '9', '10', '11', '12', '14', '18', '21', '22', '23', '50', '51', '52', '53', '54', '56', '59', '60', '61', '62', '63', '64', '65', '66', '68', '69', '70', '74', '75', '76', '77', '83', '86', '87', '88', '91', '92', '95', '98', '104', '107', '147', '148', '149', '150', '151', '152', '153'],
     participantes: [
       { colaboradorId: '10', status: 'Não iniciada', visualizada: false, dataEntrada: '2026-07-06', respostas: [] },
