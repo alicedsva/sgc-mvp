@@ -5,7 +5,7 @@ import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
 import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
-import { formatData, calcularStatusEfetivo, getStatusAvaliacaoLabel, getStatusAvaliacaoBadgeClass } from '../utils/avaliacoes';
+import { formatData, calcularStatusEfetivo, calcularDiasAteVencimento, getStatusAvaliacaoLabel, getStatusAvaliacaoBadgeClass, AvisoAtivacaoAgendada } from '../utils/avaliacoes';
 import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
@@ -1841,9 +1841,37 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           // ainda não tem essa data. "-" (hífen simples, nunca travessão/en
           // dash) para "sem valor" — mesmo tratamento das colunas Término e
           // Prazo logo abaixo.
-          return inicio
-            ? <span className="text-sm text-gray-700">{formatData(inicio)}</span>
-            : <span className="text-sm text-gray-500">-</span>;
+          if (!inicio) return <span className="text-sm text-gray-500">-</span>;
+          // Status calculado 'Pendente' ("Agendada") só ganha o aviso quando
+          // a ativação está a 5 dias ou menos — calcularDiasAteVencimento
+          // (utils/avaliacoes.tsx) já é a fonte única de "diferença em dias
+          // até uma data" usada por MinhasAvaliacoes.tsx/ColaboradorView.tsx
+          // para prazo de resposta; aqui é a mesma conta, só que contra
+          // periodoInicio em vez de periodoFim — nunca reescrever a
+          // subtração de datas na mão. Mesmo N decide se o ícone aparece
+          // (<=5) e o texto do contador do tooltip — nunca recalculado duas
+          // vezes. Ícone reaproveita AvisoAtivacaoAgendada (mesmo componente
+          // de AvaliacaoDetalhePage.tsx), só a cor muda para vermelho de
+          // alerta (text-red-500, ver 02-design-system.md) e o texto vira
+          // contador regressivo em vez da data fixa — só dentro da janela de
+          // 5 dias; fora dela, nenhum ícone aparece.
+          const diasAteAtivar = calcularDiasAteVencimento(inicio, HOJE_SIMULADO);
+          const agendadaUrgente =
+            calcularStatusEfetivo(row as Avaliacao, HOJE_SIMULADO) === 'Pendente' && diasAteAtivar <= 5;
+          const textoContador =
+            diasAteAtivar === 0
+              ? 'Vai ficar ativa hoje.'
+              : diasAteAtivar === 1
+              ? 'Vai ficar ativa amanhã.'
+              : `Vai ficar ativa em ${diasAteAtivar} dias.`;
+          return (
+            <span className="text-sm text-gray-700 inline-flex items-center gap-1">
+              {formatData(inicio)}
+              {agendadaUrgente && (
+                <AvisoAtivacaoAgendada dataISO={inicio} corIcone="text-red-500" texto={textoContador} />
+              )}
+            </span>
+          );
         },
       },
       {

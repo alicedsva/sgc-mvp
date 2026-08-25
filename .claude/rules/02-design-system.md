@@ -40,6 +40,65 @@ Nunca use hex fixo. Nunca use classes `blue-X` para elementos da marca.
 - `font-bold` reservado apenas para valores numéricos em cards de métricas
 - Regra: sempre usar prefixo `md:` quando tamanho muda entre breakpoints
 
+### Exceção documentada — rótulo da etapa Revisão (wizard de Avaliações)
+
+Decisão — 2026-08-25, revisada 7x no mesmo dia (ajustes finos sucessivos a
+pedido da Alice): a etapa "Revisão" do wizard de Avaliações
+(`FormularioAvaliacao.tsx`) **não** usa o padrão de "Cabeçalho de tabela"
+(caixa alta + `text-[10px]`) para seus rótulos de campo (Nome, Descrição,
+Carreira, Jornada, Público, Colaboradores, Habilidades, Prazo) — nem os
+tamanhos/pesos das rodadas anteriores (já superados por esta versão).
+
+Padrão atual, específico desta etapa:
+- Rótulo de campo: `text-xs font-semibold text-gray-900` (12px) — sentence
+  case, nunca caixa alta; é ele que carrega o destaque visual, não o valor.
+- Valor abaixo do rótulo: `text-sm font-normal text-gray-700` (14px) — peso
+  normal, cor mais neutra que o rótulo.
+- Título de seção (nome do container): `text-sm font-semibold text-gray-900`
+  (14px) — precisa ser o nome EXATO da etapa correspondente no stepper
+  daquele caminho (`ETAPAS_CRIACAO_JORNADA`/`ETAPAS_CRIACAO_PUBLICO`,
+  `FormularioAvaliacao.tsx`), nunca um rótulo genérico ou inventado. "Público-
+  alvo" nunca é um título válido — não existe etapa com esse nome em nenhum
+  dos dois caminhos. O card que resume quem vai participar (variável de
+  código `containerPublicoAlvo`, nome só interno) mostra "Público" no
+  caminho "Por Jornada" (nome exato da etapa 1, key `'publico'`) e
+  "Colaboradores" no caminho "Por Público-alvo" (nome exato da etapa key
+  `'colaboradores'`) — título condicional a `formData.caminho`, corrigido em
+  2026-08-25 depois de um título "Público-alvo" residual que não batia com
+  nenhuma etapa real.
+- Cada etapa do wizard vira seu próprio container (`bg-white border
+  border-gray-200 rounded-lg`, mesmo card padrão do resto do sistema), com
+  cabeçalho em linha única (`flex items-center justify-between`): título à
+  esquerda, botão de editar (ícone `Pencil`, mesmo padrão de "Ação em
+  tabela (ícone)" — `p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100
+  hover:text-gray-700`) à direita, navegando de volta pra etapa
+  correspondente via `setCurrentStepKey` (mesmo mecanismo do stepper —
+  nunca uma navegação paralela).
+- O cabeçalho tem `border-b border-gray-200` **de ponta a ponta** (ocupa a
+  largura toda do card) — e é a ÚNICA divisória do container. Nunca existe
+  linha ENTRE campos dentro do mesmo container (Identificação:
+  Nome/Descrição; card "Público" no caminho "Por Jornada": Carreira/Jornada)
+  — uma versão anterior desta exceção tinha uma `<div className="mx-5
+  border-t border-gray-200" />` ali, removida a pedido da Alice. A separação
+  entre blocos de label+valor dentro do mesmo container é só espaçamento
+  vertical (`space-y-5` no wrapper que os agrupa), nunca borda.
+- Card "Público" (caminho "Por Jornada"): Carreira e Jornada viram dois
+  campos label+valor nesse mesmo padrão (antes eram uma linha só "Carreira:
+  X"/"Jornada: Y"); a linha "N participantes · Ver colaboradores" nunca vira
+  um terceiro campo com label — continua texto simples logo abaixo do valor
+  de Jornada, sem divisória acima dela.
+- Card "Prazo": o texto de `getPrazoPartes` (Inicia em/Termina em/Prazo de
+  resposta) usa peso `font-normal` só aqui, via o 3º parâmetro
+  `getPrazoPartes(avaliacao, agendada, 'normal')` — nunca duplicar a
+  montagem desse texto; `getPrazoPartes` (`utils/avaliacoes.tsx`) aceita
+  esse parâmetro de peso desde 2026-08-25, default `'semibold'` (o
+  `<strong>` continua semibold em todo o resto do sistema — AvaliacaoDetalhePage.tsx
+  não passa esse parâmetro, mantém o padrão).
+
+Vale só para essa etapa — nunca usar esses tamanhos/pesos, essa inversão
+label/valor ou esse padrão de cabeçalho como novo padrão de "Cabeçalho de
+tabela"/label pequeno em outra tela do sistema por causa desta exceção.
+
 ## Espaçamento
 
 Escala Tailwind obrigatória — nunca `style={{ margin: 'Xpx' }}`

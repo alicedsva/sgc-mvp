@@ -26,7 +26,7 @@ const VERSION_KEY = 'carreiras_avaliacoes_mock_version';
 // 2026-08-10: Fase 2 — Avaliacao ganhou modoPrazo/prazoDias/origemJornadaId/
 // gerenciasComAutoInclusao e ParticipanteAvaliacao ganhou dataEntrada
 // (obrigatório). Dados antigos no localStorage não têm esses campos.
-const MOCK_DATA_VERSION = '2026-08-10-6';
+const MOCK_DATA_VERSION = '2026-08-25-7';
 
 function loadFromStorage(): Avaliacao[] {
   try {

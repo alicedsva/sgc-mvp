@@ -1111,15 +1111,20 @@ export const avaliacoesData: Avaliacao[] = [
     ],
   },
 
-  // ─── id=3 · Soft Skills Semestral · Rascunho ────────────────────────────────
+  // ─── id=3 · Soft Skills Semestral · Agendada (Pendente) ────────────────────
+  // Reagendada de Rascunho para Ativa com periodoInicio a 3 dias de
+  // HOJE_SIMULADO (2026-07-06) — dado de teste para validar o ícone vermelho
+  // + tooltip "Vai ficar ativa em 3 dias." na coluna "Início" (ContentArea.tsx,
+  // ver AvisoAtivacaoAgendada em utils/avaliacoes.tsx), dentro da janela de 5
+  // dias (agendadaUrgente). periodoFim ajustado para depois de periodoInicio.
   {
     id: '3',
     nome: 'Soft Skills - Semestral',
     tipo: 'Autoavaliação',
-    status: 'Rascunho',
+    status: 'Ativa',
     modoPrazo: 'datas_fixas',
-    periodoInicio: '2026-04-10',
-    periodoFim: '2026-04-30',
+    periodoInicio: '2026-07-09',
+    periodoFim: '2026-07-30',
     publicoLabel: 'Todos os colaboradores',
     descricao: 'Avaliação semestral de competências comportamentais e habilidades interpessoais para todos os colaboradores da organização.',
     habilidades: ['9', '10', '21', '22', '14'],
@@ -1210,15 +1215,20 @@ export const avaliacoesData: Avaliacao[] = [
     ],
   },
 
-  // ─── id=6 · Metodologias Ágeis · Rascunho ──────────────────────────────────
+  // ─── id=6 · Metodologias Ágeis · Agendada (Pendente, fora da janela) ───────
+  // Reagendada de Rascunho para Ativa com periodoInicio a 10 dias de
+  // HOJE_SIMULADO (2026-07-06) — dado de teste para confirmar que o ícone de
+  // aviso NÃO aparece fora da janela de 5 dias (agendadaUrgente = false),
+  // mostrando só o badge "Agendada" normal na coluna Status. periodoFim
+  // ajustado para depois de periodoInicio.
   {
     id: '6',
     nome: 'Metodologias Ágeis',
     tipo: 'Autoavaliação',
-    status: 'Rascunho',
+    status: 'Ativa',
     modoPrazo: 'datas_fixas',
-    periodoInicio: '2026-03-20',
-    periodoFim: '2026-04-10',
+    periodoInicio: '2026-07-16',
+    periodoFim: '2026-08-05',
     publicoLabel: 'Tecnologia e Produto',
     descricao: 'Avaliação do nível de adoção e domínio das metodologias ágeis pelas equipes de tecnologia e produto.',
     habilidades: ['11', '12'],
@@ -3221,6 +3231,26 @@ export const avaliacoesData: Avaliacao[] = [
       { colaboradorId: '26', status: 'Não iniciada', visualizada: false, dataEntrada: '2026-07-06', respostas: [] },
       { colaboradorId: '29', status: 'Não iniciada', visualizada: false, dataEntrada: '2026-07-06', respostas: [] },
     ],
+  },
+  // ─── id=31 · Avaliação de Fundamentos de Dados · Agendada (Pendente, amanhã) ──
+  // Nova — periodoInicio a exatamente 1 dia de HOJE_SIMULADO (2026-07-06) —
+  // dado de teste para validar especificamente o texto "Vai ficar ativa
+  // amanhã." (diasAteAtivar === 1) no ícone de aviso da coluna "Início"
+  // (ContentArea.tsx / AvisoAtivacaoAgendada em utils/avaliacoes.tsx). Sem
+  // Rascunho disponível para reagendar sem afetar outro cenário já
+  // documentado (só id=3 e id=6 existiam, já usados nos cenários de 3 e 10
+  // dias acima), por isso criada como registro novo.
+  {
+    id: '31',
+    nome: 'Fundamentos de Dados',
+    tipo: 'Autoavaliação',
+    status: 'Ativa',
+    modoPrazo: 'datas_fixas',
+    periodoInicio: '2026-07-07',
+    periodoFim: '2026-07-28',
+    publicoLabel: 'Todos os colaboradores',
+    habilidades: ['65', '66', '67'],
+    participantes: [],
   },
 ];
 

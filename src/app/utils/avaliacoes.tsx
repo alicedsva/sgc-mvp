@@ -183,6 +183,45 @@ export function formatPeriodoAvaliacao(
   return `A partir de ${formatData(avaliacao.periodoInicio)} · ${dias != null ? `${dias} ${dias === 1 ? 'dia' : 'dias'} de prazo` : 'prazo a definir'}`;
 }
 
+// Ícone Info + tooltip "Esta avaliação se tornará ativa no dia X" — aviso
+// sutil de que uma avaliação com status calculado 'Pendente' ("Agendada")
+// vai ativar sozinha naquela data, sem ação nenhuma do Admin. Extraído como
+// função própria (não JSX inline) para ser reusado tanto por getPrazoPartes
+// (parte "Inicia em" da LinhaMeta) quanto pela coluna "Início" da tabela de
+// Avaliações em ContentArea.tsx — nunca duplicar esse Tooltip/Info em cada
+// lugar que precisa avisar sobre uma Data de Início futura.
+// `corIcone` (default 'text-gray-400', mesmo padrão sutil dos demais ícones
+// de tooltip) — a coluna "Início" de ContentArea.tsx passa 'text-red-500'
+// quando a ativação está a 5 dias ou menos (ver getStatusAvaliacaoBadgeClass
+// e a cor de alerta já documentada em 02-design-system.md, "Ícones > Cores
+// por contexto"), sem alterar o padrão cinza usado em getPrazoPartes/
+// AvaliacaoDetalhePage.tsx e no preview de FormularioAvaliacao.tsx.
+// `texto` (opcional) sobrescreve a mensagem padrão "Esta avaliação se
+// tornará ativa no dia X" — a mesma coluna "Início" passa a versão em
+// contador regressivo ("Vai ficar ativa em N dias"/"amanhã"/"hoje") quando
+// está dentro da janela de 5 dias, reaproveitando o N já calculado ali via
+// calcularDiasAteVencimento, nunca recalculado de novo aqui dentro.
+export function AvisoAtivacaoAgendada({
+  dataISO,
+  corIcone = 'text-gray-400',
+  texto,
+}: {
+  dataISO: string;
+  corIcone?: string;
+  texto?: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Info className={`w-3.5 h-3.5 ${corIcone} flex-shrink-0`} />
+      </TooltipTrigger>
+      <TooltipContent>
+        {texto ?? <>Esta avaliação se tornará ativa no dia {formatData(dataISO)}.</>}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 // Partes condicionais do prazo (Início / Término / Prazo de resposta) — cada
 // campo preenchido vira um item próprio (negrito), pra uso dentro de
 // LinhaMeta (separado pelo "·" padrão do componente) — 1, 2 ou 3 partes,
@@ -195,27 +234,51 @@ export function formatPeriodoAvaliacao(
 // uma Avaliacao com os campos já inferidos antes de ela existir de fato —
 // por isso o parâmetro aceita só os 3 campos de prazo (Pick), não a
 // Avaliacao inteira, mesmo espírito de formatPeriodoAvaliacao acima.
+// `agendada` (default false) sinaliza que a Data de Início é futura — status
+// calculado 'Pendente'/"Agendada" em AvaliacaoDetalhePage.tsx, ou
+// dataInicioFutura na etapa Revisão do wizard (mesmo conceito, avaliação
+// ainda não criada). Nesse caso, a parte "Inicia em" ganha um ícone Info
+// (mesmo padrão w-3.5 h-3.5 do ícone de Prazo abaixo) com tooltip avisando
+// que a ativação é automática — nunca um banner novo, só esse aviso sutil.
+// Nunca passar `agendada` para uma Avaliacao Rascunho: Rascunho nunca tem
+// status calculado 'Pendente' (calcularStatusEfetivo devolve 'Rascunho'
+// direto, sem checar periodoInicio), mesmo com Data de Início futura já
+// escolhida no wizard — por isso AvaliacaoRascunhoView em
+// AvaliacaoDetalhePage.tsx nunca passa esse argumento.
+// `peso` — 'semibold' (default) é o peso usado em toda parte que já
+// reaproveita esta função (AvaliacaoDetalhePage.tsx, nas duas views).
+// FormularioAvaliacao.tsx passa 'normal' só no card "Prazo" da etapa
+// Revisão do wizard (exceção visual documentada em 02-design-system.md) —
+// nunca duplicar a montagem do texto/partes em outro lugar só pra mudar o
+// peso da fonte; sempre passar por aqui. Precisa setar a classe
+// explicitamente nos dois casos (nunca omitir): `<strong>` é bold por
+// padrão do user-agent, então "não aplicar font-semibold" sozinho não
+// bastaria pra ficar regular.
 export function getPrazoPartes(
-  avaliacao: Pick<Avaliacao, 'periodoInicio' | 'periodoFim' | 'prazoDias'>
+  avaliacao: Pick<Avaliacao, 'periodoInicio' | 'periodoFim' | 'prazoDias'>,
+  agendada = false,
+  peso: 'semibold' | 'normal' = 'semibold'
 ): ReactNode[] {
+  const pesoClasse = peso === 'normal' ? 'font-normal' : 'font-semibold';
   const partes: ReactNode[] = [];
   if (avaliacao.periodoInicio) {
     partes.push(
-      <strong className="font-semibold" key="inicio">
+      <strong className={`${pesoClasse} inline-flex items-center gap-1`} key="inicio">
         Inicia em: {formatData(avaliacao.periodoInicio)}
+        {agendada && <AvisoAtivacaoAgendada dataISO={avaliacao.periodoInicio} />}
       </strong>
     );
   }
   if (avaliacao.periodoFim) {
     partes.push(
-      <strong className="font-semibold" key="termino">
+      <strong className={pesoClasse} key="termino">
         Termina em: {formatData(avaliacao.periodoFim)}
       </strong>
     );
   }
   if (avaliacao.prazoDias != null) {
     partes.push(
-      <strong className="font-semibold inline-flex items-center gap-1" key="prazo">
+      <strong className={`${pesoClasse} inline-flex items-center gap-1`} key="prazo">
         Prazo de resposta: {avaliacao.prazoDias} {avaliacao.prazoDias === 1 ? 'dia' : 'dias'}
         <Tooltip>
           <TooltipTrigger asChild>

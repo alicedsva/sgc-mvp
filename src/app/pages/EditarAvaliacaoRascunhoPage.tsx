@@ -65,6 +65,7 @@ export default function EditarAvaliacaoRascunhoPage() {
     };
     atualizarAvaliacao(avaliacao.id, avaliacaoAtualizada);
     setAvaliacaoConcluida(avaliacaoAtualizada);
+    return avaliacaoAtualizada.id;
   };
 
   const handleAtivar = (data: NovaAvaliacaoFormData) => {
@@ -95,6 +96,7 @@ export default function EditarAvaliacaoRascunhoPage() {
     };
     atualizarAvaliacao(avaliacao.id, avaliacaoAtualizada);
     setAvaliacaoConcluida(avaliacaoAtualizada);
+    return avaliacaoAtualizada.id;
   };
 
   return (
@@ -103,6 +105,7 @@ export default function EditarAvaliacaoRascunhoPage() {
         avaliacaoExistente={avaliacao}
         habilidades={habilidadesData}
         avaliacoesExistentes={avaliacoesData.map(a => ({
+          id: a.id,
           nome: a.nome,
           publicoLabel: a.publicoLabel,
           jornadaId: a.origemJornadaId,

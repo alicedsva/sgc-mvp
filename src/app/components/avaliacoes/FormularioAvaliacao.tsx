@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, Fragment, type ReactNode } from 'react';
-import { ArrowLeft, Check, ChevronRight, Eye, GitBranch, Users as UsersIcon, AlertTriangle, Info, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Eye, GitBranch, Users as UsersIcon, AlertTriangle, Info, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { colaboradoresData, cargosData, HOJE_SIMULADO, type Avaliacao } from '../../data/mockData';
 import { useCarreiras } from '../../context/CarreirasContext';
@@ -315,9 +315,15 @@ interface FormularioAvaliacaoProps {
   habilidades: { id: string; nome: string; competencia: string; competenciaId?: string; tipo?: 'Técnica' | 'Comportamental'; status?: string }[];
   // jornadaId/participantesIds vêm de Avaliacao.origemJornadaId/participantes (schema.ts) —
   // nenhum campo novo precisou ser adicionado ao schema, os dois já existiam.
-  avaliacoesExistentes: { nome: string; publicoLabel: string; jornadaId?: string; participantesIds: string[] }[];
-  onSalvarRascunho: (data: NovaAvaliacaoFormData) => void;
-  onAtivar: (data: NovaAvaliacaoFormData) => void;
+  // `id` é usado só para o próprio formulário poder excluir de
+  // duplicidadeDetectada a avaliação que ele mesmo acabou de criar/ativar
+  // nesta sessão (ver avaliacaoRecemCriadaId) — nunca exibido em tela.
+  avaliacoesExistentes: { id: string; nome: string; publicoLabel: string; jornadaId?: string; participantesIds: string[] }[];
+  // Retornam o id da avaliação criada/atualizada — usado para popular
+  // avaliacaoRecemCriadaId logo em seguida (ver handleSalvarRascunho/
+  // handleAtivar), nunca só efeito colateral como antes.
+  onSalvarRascunho: (data: NovaAvaliacaoFormData) => string;
+  onAtivar: (data: NovaAvaliacaoFormData) => string;
   isSidebarCollapsed: boolean;
   breadcrumbLabel: string;
   onCancelar: () => void;
@@ -373,6 +379,17 @@ export function FormularioAvaliacao({
   // Confirmação antes de publicar imediatamente (Início vazio ou hoje) — só
   // para essa situação; agendar para o futuro nunca passa por aqui.
   const [confirmPublicarAberto, setConfirmPublicarAberto] = useState(false);
+  // id da avaliação que este próprio formulário acabou de criar/ativar
+  // (retornado por onSalvarRascunho/onAtivar) — em modo criação, o
+  // formulário continua montado por trás do ModalResumoAvaliacao até o
+  // Admin fechá-lo (nunca desmonta na hora), e a página-pai já atualizou o
+  // Context com a nova avaliação. Sem isso, no próximo render
+  // avaliacoesExistentes passa a incluir o próprio registro recém-criado, e
+  // duplicidadeDetectada colide com ele mesmo (nome + jornada/participantes
+  // idênticos) — bug real encontrado em 2026-08-25. Em modo edição a
+  // autocomparação já era evitada via avaliacaoExistente; isso aqui cobre o
+  // caso que faltava.
+  const [avaliacaoRecemCriadaId, setAvaliacaoRecemCriadaId] = useState<string | null>(null);
 
   const currentIndex = etapas.findIndex(e => e.key === currentStepKey);
 
@@ -422,19 +439,29 @@ export function FormularioAvaliacao({
       a.nome.trim().toLowerCase() === formData.nome.trim().toLowerCase()
       && (!avaliacaoExistente || a.nome !== avaliacaoExistente.nome);
 
+    // Exclui a própria avaliação recém-criada/ativada por este formulário
+    // (ver avaliacaoRecemCriadaId acima) — cobre o modo CRIAÇÃO, onde
+    // avaliacaoExistente é sempre undefined e por isso a exclusão de
+    // nomeIgual acima não filtra nada; sem isso, o registro que a própria
+    // submissão acabou de inserir no Context reaparece aqui e colide
+    // consigo mesmo.
+    const existentesSemAutoComparacao = avaliacaoRecemCriadaId
+      ? avaliacoesExistentes.filter(a => a.id !== avaliacaoRecemCriadaId)
+      : avaliacoesExistentes;
+
     if (formData.caminho === 'jornada') {
       if (!formData.jornadaId) return false;
-      return avaliacoesExistentes.some(a => nomeIgual(a) && a.jornadaId === formData.jornadaId);
+      return existentesSemAutoComparacao.some(a => nomeIgual(a) && a.jornadaId === formData.jornadaId);
     }
 
     const selecionados = new Set(formData.colaboradoresSelecionados);
     if (selecionados.size === 0) return false;
-    return avaliacoesExistentes.some(a => {
+    return existentesSemAutoComparacao.some(a => {
       if (!nomeIgual(a)) return false;
       if (a.participantesIds.length !== selecionados.size) return false;
       return a.participantesIds.every(id => selecionados.has(id));
     });
-  }, [avaliacoesExistentes, formData.nome, formData.caminho, formData.jornadaId, formData.colaboradoresSelecionados, avaliacaoExistente]);
+  }, [avaliacoesExistentes, formData.nome, formData.caminho, formData.jornadaId, formData.colaboradoresSelecionados, avaliacaoExistente, avaliacaoRecemCriadaId]);
 
   // Redação contextual ao caminho escolhido — mesmo vocabulário já usado na
   // etapa (jornada vs. público-alvo). Fonte única para as duas exibições
@@ -565,6 +592,30 @@ export function FormularioAvaliacao({
   const carreiraEJornada = useMemo(
     () => getCarreiraEJornadaNomes(formData.jornadaId, jornadas, carreiras),
     [formData.jornadaId, jornadas, carreiras],
+  );
+
+  // Linha "N participantes · Ver colaboradores" do card "Público-alvo" da
+  // Revisão — extraída pra não duplicar o JSX entre os dois formatos desse
+  // card (Caminho "Por Jornada", com campos Carreira/Jornada separados, vs.
+  // "Por Público-alvo", com uma única linha de label calculado). Nunca vira
+  // um campo com label próprio — é sempre um texto simples depois do(s)
+  // campo(s) de público, independente do caminho.
+  const linhaParticipantes = (
+    <p className="text-sm text-gray-500 mt-1">
+      {participantesAtuais.length} {participantesAtuais.length === 1 ? 'participante' : 'participantes'}
+      {participantesAtuais.length > 0 && (
+        <>
+          {' · '}
+          <button
+            type="button"
+            onClick={() => setModalColaboradoresAberto(true)}
+            className="text-sm font-medium text-[var(--brand-600)] hover:underline"
+          >
+            Ver colaboradores
+          </button>
+        </>
+      )}
+    </p>
   );
 
   // Botão de ativação — texto e comportamento dependem só da Data de Início
@@ -764,7 +815,7 @@ export function FormularioAvaliacao({
 
   const handleSalvarRascunho = () => {
     if (!formData.nome.trim()) { toast.error('Preencha o nome da avaliação'); return; }
-    onSalvarRascunho(dadosParaSubmissao());
+    setAvaliacaoRecemCriadaId(onSalvarRascunho(dadosParaSubmissao()));
   };
 
   // Agendamento (Início futuro) publica direto, sem confirmação — só a
@@ -775,7 +826,7 @@ export function FormularioAvaliacao({
     if (!validarEtapa('identificacao')) return;
     if (!validarEtapa('prazo')) return;
     if (dataInicioFutura) {
-      onAtivar(dadosParaSubmissao());
+      setAvaliacaoRecemCriadaId(onAtivar(dadosParaSubmissao()));
     } else {
       setConfirmPublicarAberto(true);
     }
@@ -783,8 +834,156 @@ export function FormularioAvaliacao({
 
   const confirmarPublicacaoImediata = () => {
     setConfirmPublicarAberto(false);
-    onAtivar(dadosParaSubmissao());
+    setAvaliacaoRecemCriadaId(onAtivar(dadosParaSubmissao()));
   };
+
+  // Containers da etapa Revisão — extraídos em variáveis (em vez de JSX
+  // inline direto na etapa) pra poderem ser reordenados conforme o caminho
+  // escolhido, sem duplicar o conteúdo de nenhum: Caminho "Por Jornada" (5
+  // etapas: Público → Identificação → Habilidades → Prazo → Revisão) mostra
+  // o container containerPublicoAlvo (título exibido: "Público", nome exato
+  // da etapa 1 — nunca "Público-alvo") PRIMEIRO na Revisão, batendo com a
+  // ordem real de suas etapas; Caminho "Por Público-alvo" (6 etapas: Público
+  // → Identificação → Habilidades → Prazo → Colaboradores → Revisão) tem a
+  // escolha de participantes por ÚLTIMO (etapa 'colaboradores', depois de
+  // Prazo), então o mesmo container (título exibido: "Colaboradores", nome
+  // exato dessa etapa) também aparece por último na Revisão desse caminho —
+  // nunca a mesma ordem fixa pros dois caminhos (ver render de
+  // `currentStepKey === 'revisao'` mais abaixo). `containerPublicoAlvo` é só
+  // o nome interno da variável — o título de fato exibido é sempre
+  // condicional a formData.caminho, ver dentro da própria const abaixo.
+  const containerIdentificacao = (
+    <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900">Identificação</h3>
+        <button
+          type="button"
+          onClick={() => setCurrentStepKey('identificacao')}
+          className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          aria-label="Editar Identificação"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-5 py-4 space-y-5">
+        <div>
+          <p className="text-xs font-semibold text-gray-900 mb-1">Nome</p>
+          <p className="text-sm font-normal text-gray-700">{formData.nome || 'Não preenchido'}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-900 mb-1">Descrição</p>
+          <p className="text-sm font-normal text-gray-700 leading-relaxed">{formData.descricao || 'Sem descrição'}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const containerPublicoAlvo = (
+    <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        {/* Título precisa bater com o nome REAL da etapa no stepper daquele
+            caminho, nunca um rótulo genérico/inventado tipo "Público-alvo"
+            (nome que nunca existiu em nenhum dos dois arrays de etapas —
+            ver ETAPAS_CRIACAO_JORNADA/ETAPAS_CRIACAO_PUBLICO acima): caminho
+            "Por Jornada" não tem etapa própria pra isso — a etapa 'publico'
+            (label exato "Público") é só a escolha do caminho, e quem
+            efetivamente coleta a Jornada é a etapa 'identificacao'; mesmo
+            assim, o card representa o "quem/o quê será avaliado" daquele
+            caminho, e "Público" é o nome mais próximo que existe no stepper
+            pra esse conceito — nunca "Público-alvo". Caminho "Por
+            Público-alvo" TEM etapa própria e seu label exato é
+            "Colaboradores" (key 'colaboradores') — usar exatamente esse
+            nome, nunca "Público-alvo" aqui. */}
+        <h3 className="text-sm font-semibold text-gray-900">
+          {formData.caminho === 'publico' ? 'Colaboradores' : 'Público'}
+        </h3>
+        <button
+          type="button"
+          onClick={() => setCurrentStepKey(formData.caminho === 'publico' ? 'colaboradores' : 'identificacao')}
+          className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          aria-label={formData.caminho === 'publico' ? 'Editar Colaboradores' : 'Editar Público'}
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      </div>
+      {formData.caminho === 'jornada' && carreiraEJornada ? (
+        <div className="px-5 py-4 space-y-5">
+          <div>
+            <p className="text-xs font-semibold text-gray-900 mb-1">Carreira</p>
+            <p className="text-sm font-normal text-gray-700">{carreiraEJornada.carreira}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-900 mb-1">Jornada</p>
+            <p className="text-sm font-normal text-gray-700">{carreiraEJornada.jornada}</p>
+            {linhaParticipantes}
+          </div>
+        </div>
+      ) : (
+        <div className="px-5 py-4">
+          <p className="text-sm font-normal text-gray-700">{formData.publicoLabelCalculado || 'Não definido'}</p>
+          {linhaParticipantes}
+        </div>
+      )}
+    </div>
+  );
+
+  const containerHabilidades = (
+    <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900">Habilidades</h3>
+        <button
+          type="button"
+          onClick={() => setCurrentStepKey('habilidades')}
+          className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          aria-label="Editar Habilidades"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-5 py-4">
+        {formData.habilidades.length === 0 ? (
+          <p className="text-sm font-normal text-gray-700">Nenhuma selecionada</p>
+        ) : (
+          <>
+            <p className="text-sm font-normal text-gray-700 mb-2">
+              {formData.habilidades.length} {formData.habilidades.length === 1 ? 'habilidade selecionada' : 'habilidades selecionadas'}
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+              {habilidadesSelecionadasDetalhe.map(h => (
+                <span
+                  key={h.id}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    h.tipo === 'Técnica' ? 'bg-[var(--brand-100)] text-[var(--brand-800)]' : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
+                  {h.nome}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  const containerPrazo = (
+    <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900">Prazo</h3>
+        <button
+          type="button"
+          onClick={() => setCurrentStepKey('prazo')}
+          className="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          aria-label="Editar Prazo"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-5 py-4">
+        <LinhaMeta className="text-sm font-normal text-gray-700" partes={getPrazoPartes(prazoPreview, dataInicioFutura, 'normal')} />
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -1142,85 +1341,93 @@ export function FormularioAvaliacao({
                 </div>
               )}
 
-              {/* Etapa — Revisão */}
+              {/* Etapa — Revisão — 4 containers separados, um por etapa do
+                  wizard, cada um bg-white border border-gray-200 rounded-lg
+                  (redesign 2026-08-25, 7 rodadas de ajuste fino a pedido da
+                  Alice — ver exceção completa em 02-design-system.md,
+                  "Tipografia"). Conteúdo de cada um vive em const própria
+                  (containerIdentificacao/containerPublicoAlvo/
+                  containerHabilidades/containerPrazo, definidas antes do
+                  "return (" principal do componente) — variável
+                  `containerPublicoAlvo` é só um nome interno de código, o
+                  TÍTULO exibido dentro dela é condicional a formData.caminho
+                  e nunca mostra literalmente "Público-alvo" (nome que não
+                  existe em nenhuma etapa do stepper — ver
+                  ETAPAS_CRIACAO_JORNADA/ETAPAS_CRIACAO_PUBLICO no topo do
+                  arquivo): "Público" no caminho "Por Jornada" (nome exato da
+                  etapa 1, key 'publico'), "Colaboradores" no caminho "Por
+                  Público-alvo" (nome exato da etapa key 'colaboradores') —
+                  ver comentário dentro da própria const, acima do `<h3>`.
+                  ORDEM de renderização também depende de formData.caminho,
+                  pra bater com a ordem real das etapas de cada caminho:
+                  Caminho "Por Jornada" (Público → Identificação →
+                  Habilidades → Prazo → Revisão): container "Público"
+                  primeiro. Caminho "Por Público-alvo" (Público →
+                  Identificação → Habilidades → Prazo → Colaboradores →
+                  Revisão): container "Colaboradores" por ÚLTIMO, já que essa
+                  etapa é a última antes da Revisão nesse caminho. Nunca
+                  fixar uma ordem só — sempre condicionar a formData.caminho.
+                  - Label de campo: text-xs font-semibold text-gray-900 (12px)
+                    — carrega o destaque visual. Valor: text-sm font-normal
+                    text-gray-700 (14px), peso normal, cor mais neutra. Título
+                    de seção (nome do container): text-sm font-semibold
+                    text-gray-900 (14px).
+                  - Cabeçalho de cada container é uma linha só (flex
+                    justify-between): título à esquerda, botão de editar
+                    (Pencil, mesmo padrão de "Ação em tabela (ícone)" do
+                    design system — p-1.5/2 rounded-lg text-gray-500
+                    hover:bg-gray-100 hover:text-gray-700) à direita. Editar
+                    reaproveita setCurrentStepKey (o mesmo mecanismo de
+                    navegação do stepper/handleContinuar/handleVoltar) —
+                    nunca uma navegação paralela. Mapeamento container→etapa:
+                    Identificação→'identificacao'; container "Público"/
+                    "Colaboradores"→'colaboradores' quando caminho é 'publico'
+                    (é lá que a seleção de colaboradores acontece de fato) ou
+                    'identificacao' quando caminho é 'jornada' (é lá que a
+                    Jornada é selecionada, ver currentStepKey ===
+                    'identificacao' acima — a etapa 'publico' em si só
+                    escolhe o caminho, não coleta a Jornada); Habilidades→
+                    'habilidades'; Prazo→'prazo'.
+                  - Essa linha de cabeçalho (border-b border-gray-200, de
+                    ponta a ponta, ocupando a largura toda do card) é a ÚNICA
+                    divisória de cada container — nunca reintroduzir uma
+                    linha ENTRE campos dentro do mesmo container
+                    (Identificação: Nome/Descrição; container "Público" no
+                    caminho "Por Jornada": Carreira/Jornada, ver
+                    linhaParticipantes acima); campos multi-linha dentro de
+                    um container se separam só pelo padding (py-4) de cada
+                    bloco, sem <hr>/border interno (decisão 2026-08-25,
+                    revisada — a versão anterior tinha uma linha mx-5 entre
+                    eles, removida a pedido da Alice).
+                  - Card "Prazo": getPrazoPartes recebe 'normal' como 3º
+                    argumento pra essa tela usar font-normal no texto (Inicia
+                    em/Termina em/Prazo de resposta) em vez do font-semibold
+                    padrão de AvaliacaoDetalhePage.tsx — parâmetro de peso
+                    documentado em utils/avaliacoes.tsx, nunca duplicar a
+                    montagem desse texto.
+                  Campo "Tipo"/Autoavaliação continua fora da exibição desta
+                  etapa (removido numa rodada anterior) — informação não foi
+                  removida do sistema, só não aparece aqui. Containers com um
+                  único campo (Habilidades/Prazo) não repetem o nome do campo
+                  como label interno — o título do container já cumpre esse
+                  papel. */}
               {currentStepKey === 'revisao' && (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Nome</p>
-                      <p className="text-sm text-gray-900 font-medium">{formData.nome || 'Não preenchido'}</p>
-                    </div>
-                    {formData.descricao && (
-                      <div>
-                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Descrição</p>
-                        <p className="text-sm text-gray-700 leading-relaxed">{formData.descricao}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Tipo</p>
-                      <p className="text-sm text-gray-900 font-medium">Autoavaliação</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Público-alvo</p>
-                      {formData.caminho === 'jornada' && carreiraEJornada ? (
-                        <>
-                          <p className="text-sm text-gray-700">Carreira: {carreiraEJornada.carreira}</p>
-                          <p className="text-sm text-gray-700">Jornada: {carreiraEJornada.jornada}</p>
-                        </>
-                      ) : (
-                        <p className="text-sm text-gray-700">{formData.publicoLabelCalculado || 'Não definido'}</p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {participantesAtuais.length} {participantesAtuais.length === 1 ? 'participante' : 'participantes'}
-                        {participantesAtuais.length > 0 && (
-                          <>
-                            {' · '}
-                            <button
-                              type="button"
-                              onClick={() => setModalColaboradoresAberto(true)}
-                              className="text-xs font-medium text-[var(--brand-600)] hover:underline"
-                            >
-                              Ver colaboradores
-                            </button>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Habilidades</p>
-                      {formData.habilidades.length === 0 ? (
-                        <p className="text-sm text-gray-700">Nenhuma selecionada</p>
-                      ) : (
-                        <>
-                          <p className="text-sm text-gray-700 mb-2">
-                            {formData.habilidades.length} {formData.habilidades.length === 1 ? 'habilidade selecionada' : 'habilidades selecionadas'}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                            {habilidadesSelecionadasDetalhe.map(h => (
-                              <span
-                                key={h.id}
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  h.tipo === 'Técnica' ? 'bg-[var(--brand-100)] text-[var(--brand-800)]' : 'bg-purple-100 text-purple-800'
-                                }`}
-                              >
-                                {h.nome}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">Prazo</p>
-                      <LinhaMeta className="text-sm text-gray-700" partes={getPrazoPartes(prazoPreview)} />
-                    </div>
-                  </div>
+                  {formData.caminho === 'jornada' ? (
+                    <>
+                      {containerPublicoAlvo}
+                      {containerIdentificacao}
+                      {containerHabilidades}
+                      {containerPrazo}
+                    </>
+                  ) : (
+                    <>
+                      {containerIdentificacao}
+                      {containerHabilidades}
+                      {containerPrazo}
+                      {containerPublicoAlvo}
+                    </>
+                  )}
 
                   {semColaboradoresSelecionados && (
                     <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">

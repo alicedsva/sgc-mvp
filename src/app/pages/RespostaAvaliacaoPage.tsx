@@ -8,6 +8,7 @@ import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { NiveisHabilidadeCards } from '../components/avaliacoes/NiveisHabilidadeCards';
 import { PainelLateralCompetencias } from '../components/avaliacoes/PainelLateralCompetencias';
 import { LinhaMeta } from '../components/avaliacoes/LinhaMeta';
+import { ModalConclusaoAvaliacao } from '../components/avaliacoes/ModalConclusaoAvaliacao';
 import type { NivelNome } from '../../data/schema';
 import { toast } from 'sonner';
 
@@ -75,6 +76,11 @@ export default function RespostaAvaliacaoPage() {
   });
   const [passo, setPasso] = useState<'instrucoes' | 'perguntas'>('instrucoes');
   const [habilidadeAtualId, setHabilidadeAtualId] = useState<string | undefined>(ordemHabilidades[0]?.id);
+  // Controla o ModalConclusaoAvaliacao — aberto só pelo envio final
+  // (handleEnviar), nunca fecha sozinho (sem onClose/timeout), só pelas duas
+  // ações do próprio modal (Ver resultado / Finalizar), cada uma navegando
+  // para um destino diferente.
+  const [modalConclusaoAberto, setModalConclusaoAberto] = useState(false);
 
   const totalHabilidades = habilidadesAvaliacao.length;
   const respondidas = Object.keys(respostas).length;
@@ -165,17 +171,25 @@ export default function RespostaAvaliacaoPage() {
   // Envio final: bloqueia com toast.error se houver habilidade sem resposta
   // — nunca permite envio parcial. Só chama responderAvaliacao(enviar: true)
   // — que marca o participante como 'Concluída' no Context — quando 100%
-  // das habilidades foram respondidas.
+  // das habilidades foram respondidas. Em vez de toast + redirect automático,
+  // abre o ModalConclusaoAvaliacao (mesma anatomia visual de
+  // ModalResumoAvaliacao.tsx) — a navegação some daqui e vira responsabilidade
+  // exclusiva das duas ações do modal.
   const handleEnviar = () => {
     if (respondidas < totalHabilidades) {
       toast.error('Por favor, avalie todas as habilidades antes de enviar.');
       return;
     }
     responderAvaliacao(avaliacao.id, JOAO_ID, respostasParaEnvio(respostas), true);
-    toast.success('Avaliação enviada com sucesso!');
-    setTimeout(() => {
-      navigate('/minhas-avaliacoes');
-    }, 1500);
+    setModalConclusaoAberto(true);
+  };
+
+  const handleVerResultado = () => {
+    navigate(`/minhas-avaliacoes/resultado/${avaliacao.id}`);
+  };
+
+  const handleFinalizarConclusao = () => {
+    navigate('/minhas-avaliacoes');
   };
 
   return (
@@ -378,6 +392,14 @@ export default function RespostaAvaliacaoPage() {
             </div>
         </div>
       ) : null}
+
+      {modalConclusaoAberto && (
+        <ModalConclusaoAvaliacao
+          nomeAvaliacao={avaliacao.nome}
+          onVerResultado={handleVerResultado}
+          onFinalizar={handleFinalizarConclusao}
+        />
+      )}
     </div>
   );
 }

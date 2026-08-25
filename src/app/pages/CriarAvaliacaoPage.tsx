@@ -56,6 +56,7 @@ export default function CriarAvaliacaoPage() {
     };
     adicionarAvaliacao(newAvaliacao);
     setAvaliacaoConcluida(newAvaliacao);
+    return newAvaliacao.id;
   };
 
   const handleAtivar = (data: NovaAvaliacaoFormData) => {
@@ -88,6 +89,7 @@ export default function CriarAvaliacaoPage() {
     };
     adicionarAvaliacao(newAvaliacao);
     setAvaliacaoConcluida(newAvaliacao);
+    return newAvaliacao.id;
   };
 
   return (
@@ -96,6 +98,7 @@ export default function CriarAvaliacaoPage() {
         jornadaPreSelecionada={jornadaPreSelecionada}
         habilidades={habilidadesData}
         avaliacoesExistentes={avaliacoesData.map(a => ({
+          id: a.id,
           nome: a.nome,
           publicoLabel: a.publicoLabel,
           jornadaId: a.origemJornadaId,

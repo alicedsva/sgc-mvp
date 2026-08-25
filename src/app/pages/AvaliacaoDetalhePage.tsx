@@ -307,20 +307,19 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
       <div className="border-b border-gray-200 mb-6">
         <div className="flex gap-4 overflow-x-auto">
           {([
-            { id: 'habilidades' as const, label: `Habilidades (${totalHabilidades})`, icon: <ListChecks className="w-4 h-4" /> },
-            { id: 'colaboradores' as const, label: `Colaboradores (${total})`, icon: <Users className="w-4 h-4" /> },
+            { id: 'habilidades' as const, label: 'Habilidades' },
+            { id: 'colaboradores' as const, label: 'Colaboradores' },
           ]).map(tab => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setAbaAtiva(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 abaAtiva === tab.id
                   ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              {tab.icon}
               {tab.label}
             </button>
           ))}
@@ -509,7 +508,7 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
           <span className="text-sm text-gray-400 font-normal">{avaliacao.tipo}</span>
           <StatusBadge label={getStatusAvaliacaoLabel(statusEfetivo)} colorClass={getStatusAvaliacaoBadgeClass(statusEfetivo)} />
         </div>
-        <LinhaMeta partes={[...getPrazoPartes(avaliacao), getMetaOrigem(avaliacao)]} />
+        <LinhaMeta partes={[...getPrazoPartes(avaliacao, statusEfetivo === 'Pendente'), getMetaOrigem(avaliacao)]} />
       </div>
 
       {/* Cards de resumo */}
