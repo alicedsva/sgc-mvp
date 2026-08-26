@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { getCompetenciaNome } from '../../data/mockData';
+import { useCompetencias } from '../../context/CompetenciasContext';
 
 export interface HabilidadeItem {
   id: string;
@@ -30,6 +31,7 @@ export function HabilidadesSelectionModal({
   const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'Técnica' | 'Comportamental'>('todas');
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const { competencias } = useCompetencias();
 
   const isModosBusca = searchTerm.trim().length > 0;
 
@@ -246,7 +248,7 @@ export function HabilidadesSelectionModal({
                         : 'text-gray-700 hover:bg-gray-50 border-transparent'
                     }`}
                   >
-                    <span className="flex-1 truncate">{getCompetenciaNome(comp)}</span>
+                    <span className="flex-1 truncate">{getCompetenciaNome(comp, competencias)}</span>
                     <span
                       className={`text-xs tabular-nums flex-shrink-0 ml-2 ${
                         marcadasNoGrupo > 0 ? 'text-[var(--brand-600)] font-medium' : 'text-gray-400'
@@ -272,7 +274,7 @@ export function HabilidadesSelectionModal({
                 <div className="space-y-4">
                   {competenciasComBusca.map((comp) => (
                     <div key={comp}>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{getCompetenciaNome(comp)}</p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">{getCompetenciaNome(comp, competencias)}</p>
                       <div className="space-y-0.5">
                         {resultadosBusca[comp].map(renderHabilidade)}
                       </div>
@@ -284,7 +286,7 @@ export function HabilidadesSelectionModal({
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {getCompetenciaNome(competenciaEfetiva)}
+                    {getCompetenciaNome(competenciaEfetiva, competencias)}
                   </p>
                   {habilidadesCompetenciaAtiva.length > 0 && (
                     <button

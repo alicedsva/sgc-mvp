@@ -3,6 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, ClipboardCheck } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, colaboradoresData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
+import { useCompetencias } from '../context/CompetenciasContext';
 import type { Cargo, HabilidadeCargo, NivelNome } from '../../data/schema';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
@@ -12,6 +13,7 @@ import { ColaboradoresSelectionModal } from '../components/templates/Colaborador
 import { Table, Column, InlineAction } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
@@ -39,6 +41,7 @@ function JornadaDetalheContent() {
     desvincularColaborador,
     getColaboradoresPorJornada,
   } = useCarreiras();
+  const { competencias } = useCompetencias();
 
   // Buscar dados
   const carreira = carreiras.find(c => c.id === carreiraId);
@@ -695,12 +698,14 @@ function JornadaDetalheContent() {
                           <div className="flex items-center justify-center gap-0.5 w-full">
                             {/* overflow-hidden só aqui, para não clipar o dropdown absoluto */}
                             <div className="flex-1 min-w-0 overflow-hidden">
-                              <span
-                                className="block text-sm font-medium text-gray-900 truncate"
-                                title={cargo.cargoRM}
-                              >
-                                {cargo.cargoRM}
-                              </span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block text-sm font-medium text-gray-900 truncate">
+                                    {cargo.cargoRM}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{cargo.cargoRM}</TooltipContent>
+                              </Tooltip>
                             </div>
                             <div className="relative flex-shrink-0 w-5">
                               <button
@@ -788,7 +793,7 @@ function JornadaDetalheContent() {
                         rows.push(
                           <tr key={`group-${hab.competenciaId}`}>
                             <td colSpan={cargos.length + 1} className="bg-[#F3F4F6] px-4 py-2">
-                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{getCompetenciaNome(hab.competenciaId)}</span>
+                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{getCompetenciaNome(hab.competenciaId, competencias)}</span>
                             </td>
                           </tr>
                         );

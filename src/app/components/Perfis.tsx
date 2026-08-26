@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { RefreshCw, Users, Circle, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 interface Perfil {
   id: string;
@@ -329,20 +330,22 @@ export function Perfis({ profilesData, onUpdateProfiles }: PerfisProps) {
                       }}
                     >
                       <td className="px-6 py-4 text-sm">
-                        <div className="relative group">
-                          <Circle
-                            className={`w-2 h-2 ${
-                              perfil.atualizacaoDisponivel
-                                ? 'fill-red-500 text-red-500'
-                                : 'fill-green-500 text-green-500'
-                            }`}
-                          />
-                          <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10 whitespace-normal">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Circle
+                              className={`w-2 h-2 ${
+                                perfil.atualizacaoDisponivel
+                                  ? 'fill-red-500 text-red-500'
+                                  : 'fill-green-500 text-green-500'
+                              }`}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
                             {perfil.atualizacaoDisponivel
                               ? 'Dados desatualizados no RM. Recarregue para sincronizar'
                               : 'Dados sincronizados com o RM'}
-                          </div>
-                        </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{perfil.nome}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{perfil.cargo}</td>

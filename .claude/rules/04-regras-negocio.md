@@ -6,20 +6,9 @@
 
 - Cor sempre derivada de `getCorFromPeso(nivel.peso)` — nunca hardcoded
 - Hierarquia definida pela ordem de progressão (1–5), nunca pelo nome
-- Nomes são definidos livremente pelo RH (não são fixos)
+- Nomes são fixos: Aprendiz, Iniciante, Intermediário, Avançado, Especialista (peso 1 a 5) — sem CRUD pelo RH.
 - Texto em badges de nível: sempre `text-white`
 - Desempate de ordem igual: ordem alfabética pelo nome
-- Atenção: `nivelToNumber` em `mockData.ts` usa nomes fixos (Básico, Intermediário,
-  Avançado, Especialista) — isso é limitação do mock, não regra do sistema.
-  No sistema real os nomes são livres.
-
-### Ciclo de vida dos estados de nível
-```
-Ativo → Desativado → Arquivado
-```
-- **Desativado**: não aparece em novas seleções; histórico de uso preservado
-- **Arquivado**: removido das listas; histórico preservado em relatórios
-- **Restaurar arquivado** → volta para Desativado (não para Ativo)
 
 ## Cálculo de avaliações
 

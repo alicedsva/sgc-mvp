@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Check } from 'lucide-react';
 import { getCompetenciaNome } from '../../data/mockData';
+import { useCompetencias } from '../../context/CompetenciasContext';
 
 export interface HabilidadeItem {
   id: string;
@@ -39,6 +40,7 @@ export function HabilidadesMasterDetail({
   const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'Técnica' | 'Comportamental'>('todas');
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const { competencias } = useCompetencias();
 
   useEffect(() => {
     if (autoFocusBusca) searchRef.current?.focus();
@@ -203,7 +205,7 @@ export function HabilidadesMasterDetail({
                     : 'text-gray-700 hover:bg-gray-50 border-transparent'
                 }`}
               >
-                <span className="flex-1 truncate">{getCompetenciaNome(comp)}</span>
+                <span className="flex-1 truncate">{getCompetenciaNome(comp, competencias)}</span>
                 <span
                   className={`text-xs tabular-nums flex-shrink-0 ml-2 ${
                     marcadasNoGrupo > 0 ? 'text-[var(--brand-600)] font-medium' : 'text-gray-400'
@@ -229,7 +231,7 @@ export function HabilidadesMasterDetail({
                 {competenciasComBusca.map((comp) => (
                   <div key={comp}>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                      {getCompetenciaNome(comp)}
+                      {getCompetenciaNome(comp, competencias)}
                     </p>
                     <div className="space-y-0.5">{resultadosBusca[comp].map(renderHabilidade)}</div>
                   </div>
@@ -240,7 +242,7 @@ export function HabilidadesMasterDetail({
             <>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {getCompetenciaNome(competenciaEfetiva)}
+                  {getCompetenciaNome(competenciaEfetiva, competencias)}
                 </p>
                 {habilidadesCompetenciaAtiva.length > 0 && (
                   <button

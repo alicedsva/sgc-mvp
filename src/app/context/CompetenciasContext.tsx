@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { competenciasData, Competencia } from '../data/mockData';
 
 interface CompetenciasContextType {
@@ -9,23 +9,49 @@ interface CompetenciasContextType {
 
 const CompetenciasContext = createContext<CompetenciasContextType | null>(null);
 
+const STORAGE_KEY = 'habilidades_competencias';
+const VERSION_KEY = 'habilidades_competencias_mock_version';
+// Mesmo padrão de AvaliacoesContext.tsx: sempre que mockData.ts sofrer
+// alteração estrutural em competenciasData, incremente esta versão para
+// descartar dados antigos salvos no navegador.
+const MOCK_DATA_VERSION = '2026-08-26-1';
+
+function loadFromStorage(): Competencia[] {
+  try {
+    const storedVersion = localStorage.getItem(VERSION_KEY);
+    if (storedVersion !== MOCK_DATA_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(VERSION_KEY, MOCK_DATA_VERSION);
+      return competenciasData;
+    }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (error) {
+    console.error('Erro ao carregar competências do localStorage:', error);
+  }
+  return competenciasData;
+}
+
 export function CompetenciasProvider({ children }: { children: ReactNode }) {
-  const [competencias, setCompetencias] = useState<Competencia[]>(competenciasData);
+  const [competencias, setCompetencias] = useState<Competencia[]>(loadFromStorage);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(competencias));
+    } catch (error) {
+      console.error('Erro ao salvar competências no localStorage:', error);
+    }
+  }, [competencias]);
 
   function addCompetencia(data: Omit<Competencia, 'id'>): string {
     const id = `comp${Date.now()}`;
     const nova = { ...data, id };
     setCompetencias(prev => [nova, ...prev]);
-    competenciasData.push(nova); // sincroniza array estático para getCompetenciaNome
     return id;
   }
 
   function updateCompetencia(id: string, data: Partial<Competencia>) {
     setCompetencias(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
-    const index = competenciasData.findIndex(c => c.id === id);
-    if (index !== -1) {
-      competenciasData[index] = { ...competenciasData[index], ...data };
-    }
   }
 
   return (

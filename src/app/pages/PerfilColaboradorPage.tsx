@@ -3,6 +3,7 @@ import { useParams, useOutletContext, useNavigate } from 'react-router';
 import { User, Briefcase, TrendingUp, Award, ClipboardCheck, ArrowLeft } from 'lucide-react';
 import { colaboradoresData, jornadasData, cargosData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
+import { useCompetencias } from '../context/CompetenciasContext';
 import { calcularHabilidadesComGap, calcularCobertura } from '../utils/aderenciaColaborador';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Table, Column } from '../components/ui/Table';
@@ -17,6 +18,7 @@ export default function PerfilColaboradorPage() {
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const { carreiras } = useCarreiras();
+  const { competencias } = useCompetencias();
   const [activeTab, setActiveTab] = useState('visao-geral');
   const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
 
@@ -59,7 +61,7 @@ export default function PerfilColaboradorPage() {
   });
 
   const competenciasComMedia = Array.from(competenciasMap.entries()).map(([id, data]) => ({
-    competencia: getCompetenciaNome(id) || id,
+    competencia: getCompetenciaNome(id, competencias) || id,
     mediaAtual: data.atual / data.count,
     mediaEsperado: data.esperado / data.count,
     percentualAderencia: Math.round((data.atual / data.esperado) * 100),
@@ -276,7 +278,7 @@ export default function PerfilColaboradorPage() {
             {Object.entries(habilidadesPorCategoria).map(([categoria, habilidades]) => (
               <div key={categoria} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-base font-semibold text-gray-900">{getCompetenciaNome(categoria) || categoria}</h3>
+                  <h3 className="text-base font-semibold text-gray-900">{getCompetenciaNome(categoria, competencias) || categoria}</h3>
                   <p className="text-xs text-gray-600 mt-1">
                     {habilidades.length} habilidade(s) mapeada(s)
                   </p>

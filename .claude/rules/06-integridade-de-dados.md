@@ -112,6 +112,8 @@ habilidades por cargo, os níveis esperados foram preenchidos com nomes da
 escala errada para algumas habilidades — o nome `'Básico'` foi usado para
 uma habilidade que só aceita `'Iniciante'`. O dado existia, mas a busca
 por nome falhava silenciosamente e a célula renderizava vazia.
+(Resolvido — consolidado em uma escala única de 5 níveis fixos, ver Etapas
+1-5 da consolidação de Níveis.)
 
 Regra: ao criar ou expandir qualquer relação entre entidades que envolva
 um campo de escala fixa (nível, status, categoria), confirme explicitamente

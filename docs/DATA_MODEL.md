@@ -85,7 +85,7 @@ conteúdo da Matriz de Habilidades por cargo.
 |---|---|
 | `cargoId` | FK → Cargo |
 | `habilidadeId` | FK → Habilidade |
-| `nivelEsperado` | Nome do nível esperado (ver seção **Nível** abaixo — cuidado com as duas escalas) |
+| `nivelEsperado` | Nome do nível esperado (ver seção **Nível** abaixo) |
 | `obrigatoria` | Se a habilidade é obrigatória para o cargo |
 
 **Distinção importante (ver `.claude/rules/06`):** uma célula da Matriz sem
@@ -220,16 +220,11 @@ Competência.
 | `competenciaId` | FK → Competência |
 | `tipo` | `Técnica` ou `Comportamental` |
 | `status` | Sempre `'Ativa'` nos dados atuais |
-| `niveis` | Subconjunto livre de níveis escolhido pelo RH ao criar a habilidade (não precisa ser 5, não precisa ser de uma escala só). Cada nível escolhido recebe um critério de texto próprio: `{ nivelId, criterio }`. Ao montar a Matriz de Habilidades por cargo, o RH escolhe o nível esperado dentre os níveis já aplicáveis desta habilidade — nunca um nível novo fora dessa lista. |
+| `niveis` | Subconjunto livre de níveis escolhido pelo RH ao criar a habilidade (não precisa ser 5). Cada nível escolhido recebe um critério de texto próprio: `{ nivelId, criterio }`. Ao montar a Matriz de Habilidades por cargo, o RH escolhe o nível esperado dentre os níveis já aplicáveis desta habilidade — nunca um nível novo fora dessa lista. |
 
-**Atenção — duas escalas de nível:** a maioria das habilidades (100 de 117)
-usa a escala "Básico → Intermediário → Avançado → Especialista"
-(`nivelId` `'1'`–`'5'` mais `'Proficiente'`). Um grupo menor (17 habilidades,
-ids 130–146, ligadas às jornadas de Engenharia/Operações/Inovação) usa a
-escala alternativa "Iniciante → Aprendiz → Praticante → Experiente →
-Referência" (`nivelId` `'6'`–`'10'`). As duas escalas têm o **mesmo peso
-numérico** por posição — sempre comparar por peso (`getPesoFromNome`), nunca
-por nome.
+Os 5 registros de Nível (ids `'1'`–`'5'`: Aprendiz/Iniciante/Intermediário/
+Avançado/Especialista) são compartilhados por todas as 117 habilidades — não
+há mais divisão de escala.
 
 **Usado em:** Matriz de Habilidades, `HabilidadeDetalhePage`, `HabilidadesSelectionModal`, telas do Colaborador (Minha Carreira, Meu Perfil), Dashboard.
 
@@ -237,17 +232,19 @@ por nome.
 
 ## Nível (de proficiência)
 
-Um degrau de uma escala de proficiência. Existem 10 registros — 2 escalas
-completas de 5 níveis cada — ver explicação em Habilidade acima.
+Um degrau da escala de proficiência. Existem 5 registros, uma escala única,
+fixa (sem CRUD pelo RH).
 
 | Campo | Significado |
 |---|---|
 | `id` | Identificador único |
-| `nome` | Nome do nível (ex: "Básico", "Iniciante") |
+| `nome` | Nome do nível (Aprendiz, Iniciante, Intermediário, Avançado ou Especialista) |
 | `descricao` | Descrição do que o nível representa |
-| `peso` | Peso numérico 1–5, usado para comparar níveis entre escalas diferentes |
-| `status` | Sempre `'Ativo'` |
-| `emUso` | Contador de quantas vezes o nível é usado — **hoje desatualizado** para a escala alternativa e para "Proficiente" (aparecem como 0 apesar de serem usados de fato); ver diagnóstico |
+| `peso` | Peso numérico 1–5, usado para comparar posição na progressão |
+| `emUso` | Contador de quantas vezes o nível é usado — o valor bruto gravado no mock é decorativo; a exibição real sempre recalcula em runtime (`ContentArea.tsx`, `niveisComContagem`) a partir de `habilidadesData`, nunca lê este campo direto |
+
+A tela "Níveis de Habilidades" é consulta pura — sem busca, filtros, criação
+ou edição; só lista os 5 registros fixos.
 
 **Usado em:** Matriz, `HabilidadeDetalhePage`, `DesignSystemPage`, cálculo de cobertura, cores de badge (`getCorFromPeso`).
 

@@ -103,14 +103,13 @@ export function MatrizCell({ nivel, onChange, niveisAplicaveis }: MatrizCellProp
           onClick={() => setIsOpen(!isOpen)}
           className="w-full cursor-pointer rounded-lg border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all text-left"
           style={{ borderLeftWidth: 3, borderLeftColor: corAtual ?? '#9CA3AF' }}
-          title={nivelAtual?.criterio ? `${nivelAtual.nome}: ${nivelAtual.criterio}` : `Nível: ${nivelAtual?.nome} — clique para alterar`}
         >
           <div className="px-2.5 py-2 space-y-0.5">
             <span className="block text-xs font-semibold leading-tight" style={{ color: corAtual ?? '#374151' }}>
               {nivelAtual?.nome}
             </span>
             {nivelAtual?.criterio && (
-              <p className="text-xs text-gray-500 leading-snug line-clamp-3">
+              <p className="text-xs text-gray-500 leading-snug">
                 {nivelAtual.criterio}
               </p>
             )}

@@ -3,8 +3,9 @@ import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeft, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHabilidades } from '../context/HabilidadesContext';
-import { niveisDefaultData, getCorFromPeso, competenciasData, getCompetenciaNome } from '../data/mockData';
-import { FormDrawer, FormField } from '../components/templates/FormDrawer';
+import { useCompetencias } from '../context/CompetenciasContext';
+import { niveisDefaultData, getCorFromPeso, getCompetenciaNome } from '../data/mockData';
+import { HabilidadeFormDrawer, type HabilidadeFormValues } from '../components/templates/HabilidadeFormDrawer';
 import { StatusBadge } from '../components/ui/StatusBadge';
 
 interface OutletContext {
@@ -17,20 +18,11 @@ export default function HabilidadeDetalhePage() {
   const navigate = useNavigate();
   const { isSidebarCollapsed } = useOutletContext<OutletContext>();
   const { habilidades, updateHabilidade } = useHabilidades();
+  const { competencias } = useCompetencias();
 
   const habilidade = habilidades.find((h) => h.id === id);
 
-
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    competencia: '',
-    competenciaId: '',
-    tipo: 'Técnica',
-    status: 'Ativa',
-    niveis: [] as Array<{ nivelId: string; criterio: string }>,
-  });
 
   if (!habilidade) {
     return (
@@ -46,193 +38,19 @@ export default function HabilidadeDetalhePage() {
     .filter((n) => n.nivel)
     .sort((a, b) => a.nivel.peso - b.nivel.peso);
 
-  const niveisAtivos = niveisDefaultData
-    .filter((n) => n.status === 'Ativo')
-    .sort((a, b) => a.peso - b.peso);
-
-  const selectedIds = new Set(formData.niveis.map((n) => n.nivelId));
-
-  const toggleNivel = (nivelId: string) => {
-    if (selectedIds.has(nivelId)) {
-      setFormData((prev) => ({
-        ...prev,
-        niveis: prev.niveis.filter((n) => n.nivelId !== nivelId),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        niveis: [...prev.niveis, { nivelId, criterio: '' }],
-      }));
-    }
-  };
-
-  const handleOpenEditDrawer = () => {
-    setFormData({
-      nome: habilidade.nome,
-      descricao: habilidade.descricao,
-      competencia: habilidade.competencia,
-      competenciaId: habilidade.competenciaId ?? '',
-      tipo: habilidade.tipo,
-      status: habilidade.status,
-      niveis: [...habilidade.niveis],
-    });
-    setIsDrawerOpen(true);
-  };
-
-  const formFields: FormField[] = [
-    {
-      name: 'nome',
-      label: 'Nome da Habilidade',
-      type: 'text',
-      placeholder: 'Ex: React',
-      required: true,
-      value: formData.nome,
-      onChange: (value) => setFormData((prev) => ({ ...prev, nome: value })),
-    },
-    {
-      name: 'descricao',
-      label: 'Descrição',
-      type: 'textarea',
-      placeholder: 'Descreva esta habilidade...',
-      rows: 3,
-      value: formData.descricao,
-      onChange: (value) => setFormData((prev) => ({ ...prev, descricao: value })),
-    },
-    {
-      name: 'competenciaId',
-      label: 'Competência',
-      type: 'select',
-      required: true,
-      value: formData.competenciaId,
-      onChange: (value) => {
-        const comp = competenciasData.find((c) => c.id === value);
-        setFormData((prev) => ({ ...prev, competenciaId: value, competencia: comp?.nome ?? '' }));
-      },
-      options: competenciasData
-        .filter((c) => c.status === 'Ativa')
-        .map((c) => ({ value: c.id, label: c.nome })),
-    },
-    {
-      name: 'tipo',
-      label: 'Tipo',
-      type: 'select',
-      required: true,
-      value: formData.tipo,
-      onChange: (value) => setFormData((prev) => ({ ...prev, tipo: value })),
-      options: [
-        { value: 'Técnica', label: 'Técnica' },
-        { value: 'Comportamental', label: 'Comportamental' },
-      ],
-    },
-    {
-      name: 'status',
-      label: 'Status',
-      type: 'select',
-      required: true,
-      value: formData.status,
-      onChange: (value) => setFormData((prev) => ({ ...prev, status: value })),
-      options: [
-        { value: 'Ativa', label: 'Ativa' },
-        { value: 'Desativada', label: 'Desativada' },
-      ],
-    },
-  ];
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.niveis.length === 0) {
-      toast.error('Selecione ao menos um nível aplicável para esta habilidade.');
-      return;
-    }
+  const handleSaveHabilidade = (values: HabilidadeFormValues) => {
     updateHabilidade(habilidade.id, {
-      nome: formData.nome,
-      descricao: formData.descricao,
-      competencia: formData.competencia,
-      competenciaId: formData.competenciaId,
-      tipo: formData.tipo as 'Técnica' | 'Comportamental',
-      status: formData.status as 'Ativa' | 'Desativada',
-      niveis: formData.niveis,
+      nome: values.nome,
+      descricao: values.descricao,
+      competencia: values.competencia,
+      competenciaId: values.competenciaId,
+      tipo: values.tipo,
+      status: values.status,
+      niveis: values.niveis,
     });
     toast.success('Habilidade atualizada com sucesso!');
     setIsDrawerOpen(false);
   };
-
-  const drawerCustomContent = (
-    <div className="border-t border-gray-200 pt-4 mt-1 space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-700">
-          Níveis Aplicáveis <span className="text-red-500">*</span>
-        </label>
-        {formData.niveis.length > 0 && (
-          <span className="text-xs text-gray-500">
-            {formData.niveis.length} selecionado{formData.niveis.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {niveisAtivos.map((nivel) => {
-          const isSelected = selectedIds.has(nivel.id);
-          return (
-            <button
-              key={nivel.id}
-              type="button"
-              onClick={() => toggleNivel(nivel.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                isSelected
-                  ? 'border-transparent text-white'
-                  : 'border-gray-300 text-gray-600 bg-white hover:border-gray-400'
-              }`}
-              style={isSelected ? { backgroundColor: getCorFromPeso(nivel.peso) } : {}}
-            >
-              {nivel.nome}
-            </button>
-          );
-        })}
-      </div>
-
-      {formData.niveis.length > 0 && (
-        <div className="border-t border-gray-100 pt-4 space-y-4">
-          <label className="text-sm font-medium text-gray-700">Critérios por nível</label>
-          {niveisAtivos
-            .filter((nivel) => selectedIds.has(nivel.id))
-            .map((nivel) => {
-              const nivelEntry = formData.niveis.find((n) => n.nivelId === nivel.id);
-              return (
-                <div key={nivel.id} className="space-y-2">
-                  <span
-                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
-                  >
-                    {nivel.nome}
-                  </span>
-                  <textarea
-                    value={nivelEntry?.criterio ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        niveis: prev.niveis.map((n) =>
-                          n.nivelId === nivel.id ? { ...n, criterio: val } : n
-                        ),
-                      }));
-                    }}
-                    placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] resize-none text-gray-700 placeholder-gray-400"
-                  />
-                  {nivel.descricao && (
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      <span className="font-medium">Referência do nível:</span> {nivel.descricao}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
@@ -262,14 +80,14 @@ export default function HabilidadeDetalhePage() {
             }`}>
               {habilidade.tipo}
             </span>
-            <span className="text-sm text-gray-500">{getCompetenciaNome(habilidade.competenciaId ?? '')}</span>
+            <span className="text-sm text-gray-500">{getCompetenciaNome(habilidade.competenciaId ?? '', competencias)}</span>
           </div>
           {habilidade.descricao && (
             <p className="text-sm text-gray-600 mt-1">{habilidade.descricao}</p>
           )}
         </div>
         <button
-          onClick={handleOpenEditDrawer}
+          onClick={() => setIsDrawerOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
         >
           <Edit className="w-4 h-4" />
@@ -317,14 +135,23 @@ export default function HabilidadeDetalhePage() {
       </div>
 
       {/* Drawer de edição */}
-      <FormDrawer
+      <HabilidadeFormDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        title="Editar Habilidade"
-        fields={formFields}
-        onSubmit={handleFormSubmit}
-        submitLabel="Salvar alterações"
-        customContent={drawerCustomContent}
+        initialValues={{
+          nome: habilidade.nome,
+          descricao: habilidade.descricao,
+          competencia: habilidade.competencia,
+          competenciaId: habilidade.competenciaId ?? '',
+          tipo: habilidade.tipo,
+          status: habilidade.status,
+          niveis: [...habilidade.niveis],
+        }}
+        competenciasAtivas={competencias
+          .filter((c) => c.status === 'Ativa')
+          .map((c) => ({ id: c.id, nome: c.nome }))}
+        niveis={niveisDefaultData}
+        onSave={handleSaveHabilidade}
+        onCancel={() => setIsDrawerOpen(false)}
       />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { habilidadesData } from '../data/mockData';
 
 export interface HabilidadeNivel {
@@ -25,8 +25,39 @@ interface HabilidadesContextType {
 
 const HabilidadesContext = createContext<HabilidadesContextType | null>(null);
 
+const STORAGE_KEY = 'habilidades_habilidades';
+const VERSION_KEY = 'habilidades_habilidades_mock_version';
+// Mesmo padrão de AvaliacoesContext.tsx: sempre que mockData.ts sofrer
+// alteração estrutural em habilidadesData, incremente esta versão para
+// descartar dados antigos salvos no navegador.
+const MOCK_DATA_VERSION = '2026-08-26-1';
+
+function loadFromStorage(): Habilidade[] {
+  try {
+    const storedVersion = localStorage.getItem(VERSION_KEY);
+    if (storedVersion !== MOCK_DATA_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(VERSION_KEY, MOCK_DATA_VERSION);
+      return habilidadesData as Habilidade[];
+    }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (error) {
+    console.error('Erro ao carregar habilidades do localStorage:', error);
+  }
+  return habilidadesData as Habilidade[];
+}
+
 export function HabilidadesProvider({ children }: { children: ReactNode }) {
-  const [habilidades, setHabilidades] = useState<Habilidade[]>(habilidadesData as Habilidade[]);
+  const [habilidades, setHabilidades] = useState<Habilidade[]>(loadFromStorage);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(habilidades));
+    } catch (error) {
+      console.error('Erro ao salvar habilidades no localStorage:', error);
+    }
+  }, [habilidades]);
 
   function addHabilidade(data: Omit<Habilidade, 'id'>): string {
     const id = String(Date.now());

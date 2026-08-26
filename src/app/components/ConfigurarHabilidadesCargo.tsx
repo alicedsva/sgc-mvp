@@ -74,7 +74,7 @@ export function ConfigurarHabilidadesCargo({
     const novaVinculacao = {
       cargoId: cargo.id,
       habilidadeId,
-      nivelEsperado: 'Básico',
+      nivelEsperado: 'Aprendiz',
       obrigatoria: true,
     };
     setHabilidadesCargoData([...habilidadesCargoData, novaVinculacao]);

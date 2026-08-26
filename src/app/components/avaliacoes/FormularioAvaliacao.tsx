@@ -47,7 +47,7 @@ export interface NovaAvaliacaoFormData {
 // Infere o modoPrazo real do schema a partir da combinação preenchida dos 3
 // campos livres da Etapa Prazo — nunca um seletor explícito. Regra de
 // negócio final (aprovada pelo time — substitui a versão anterior, que
-// tratava Término e Prazo como mutuamente exclusivos): os 9 casos abaixo.
+// tratava Término e Prazo como mutuamente exclusivos): os 8 casos abaixo.
 //
 // | Início | Término | Dias | Resultado |
 // |--------|---------|------|-----------|
@@ -376,6 +376,13 @@ export function FormularioAvaliacao({
   const [previewAberto, setPreviewAberto] = useState(false);
   // Lista somente-leitura dos colaboradores da jornada (Caminho "Por Jornada", criação).
   const [modalColaboradoresAberto, setModalColaboradoresAberto] = useState(false);
+  // Gerência cujo "Ver colaboradores" foi clicado no card "Colaboradores" da
+  // Revisão (Caminho "Por Público-alvo") — null = modal fechado. Guarda o
+  // nome da gerência (não um boolean) porque cada bloco de gerência abre o
+  // MESMO ColaboradoresListaModal, mas filtrado só pros colaboradores
+  // daquela gerência (ver participantesPorGerencia abaixo) — precisa saber
+  // qual bloco foi clicado pra filtrar certo.
+  const [gerenciaModalAberta, setGerenciaModalAberta] = useState<string | null>(null);
   // Confirmação antes de publicar imediatamente (Início vazio ou hoje) — só
   // para essa situação; agendar para o futuro nunca passa por aqui.
   const [confirmPublicarAberto, setConfirmPublicarAberto] = useState(false);
@@ -583,6 +590,29 @@ export function FormularioAvaliacao({
         .map(c => ({ id: c.id, nome: c.nome, cargo: cargosData.find(cg => cg.id === c.cargoId)?.cargoRM ?? c.cargo })),
     [formData.colaboradoresSelecionados],
   );
+
+  // Participantes selecionados (Caminho "Por Público-alvo"), agrupados pela
+  // gerência REAL de cada colaborador (colaboradoresData[].gerencia) — nunca
+  // pelo texto calculado de montarPublicoLabelGranular, que só descreve COMO
+  // a seleção foi montada (gerência inteira vs. avulso), não onde cada
+  // participante está de fato hoje. Cobre os dois casos: gerência marcada
+  // inteira E colaborador avulso de fora dela — ambos caem no grupo da
+  // própria gerência do colaborador. Ordem alfabética via GERENCIAS (mesmo
+  // array já usado por SeletorGerenciaGranular/DashboardPage/ContentArea —
+  // nunca uma ordenação nova). Usado só pelo card "Colaboradores" da Revisão.
+  const participantesPorGerencia = useMemo(() => {
+    if (formData.caminho !== 'publico') return [];
+    const porGerencia = new Map<string, { id: string; nome: string; cargo: string }[]>();
+    participantesAtuais.forEach(id => {
+      const c = colaboradoresData.find(cc => cc.id === id);
+      if (!c) return;
+      const cargo = cargosData.find(cg => cg.id === c.cargoId)?.cargoRM ?? c.cargo;
+      const lista = porGerencia.get(c.gerencia) ?? [];
+      lista.push({ id: c.id, nome: c.nome, cargo });
+      porGerencia.set(c.gerencia, lista);
+    });
+    return GERENCIAS.filter(g => porGerencia.has(g)).map(g => ({ gerencia: g, colaboradores: porGerencia.get(g)! }));
+  }, [formData.caminho, participantesAtuais]);
 
   // Carreira + Jornada do Caminho "Por Jornada" — mesma função compartilhada
   // usada pelo header de AvaliacaoDetalhePage.tsx (getMetaOrigem), aqui
@@ -919,9 +949,27 @@ export function FormularioAvaliacao({
           </div>
         </div>
       ) : (
-        <div className="px-5 py-4">
-          <p className="text-sm font-normal text-gray-700">{formData.publicoLabelCalculado || 'Não definido'}</p>
-          {linhaParticipantes}
+        <div className="px-5 py-4 space-y-4 md:space-y-5">
+          {participantesPorGerencia.length === 0 ? (
+            <p className="text-sm font-normal text-gray-700">Não definido</p>
+          ) : (
+            participantesPorGerencia.map(({ gerencia, colaboradores }) => (
+              <div key={gerencia}>
+                <p className="text-sm font-normal text-gray-700 mb-1">{gerencia}</p>
+                <p className="text-sm text-gray-500">
+                  {colaboradores.length} {colaboradores.length === 1 ? 'participante' : 'participantes'}
+                  {' · '}
+                  <button
+                    type="button"
+                    onClick={() => setGerenciaModalAberta(gerencia)}
+                    className="text-sm font-medium text-[var(--brand-600)] hover:underline"
+                  >
+                    Ver colaboradores
+                  </button>
+                </p>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
@@ -1568,6 +1616,14 @@ export function FormularioAvaliacao({
       titulo={formData.caminho === 'jornada' ? 'Colaboradores da jornada' : 'Colaboradores selecionados'}
       subtitulo={formData.caminho === 'jornada' ? jornadaSelecionada?.nome : undefined}
       colaboradores={formData.caminho === 'jornada' ? colaboradoresDaJornadaModal : colaboradoresSelecionadosModal}
+    />
+
+    <ColaboradoresListaModal
+      isOpen={gerenciaModalAberta !== null}
+      onClose={() => setGerenciaModalAberta(null)}
+      titulo="Colaboradores selecionados"
+      subtitulo={gerenciaModalAberta ?? undefined}
+      colaboradores={participantesPorGerencia.find(g => g.gerencia === gerenciaModalAberta)?.colaboradores ?? []}
     />
 
     <ConfirmationModal

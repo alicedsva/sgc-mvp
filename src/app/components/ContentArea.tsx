@@ -4,16 +4,18 @@ import { useCompetencias } from '../context/CompetenciasContext';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
-import { niveisDefaultData, getCorFromPeso, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
+import { niveisDefaultData, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
 import { formatData, calcularStatusEfetivo, calcularDiasAteVencimento, getStatusAvaliacaoLabel, getStatusAvaliacaoBadgeClass, AvisoAtivacaoAgendada } from '../utils/avaliacoes';
 import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
 import { FormDrawer, FormField } from './templates/FormDrawer';
+import { HabilidadeFormDrawer, type HabilidadeFormValues } from './templates/HabilidadeFormDrawer';
 import { ConfirmationModal } from './templates/ConfirmationModal';
 import { Column, InlineAction, Table } from './ui/Table';
 import { ToggleSwitch } from './ui/ToggleSwitch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { EmptyState } from './ui/EmptyState';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { NiveisProficiencia } from './NiveisProficiencia';
 import { ColaboradorView } from './ColaboradorView';
 import { MinhasAvaliacoes } from './MinhasAvaliacoes';
@@ -150,19 +152,18 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     status: 'Ativa',
   });
 
-  // Estado e dados para Níveis de Habilidades
-  const [niveisData, setNiveisData] = useState(niveisDefaultData);
-
   // Estado e dados para Habilidades (gerenciados via contexto compartilhado)
   const { habilidades: habilidadesData, addHabilidade, updateHabilidade } = useHabilidades();
 
-  // emUso calculado a partir das habilidades reais (não do campo armazenado em mockData)
+  // Níveis são fixos (5 registros, sempre Ativo) — sem ciclo de vida, sem
+  // state próprio. emUso calculado a partir das habilidades reais (não do
+  // campo armazenado em mockData).
   const niveisComContagem = useMemo(() =>
-    niveisData.map(nivel => ({
+    niveisDefaultData.map(nivel => ({
       ...nivel,
       emUso: habilidadesData.filter(h => h.niveis.some(n => n.nivelId === nivel.id)).length,
     })),
-    [niveisData, habilidadesData]
+    [habilidadesData]
   );
   const { competencias, addCompetencia, updateCompetencia } = useCompetencias();
   const {
@@ -171,16 +172,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     atualizarCarreira,
     jornadas: jornadasDoContexto,
   } = useCarreiras();
-  const [habilidadeFormData, setHabilidadeFormData] = useState({
-    nome: '',
-    descricao: '',
-    competencia: '',
-    competenciaId: '',
-    tipo: 'Técnica',
-    status: 'Ativa',
-    niveis: [] as Array<{ nivelId: string; criterio: string }>,
-  });
-
   // Perfis derivados de colaboradoresData — fonte única de verdade
   const [syncedProfileIds, setSyncedProfileIds] = useState<Set<string>>(new Set());
 
@@ -294,7 +285,27 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           </button>
         ),
       },
-      { key: 'descricao', label: 'Descrição', width: '40%' },
+      {
+        key: 'descricao',
+        label: 'Descrição',
+        width: '40%',
+        render: (value) => {
+          const descricao = value as string;
+          if (!descricao) {
+            return <span className="text-sm text-gray-500">-</span>;
+          }
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                  {descricao}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>{descricao}</TooltipContent>
+            </Tooltip>
+          );
+        },
+      },
       {
         key: 'habilidades',
         label: 'Habilidades Vinculadas',
@@ -596,7 +607,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         return (
           <NiveisProficiencia
             niveisData={niveisComContagem}
-            onUpdateNiveis={setNiveisData}
           />
         );
       }
@@ -693,7 +703,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             render: (value) => {
               const niveis = value as Array<{ nivelId: string; criterio: string }> | undefined;
               if (!niveis || niveis.length === 0) return <span className="text-gray-400 text-sm">—</span>;
-              const niveisMap = Object.fromEntries(niveisData.map((n) => [n.id, n]));
+              const niveisMap = Object.fromEntries(niveisDefaultData.map((n) => [n.id, n]));
               const nomes = niveis.map(({ nivelId }) => niveisMap[nivelId]?.nome).filter(Boolean).join(', ');
               return <span className="text-sm text-gray-700">{nomes || <span className="text-gray-400">—</span>}</span>;
             },
@@ -756,15 +766,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             icon: <Edit className="w-4 h-4" />,
             onClick: (row) => {
               setSelectedRow(row);
-              setHabilidadeFormData({
-                nome: row.nome,
-                descricao: row.descricao,
-                competencia: row.competencia,
-                competenciaId: row.competenciaId ?? '',
-                tipo: row.tipo,
-                status: row.status,
-                niveis: row.niveis || [],
-              });
               setIsDrawerOpen(true);
             },
           },
@@ -791,109 +792,36 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
         const handleOpenCreateHabilidadeDrawer = () => {
           setSelectedRow(null);
-          setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
           setIsDrawerOpen(true);
         };
 
-        const habilidadesFormFields: FormField[] = [
-          {
-            name: 'nome',
-            label: 'Nome da Habilidade',
-            type: 'text',
-            placeholder: 'Ex: React',
-            required: true,
-            value: habilidadeFormData.nome,
-            onChange: (value) =>
-              setHabilidadeFormData({ ...habilidadeFormData, nome: value }),
-          },
-          {
-            name: 'descricao',
-            label: 'Descrição',
-            type: 'textarea',
-            placeholder: 'Descreva esta habilidade...',
-            rows: 3,
-            value: habilidadeFormData.descricao,
-            onChange: (value) =>
-              setHabilidadeFormData({ ...habilidadeFormData, descricao: value }),
-          },
-          {
-            name: 'competenciaId',
-            label: 'Competência',
-            type: 'select',
-            required: true,
-            value: habilidadeFormData.competenciaId,
-            onChange: (value) => {
-              const comp = competencias.find((c) => c.id === value);
-              setHabilidadeFormData({ ...habilidadeFormData, competenciaId: value, competencia: comp?.nome ?? '' });
-            },
-            options: competencias
-              .filter((c) => c.status === 'Ativa')
-              .map((c) => ({ value: c.id, label: c.nome })),
-          },
-          {
-            name: 'tipo',
-            label: 'Tipo',
-            type: 'select',
-            required: true,
-            value: habilidadeFormData.tipo,
-            onChange: (value) =>
-              setHabilidadeFormData({ ...habilidadeFormData, tipo: value }),
-            options: [
-              { value: 'Técnica', label: 'Técnica' },
-              { value: 'Comportamental', label: 'Comportamental' },
-            ],
-          },
-          {
-            name: 'status',
-            label: 'Status',
-            type: 'select',
-            required: true,
-            value: habilidadeFormData.status,
-            onChange: (value) =>
-              setHabilidadeFormData({ ...habilidadeFormData, status: value }),
-            options: [
-              { value: 'Ativa', label: 'Ativa' },
-              { value: 'Desativada', label: 'Desativada' },
-            ],
-          },
-        ];
-
-        const handleHabilidadeFormSubmit = (e: React.FormEvent) => {
-          e.preventDefault();
-
-          if (habilidadeFormData.niveis.length === 0) {
-            toast.error('Selecione ao menos um nível aplicável para esta habilidade.');
-            return;
-          }
-
+        const handleSaveHabilidade = (values: HabilidadeFormValues) => {
           if (selectedRow) {
             updateHabilidade(selectedRow.id, {
-              nome: habilidadeFormData.nome,
-              descricao: habilidadeFormData.descricao,
-              competencia: habilidadeFormData.competencia,
-              competenciaId: habilidadeFormData.competenciaId,
-              tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
-              status: habilidadeFormData.status as 'Ativa' | 'Desativada',
-              niveis: habilidadeFormData.niveis,
+              nome: values.nome,
+              descricao: values.descricao,
+              competencia: values.competencia,
+              competenciaId: values.competenciaId,
+              tipo: values.tipo,
+              status: values.status,
+              niveis: values.niveis,
             });
             toast.success('Habilidade atualizada com sucesso!');
             setIsDrawerOpen(false);
             setSelectedRow(null);
-            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
           } else {
             addHabilidade({
-              nome: habilidadeFormData.nome,
-              descricao: habilidadeFormData.descricao,
-              competencia: habilidadeFormData.competencia,
-              competenciaId: habilidadeFormData.competenciaId,
-              tipo: habilidadeFormData.tipo as 'Técnica' | 'Comportamental',
-              status: habilidadeFormData.status as 'Ativa' | 'Desativada',
-              niveis: habilidadeFormData.niveis,
+              nome: values.nome,
+              descricao: values.descricao,
+              competencia: values.competencia,
+              competenciaId: values.competenciaId,
+              tipo: values.tipo,
+              status: values.status,
+              niveis: values.niveis,
             });
             toast.success('Habilidade criada com sucesso!');
             setIsDrawerOpen(false);
             setSelectedRow(null);
-            setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
             setHabilidadesSortConfig({ column: 'id', direction: 'desc' });
             setCurrentPageHabilidades(1);
           }
@@ -1158,113 +1086,30 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               </div>
             </div>
 
-            <FormDrawer
+            <HabilidadeFormDrawer
               isOpen={isDrawerOpen}
-              onClose={() => {
+              initialValues={
+                selectedRow
+                  ? {
+                      nome: selectedRow.nome,
+                      descricao: selectedRow.descricao,
+                      competencia: selectedRow.competencia,
+                      competenciaId: selectedRow.competenciaId ?? '',
+                      tipo: selectedRow.tipo,
+                      status: selectedRow.status,
+                      niveis: selectedRow.niveis || [],
+                    }
+                  : null
+              }
+              competenciasAtivas={competencias
+                .filter((c) => c.status === 'Ativa')
+                .map((c) => ({ id: c.id, nome: c.nome }))}
+              niveis={niveisDefaultData}
+              onSave={handleSaveHabilidade}
+              onCancel={() => {
                 setIsDrawerOpen(false);
                 setSelectedRow(null);
-                setHabilidadeFormData({ nome: '', descricao: '', competencia: '', competenciaId: '', tipo: 'Técnica', status: 'Ativa', niveis: [] });
               }}
-              title={selectedRow ? 'Editar Habilidade' : 'Nova Habilidade'}
-              fields={habilidadesFormFields}
-              onSubmit={handleHabilidadeFormSubmit}
-              submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
-              customContent={(() => {
-                const niveisAtivos = niveisData
-                  .filter((n) => n.status === 'Ativo' && !('arquivado' in n && n.arquivado))
-                  .sort((a, b) => a.peso - b.peso);
-
-                const selectedIds = new Set(habilidadeFormData.niveis.map((n) => n.nivelId));
-
-                const toggleNivel = (nivelId: string) => {
-                  if (selectedIds.has(nivelId)) {
-                    setHabilidadeFormData((prev) => ({
-                      ...prev,
-                      niveis: prev.niveis.filter((n) => n.nivelId !== nivelId),
-                    }));
-                  } else {
-                    setHabilidadeFormData((prev) => ({
-                      ...prev,
-                      niveis: [...prev.niveis, { nivelId, criterio: '' }],
-                    }));
-                  }
-                };
-
-                return (
-                  <div className="border-t border-gray-200 pt-4 mt-1 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-gray-700">
-                        Níveis Aplicáveis <span className="text-red-500">*</span>
-                      </label>
-                      {habilidadeFormData.niveis.length > 0 && (
-                        <span className="text-xs text-gray-500">{habilidadeFormData.niveis.length} selecionado{habilidadeFormData.niveis.length > 1 ? 's' : ''}</span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {niveisAtivos.map((nivel) => {
-                        const isSelected = selectedIds.has(nivel.id);
-                        return (
-                          <button
-                            key={nivel.id}
-                            type="button"
-                            onClick={() => toggleNivel(nivel.id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                              isSelected
-                                ? 'border-transparent text-white'
-                                : 'border-gray-300 text-gray-600 bg-white hover:border-gray-400'
-                            }`}
-                            style={isSelected ? { backgroundColor: getCorFromPeso(nivel.peso) } : {}}
-                          >
-                            {nivel.nome}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {habilidadeFormData.niveis.length > 0 && (
-                      <div className="border-t border-gray-100 pt-4 space-y-4">
-                        <label className="text-sm font-medium text-gray-700">Critérios por nível</label>
-                        {niveisAtivos
-                          .filter((nivel) => selectedIds.has(nivel.id))
-                          .map((nivel) => {
-                            const nivelEntry = habilidadeFormData.niveis.find((n) => n.nivelId === nivel.id);
-                            return (
-                              <div key={nivel.id} className="space-y-2">
-                                <span
-                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                                  style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
-                                >
-                                  {nivel.nome}
-                                </span>
-                                <textarea
-                                  value={nivelEntry?.criterio ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setHabilidadeFormData((prev) => ({
-                                      ...prev,
-                                      niveis: prev.niveis.map((n) =>
-                                        n.nivelId === nivel.id ? { ...n, criterio: val } : n
-                                      ),
-                                    }));
-                                  }}
-                                  placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
-                                  rows={3}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
-                                />
-                                {nivel.descricao && (
-                                  <p className="text-xs text-gray-400 leading-relaxed">
-                                    <span className="font-medium">Referência do nível:</span> {nivel.descricao}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
             />
 
             <ConfirmationModal
@@ -1774,18 +1619,6 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         width: '20%',
         render: (_value, row) => {
           const descricao = (row as Avaliacao).descricao;
-          // Tooltip via atributo title nativo, não o padrão de bolha
-          // group/tip (HelpCircle) usado em CriarJornadaPage.tsx/
-          // EditarJornadaPage.tsx/DesignSystemPage.tsx: aquele padrão é
-          // position: absolute e, nesta tabela, ficaria dentro do
-          // container com overflow-hidden do ListingPage (e do
-          // overflow-x-auto do próprio Table.tsx) — cortaria a bolha em
-          // linhas perto da borda de cima/baixo/direita da tabela. title
-          // nativo nunca é cortado por overflow de ancestral (é renderizado
-          // fora de qualquer contexto de stacking/overflow do CSS) e já é o
-          // padrão usado nesta mesma tabela para os ícones de ação
-          // (Table.tsx, `title={label}`) — mesmo princípio, reaproveitado
-          // aqui para texto truncado por line-clamp.
           if (!descricao) {
             return <span className="text-sm text-gray-500">-</span>;
           }
@@ -1797,9 +1630,14 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             // trava a LARGURA da coluna, mas não impede um token sem quebra
             // de vazar visualmente por cima da célula vizinha se o texto em
             // si não souber quebrar.
-            <p className="text-sm text-gray-700 line-clamp-2 break-words" title={descricao}>
-              {descricao}
-            </p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                  {descricao}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>{descricao}</TooltipContent>
+            </Tooltip>
           );
         },
       },

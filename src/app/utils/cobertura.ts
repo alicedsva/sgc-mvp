@@ -2,7 +2,7 @@ import { niveisDefaultData } from '../data/mockData';
 
 export interface HabilidadeColaborador {
   habilidadeId: string;
-  nivelAtual: string; // 'Básico' | 'Intermediário' | 'Avançado' | 'Especialista'
+  nivelAtual: string; // 'Aprendiz' | 'Iniciante' | 'Intermediário' | 'Avançado' | 'Especialista'
 }
 
 export interface MatrizCargo {

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableCargo } from '@/app/components/ui/DraggableCargo';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 
 interface OutletContext {
   isSidebarCollapsed: boolean;
@@ -161,12 +162,14 @@ function CriarJornadaPageContent() {
               <div>
                 <div className="flex items-center gap-1.5 mb-3">
                   <label className="text-xs md:text-sm font-medium text-gray-700">Modelo de evolução</label>
-                  <div className="relative group/tip">
-                    <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-default" />
-                    <div className="absolute left-5 top-0 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 hidden group-hover/tip:block z-10 shadow-lg">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-default" />
+                    </TooltipTrigger>
+                    <TooltipContent>
                       O modelo define a natureza da progressão: técnica, de liderança ou especialização estratégica.
-                    </div>
-                  </div>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="flex gap-3 flex-wrap">
                   {[

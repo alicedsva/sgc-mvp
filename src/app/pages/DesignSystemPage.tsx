@@ -8,12 +8,13 @@ import {
   Plus, Download, Search, X, AlertTriangle, ArrowLeft, ArrowRight,
   Layers, Calendar, Wrench, Construction,
   Bell, ArrowLeftRight, LogOut, Menu, Activity, Monitor,
-  Check, ListChecks, Save,
+  Check, ListChecks, Save, HelpCircle,
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { getStatusAvaliacaoBadgeClass, getStatusParticipanteBadgeClass } from '../utils/avaliacoes';
 
 type SectionId =
@@ -5804,12 +5805,14 @@ function SecaoCriarEditarJornada() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-3">
                     <label className="text-sm font-medium text-gray-700">Modelo de evolução</label>
-                    <div className="relative group/tip">
-                      <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                      <div className="absolute left-5 top-0 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 hidden group-hover/tip:block z-10 shadow-lg">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-default" />
+                      </TooltipTrigger>
+                      <TooltipContent>
                         O modelo define a natureza da progressão: técnica, de liderança ou especialização estratégica.
-                      </div>
-                    </div>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <div className="flex gap-3 flex-wrap">
                     <div className="flex items-start gap-3 p-4 border-2 border-[var(--brand-500)] bg-[var(--brand-50)] rounded-lg cursor-pointer flex-1 max-w-xs">
@@ -6480,11 +6483,10 @@ function SecaoMatrizHabilidadesAdmin() {
                   <div
                     className="rounded-lg border border-gray-200 bg-white text-left cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
                     style={{ borderLeftWidth: 3, borderLeftColor: '#5B21B6' }}
-                    title="Especialista: Usa hooks, gerencia estado local e consome APIs REST"
                   >
                     <div className="px-2.5 py-2 space-y-0.5">
                       <span className="block text-xs font-semibold leading-tight" style={{ color: '#5B21B6' }}>Especialista</span>
-                      <p className="text-xs text-gray-500 leading-snug line-clamp-3">Usa hooks, gerencia estado local e consome APIs REST</p>
+                      <p className="text-xs text-gray-500 leading-snug">Usa hooks, gerencia estado local e consome APIs REST</p>
                       <span className="block text-[10px] text-gray-400 leading-tight">Progressão 5</span>
                     </div>
                   </div>
@@ -6494,8 +6496,8 @@ function SecaoMatrizHabilidadesAdmin() {
                     'Valor: string com nome do nível',
                     'Borda esquerda: 3px via borderLeftColor',
                     'Cor via getCorFromPeso(peso)',
-                    'Critério: text-xs text-gray-500 line-clamp-3 (condicional — só aparece se criterio não for vazio)',
-                    'Tooltip: title="Nome do nível: criterio"',
+                    'Critério: text-xs text-gray-500, texto completo sem truncamento — exceção documentada (célula pode crescer)',
+                    'Sem tooltip: nada é cortado, então não há texto oculto para revelar',
                     'Hover: border-gray-300 + shadow-sm',
                   ].map((t, i) => <li key={i} className="text-xs text-gray-500">{t}</li>)}
                 </ul>
@@ -6516,10 +6518,11 @@ function SecaoMatrizHabilidadesAdmin() {
             <div className="flex items-start gap-8 mb-5">
               <div className="w-[200px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden flex-shrink-0" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
                 {[
-                  { nome: 'Básico', peso: 1, cor: '#60A5FA' },
-                  { nome: 'Intermediário', peso: 2, cor: '#2563EB' },
-                  { nome: 'Avançado', peso: 4, cor: '#4338CA' },
-                  { nome: 'Especialista', peso: 5, cor: '#5B21B6' },
+                  { nome: 'Aprendiz', peso: 1, cor: '#60A5FA' },
+                  { nome: 'Iniciante', peso: 2, cor: '#2563EB' },
+                  { nome: 'Intermediário', peso: 3, cor: '#4338CA' },
+                  { nome: 'Avançado', peso: 4, cor: '#5B21B6' },
+                  { nome: 'Especialista', peso: 5, cor: '#581C87' },
                 ].map((n, idx, arr) => (
                   <div key={n.nome} className={`px-4 py-2.5 flex items-center gap-2 hover:bg-[#F3F4F6] transition-colors ${idx < arr.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap text-white" style={{ backgroundColor: n.cor }}>{n.nome}</span>

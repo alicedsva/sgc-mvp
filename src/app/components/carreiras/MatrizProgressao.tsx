@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Search, Filter } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, getCorFromPeso, getPesoFromNome, getCompetenciaNome } from '../../data/mockData';
+import { useCompetencias } from '../../context/CompetenciasContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface Cargo {
@@ -30,14 +31,15 @@ interface HabilidadeMatriz {
 export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoProps) {
   const [buscaHabilidade, setBuscaHabilidade] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas');
+  const { competencias } = useCompetencias();
 
   // Obter todas as categorias únicas (IDs)
   const categorias = useMemo(() => {
     const cats = new Set(habilidadesData.map(h => h.competenciaId).filter(Boolean));
     return Array.from(cats).sort((a, b) =>
-      getCompetenciaNome(a).localeCompare(getCompetenciaNome(b))
+      getCompetenciaNome(a, competencias).localeCompare(getCompetenciaNome(b, competencias))
     );
-  }, []);
+  }, [competencias]);
 
   // Construir matriz de habilidades
   const matrizHabilidades = useMemo(() => {
@@ -71,12 +73,12 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
 
     // Ordenar por categoria (nome) e depois por habilidade
     return matriz.sort((a, b) => {
-      const catA = getCompetenciaNome(a.categoria);
-      const catB = getCompetenciaNome(b.categoria);
+      const catA = getCompetenciaNome(a.categoria, competencias);
+      const catB = getCompetenciaNome(b.categoria, competencias);
       if (catA !== catB) return catA.localeCompare(catB);
       return a.nome.localeCompare(b.nome);
     });
-  }, [cargos, habilidadesCargo]);
+  }, [cargos, habilidadesCargo, competencias]);
 
   // Filtrar habilidades
   const habilidadesFiltradas = useMemo(() => {
@@ -87,7 +89,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
       const busca = buscaHabilidade.toLowerCase();
       filtradas = filtradas.filter(h =>
         h.nome.toLowerCase().includes(busca) ||
-        getCompetenciaNome(h.categoria).toLowerCase().includes(busca)
+        getCompetenciaNome(h.categoria, competencias).toLowerCase().includes(busca)
       );
     }
 
@@ -97,14 +99,15 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
     }
 
     return filtradas;
-  }, [matrizHabilidades, buscaHabilidade, categoriaFiltro]);
+  }, [matrizHabilidades, buscaHabilidade, categoriaFiltro, competencias]);
 
   // Função para abreviar nível
   const getNivelAbrev = (nivel: string | null) => {
     if (!nivel) return '—';
 
     const abrev: Record<string, string> = {
-      'Básico': 'Bás',
+      'Aprendiz': 'Apr',
+      'Iniciante': 'Ini',
       'Intermediário': 'Int',
       'Avançado': 'Ava',
       'Especialista': 'Esp',
@@ -186,7 +189,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
             <SelectContent>
               <SelectItem value="todas">Todas as categorias</SelectItem>
               {categorias.map(id => (
-                <SelectItem key={id} value={id}>{getCompetenciaNome(id)}</SelectItem>
+                <SelectItem key={id} value={id}>{getCompetenciaNome(id, competencias)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -226,7 +229,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
                       <div className="text-sm font-medium text-gray-900">{habilidade.nome}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-gray-600">{getCompetenciaNome(habilidade.categoria)}</span>
+                      <span className="text-xs text-gray-600">{getCompetenciaNome(habilidade.categoria, competencias)}</span>
                     </td>
                     {cargos.map(cargo => {
                       const nivel = habilidade.niveis[cargo.id];

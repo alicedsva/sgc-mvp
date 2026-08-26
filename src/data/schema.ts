@@ -280,13 +280,6 @@ export interface Habilidade {
 
 // ─── Nível de proficiência ──────────────────────────────────────────────────
 
-/**
- * 'Desativado' nunca aparece no mock estático, mas é produzido de fato pela
- * tela Habilidades > Níveis de Habilidades (NiveisProficiencia.tsx) via
- * toggle de status — precisa estar no tipo mesmo sem exemplo nos dados.
- */
-export type StatusNivel = 'Ativo' | 'Desativado';
-
 export interface Nivel {
   id: string;
   /**
@@ -299,7 +292,6 @@ export interface Nivel {
   descricao: string;
   /** 1–5. Comparar níveis SEMPRE por peso, nunca por nome — duas escalas coexistem com nomes diferentes para o mesmo peso. */
   peso: number;
-  status: StatusNivel;
   /**
    * Contador de uso — hoje divergente da realidade para a "escala B"
    * (Iniciante…Referência) e para "Proficiente": aparecem como 0 mesmo sendo
@@ -307,12 +299,6 @@ export interface Nivel {
    * docs/DATA_MODEL.md. Não usar para decisões de exibição sem recalcular.
    */
   emUso: number;
-  /**
-   * Presente apenas em memória (useState de ContentArea/NiveisProficiencia,
-   * não persistido) — marca um nível desativado que foi movido para a aba
-   * "Arquivados". Nunca aparece no mock estático.
-   */
-  arquivado?: boolean;
 }
 
 // ─── Dados exclusivos de telas de teste (/testes/*) ────────────────────────

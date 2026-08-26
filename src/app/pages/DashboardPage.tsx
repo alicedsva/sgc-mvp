@@ -17,6 +17,7 @@ import {
   jornadasData,
   getHabilidadesAvaliadasColaborador,
   getPesoFromNome,
+  getCorFromPeso,
   HOJE_SIMULADO,
 } from '../data/mockData';
 import { calcularStatusEfetivo, formatPeriodoAvaliacao } from '../utils/avaliacoes';
@@ -288,24 +289,21 @@ function getCoberturaTextColor(cobertura: number): string {
   return 'text-red-700';
 }
 
+// Recalibrado (Etapa 3) pra derivar direto do peso real do nível, via
+// getPesoFromNome/getCorFromPeso — antes era um switch com nome hardcoded,
+// numa escala própria de 4 posições desalinhada de ESCALA_CORES_NIVEL
+// (nunca cobria 'Intermediário'/peso 3). getCorFromPeso já clampa peso pra
+// [1,5] internamente, mas peso 0 (nome não reconhecido) é tratado à parte
+// aqui por clareza — não faz sentido pintar um nome desconhecido com a cor
+// do nível 1.
 function getNivelCircleColor(nivel: string): string {
-  switch (nivel) {
-    case 'Básico':        return '#60A5FA';
-    case 'Intermediário': return '#2563EB';
-    case 'Avançado':      return '#4338CA';
-    case 'Especialista':  return '#5B21B6';
-    default:              return '#9CA3AF';
-  }
+  const peso = getPesoFromNome(nivel);
+  if (peso === 0) return '#9CA3AF';
+  return getCorFromPeso(peso);
 }
 
 function getNivelProgressao(nivel: string): number {
-  switch (nivel) {
-    case 'Básico':        return 1;
-    case 'Intermediário': return 2;
-    case 'Avançado':      return 3;
-    case 'Especialista':  return 4;
-    default:              return 0;
-  }
+  return getPesoFromNome(nivel);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

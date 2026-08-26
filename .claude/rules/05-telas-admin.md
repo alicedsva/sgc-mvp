@@ -144,6 +144,10 @@ Visão Geral · Habilidades · Carreira · Avaliações
 
 Três abas: Competências · Níveis de Habilidades · Habilidades
 
+Aba "Níveis de Habilidades":
+- Consulta pura, sem ações — sem busca, filtros, criação ou edição
+- 5 níveis fixos: Aprendiz, Iniciante, Intermediário, Avançado, Especialista
+
 Tela de detalhe da habilidade:
 - Acessada pelo ícone Eye (somente leitura)
 - Header: Nome + badge Status + badge Tipo + Competência (mesma linha)

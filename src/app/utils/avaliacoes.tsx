@@ -154,9 +154,9 @@ export function calcularPrazoParticipante(
   return prazoIndividual; // 'prazo_em_dias'
 }
 
-// Texto de período para exibição — única fonte que sabe formatar os 3 modos
-// de prazo (datas_fixas / prazo_em_dias / indefinido) e o caso "ainda não
-// ativada, sem data nenhuma" (Rascunho). Reusada por qualquer tela que
+// Texto de período para exibição — única fonte que sabe formatar os 4 modos
+// de prazo (indefinido / datas_fixas / prazo_em_dias / datas_fixas_com_prazo)
+// e o caso "ainda não ativada, sem data nenhuma" (Rascunho). Reusada por qualquer tela que
 // mostra o período de uma Avaliacao real (ContentArea.tsx,
 // AvaliacaoDetalhePage.tsx, DashboardPage.tsx) e também pelo wizard
 // (FormularioAvaliacao.tsx), que simula uma Avaliacao com os campos já

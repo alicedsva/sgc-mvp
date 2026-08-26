@@ -286,7 +286,7 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
 
 ### Pills por contexto
 - Competências / Habilidades / Carreiras / Jornadas → Todos / Ativas / Desativadas
-- Níveis → Todos / Ativos / Desativados / Arquivados
+- Níveis → (sem filtros — tela somente consulta)
 - Perfis → Todos / Ativos / Desativados
 - Avaliações Admin → Todas / Ativas / Rascunho / Agendadas / Encerradas
 - Avaliações Colaborador → Todos / Não iniciada / Em andamento / Concluída / Expirada
