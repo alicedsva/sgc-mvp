@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ListChecks } from 'lucide-react';
+import { Info, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { FormDrawer } from './FormDrawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Accordion, AccordionItem } from '../ui/Accordion';
 import { getCorFromPeso } from '../../data/mockData';
 
 export interface HabilidadeFormValues {
@@ -42,7 +43,7 @@ interface HabilidadeFormDrawerProps {
   onCancel: () => void;
 }
 
-type Tab = 'cadastro' | 'criterios';
+type Tab = 'cadastro' | 'niveis';
 
 export function HabilidadeFormDrawer({
   isOpen,
@@ -55,6 +56,7 @@ export function HabilidadeFormDrawer({
   const [formData, setFormData] = useState<HabilidadeFormValues>(HABILIDADE_FORM_VAZIO);
   const [activeTab, setActiveTab] = useState<Tab>('cadastro');
   const [errors, setErrors] = useState<{ nome?: string; competenciaId?: string }>({});
+  const [niveisAbertos, setNiveisAbertos] = useState<Set<string>>(new Set());
 
   const isEdicao = initialValues !== null;
 
@@ -65,21 +67,53 @@ export function HabilidadeFormDrawer({
   // os valores da edição anterior.
   useEffect(() => {
     if (isOpen) {
-      setFormData(initialValues ?? HABILIDADE_FORM_VAZIO);
+      const valoresIniciais = initialValues ?? HABILIDADE_FORM_VAZIO;
+      setFormData(valoresIniciais);
       setActiveTab('cadastro');
       setErrors({});
+      // Primeiro nível selecionado (menor peso) já abre por padrão.
+      const primeiroSelecionado = [...niveis]
+        .sort((a, b) => a.peso - b.peso)
+        .find((n) => valoresIniciais.niveis.some((sel) => sel.nivelId === n.id));
+      setNiveisAbertos(primeiroSelecionado ? new Set([primeiroSelecionado.id]) : new Set());
     }
-  }, [isOpen, initialValues]);
+  }, [isOpen, initialValues, niveis]);
 
   const niveisOrdenados = [...niveis].sort((a, b) => a.peso - b.peso);
   const selectedIds = new Set(formData.niveis.map((n) => n.nivelId));
 
+  const toggleNivelAberto = (id: string) => {
+    setNiveisAbertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const toggleNivel = (nivelId: string) => {
-    setFormData((prev) =>
-      selectedIds.has(nivelId)
-        ? { ...prev, niveis: prev.niveis.filter((n) => n.nivelId !== nivelId) }
-        : { ...prev, niveis: [...prev.niveis, { nivelId, criterio: '' }] }
-    );
+    if (selectedIds.has(nivelId)) {
+      setFormData((prev) => ({ ...prev, niveis: prev.niveis.filter((n) => n.nivelId !== nivelId) }));
+      // Remove o item do Set de abertos junto — evita estado "órfão" para
+      // um AccordionItem que não existe mais depois do nível desmarcado.
+      setNiveisAbertos((prev) => {
+        if (!prev.has(nivelId)) return prev;
+        const next = new Set(prev);
+        next.delete(nivelId);
+        return next;
+      });
+    } else {
+      setFormData((prev) => ({ ...prev, niveis: [...prev.niveis, { nivelId, criterio: '' }] }));
+      // Se nenhum item estava aberto ainda, abre o de menor peso entre os
+      // selecionados (não necessariamente o que acabou de ser marcado) —
+      // mesma regra de "menor peso já aberto" usada na carga inicial.
+      setNiveisAbertos((prev) => {
+        if (prev.size > 0) return prev;
+        const novoSelectedIds = new Set([...selectedIds, nivelId]);
+        const menorPeso = niveisOrdenados.find((n) => novoSelectedIds.has(n.id));
+        return menorPeso ? new Set([menorPeso.id]) : prev;
+      });
+    }
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -104,7 +138,7 @@ export function HabilidadeFormDrawer({
 
     if (formData.niveis.length === 0) {
       toast.error('Selecione ao menos um nível aplicável para esta habilidade.');
-      setActiveTab('cadastro');
+      setActiveTab('niveis');
       return;
     }
 
@@ -129,7 +163,7 @@ export function HabilidadeFormDrawer({
             <button
               type="button"
               onClick={() => setActiveTab('cadastro')}
-              className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+              className={`flex-1 px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
                 activeTab === 'cadastro'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -139,14 +173,15 @@ export function HabilidadeFormDrawer({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('criterios')}
-              className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                activeTab === 'criterios'
+              onClick={() => setActiveTab('niveis')}
+              className={`flex-1 px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
+                activeTab === 'niveis'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Critérios
+              <span className="md:hidden">Níveis</span>
+              <span className="hidden md:inline">Níveis de Habilidades</span>
             </button>
           </div>
 
@@ -245,8 +280,20 @@ export function HabilidadeFormDrawer({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Como preencher os níveis</p>
+                  <p className="text-sm text-slate-700 mt-1">
+                    Selecione quais níveis serão avaliados nesta habilidade e defina o critério esperado para cada um.
+                  </p>
+                </div>
+              </div>
 
-              <div className="border-t border-gray-200 pt-4 mt-1 space-y-3">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-gray-700">
                     Níveis Aplicáveis <span className="text-red-500">*</span>
@@ -279,53 +326,72 @@ export function HabilidadeFormDrawer({
                   })}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {formData.niveis.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                  <ListChecks className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">
-                    Selecione ao menos um nível na aba "Cadastro" para definir os critérios aqui.
-                  </p>
-                </div>
-              ) : (
-                niveisOrdenados
-                  .filter((nivel) => selectedIds.has(nivel.id))
-                  .map((nivel) => {
-                    const nivelEntry = formData.niveis.find((n) => n.nivelId === nivel.id);
-                    return (
-                      <div key={nivel.id} className="space-y-2">
-                        <span
-                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
-                        >
-                          {nivel.nome}
-                        </span>
-                        <textarea
-                          value={nivelEntry?.criterio ?? ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((prev) => ({
-                              ...prev,
-                              niveis: prev.niveis.map((n) =>
-                                n.nivelId === nivel.id ? { ...n, criterio: val } : n
-                              ),
-                            }));
-                          }}
-                          placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
-                        />
-                        {nivel.descricao && (
-                          <p className="text-xs text-gray-400 leading-relaxed">
-                            <span className="font-medium">Referência do nível:</span> {nivel.descricao}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })
-              )}
+
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Critérios
+                </label>
+
+                {formData.niveis.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                    <ListChecks className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">
+                      Selecione ao menos um nível acima para definir os critérios aqui.
+                    </p>
+                  </div>
+                ) : (
+                  <Accordion>
+                    {niveisOrdenados
+                      .filter((nivel) => selectedIds.has(nivel.id))
+                      .map((nivel) => {
+                        const nivelEntry = formData.niveis.find((n) => n.nivelId === nivel.id);
+                        return (
+                          <AccordionItem
+                            key={nivel.id}
+                            id={nivel.id}
+                            isOpen={niveisAbertos.has(nivel.id)}
+                            onToggle={toggleNivelAberto}
+                            trigger={
+                              <div className="flex items-center gap-2 text-left">
+                                <span
+                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                                  style={{ backgroundColor: getCorFromPeso(nivel.peso) }}
+                                >
+                                  {nivel.nome}
+                                </span>
+                                <span className="text-xs text-gray-500">Nível {nivel.peso}</span>
+                              </div>
+                            }
+                            content={
+                              <div className="p-4 space-y-2">
+                                <textarea
+                                  value={nivelEntry?.criterio ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      niveis: prev.niveis.map((n) =>
+                                        n.nivelId === nivel.id ? { ...n, criterio: val } : n
+                                      ),
+                                    }));
+                                  }}
+                                  placeholder="O que se espera de um colaborador neste nível para esta habilidade?"
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
+                                />
+                                {nivel.descricao && (
+                                  <p className="text-xs text-gray-400 leading-relaxed">
+                                    <span className="font-medium">Referência do nível:</span> {nivel.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            }
+                          />
+                        );
+                      })}
+                  </Accordion>
+                )}
+              </div>
             </div>
           )}
         </div>

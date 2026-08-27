@@ -103,7 +103,7 @@ export function MatrizProgressao({ cargos, habilidadesCargo }: MatrizProgressaoP
 
   // Função para abreviar nível
   const getNivelAbrev = (nivel: string | null) => {
-    if (!nivel) return '—';
+    if (!nivel) return '-';
 
     const abrev: Record<string, string> = {
       'Aprendiz': 'Apr',

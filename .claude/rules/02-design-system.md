@@ -273,6 +273,42 @@ Regras:
   Usar sempre cores concretas (`bg-white`, `text-gray-900`, `text-red-600`),
   como em todo o resto do design system
 
+## Truncamento de texto e tooltip
+
+### Componente único
+
+`src/app/components/ui/tooltip.tsx` — wrapper de `@radix-ui/react-tooltip`
+(`Tooltip` / `TooltipProvider` / `TooltipTrigger` / `TooltipContent`).
+Renderizado via **Portal** (não é cortado pelo `overflow-hidden` do container
+da tabela), `delayDuration={0}`, balão `bg-gray-900 text-white rounded-md
+px-3 py-1.5 text-xs max-w-56` com `Arrow`.
+
+**Nunca** usar o atributo `title` nativo, nem uma "bolha" `HelpCircle`/`group`
+feita à mão, nem qualquer outro tooltip — só este componente compartilhado.
+
+### Regra de truncamento em célula de tabela
+
+- **Texto longo** (Descrição, Critério, qualquer campo de texto corrido):
+  truncar em **2 linhas** com `line-clamp-2` + `break-words`, dentro de
+  `<TooltipTrigger asChild>`; o texto completo vai no `<TooltipContent>`.
+  `break-words` é obrigatório junto do `line-clamp` — sem ele, um token único
+  muito longo estoura a largura fixa da coluna mesmo com `table-layout: fixed`.
+- **Nome curto** (Nome da avaliação, Nome da habilidade, etc.): truncar em
+  **1 linha** com `truncate` + `<Tooltip>` com o valor completo, quando o
+  nome puder passar da largura da coluna.
+- Placeholder de célula vazia é sempre `-` (hífen simples), nunca `—`
+  (travessão) — ver "Regra permanente de texto" (nenhum travessão em
+  interface).
+
+### Exceções sem truncamento algum (decisões conscientes)
+
+- **`NiveisProficiencia.tsx`** — tabela de consulta com 5 linhas fixas; a
+  coluna Descrição mostra o texto inteiro (`block max-w-md`), sem
+  `line-clamp` nem Tooltip.
+- **`MatrizCell.tsx`** — o critério do nível na célula da Matriz usa
+  `line-clamp-3` sem Tooltip (decisão de produto documentada em
+  `04-regras-negocio.md` > "Conteúdo da célula preenchida").
+
 ## Filtros e Pills
 
 ### Classes

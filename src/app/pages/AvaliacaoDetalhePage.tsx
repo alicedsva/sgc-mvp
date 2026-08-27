@@ -14,6 +14,8 @@ import {
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import {
   calcularStatusEfetivo,
+  calcularPrazoParticipante,
+  formatData,
   getCarreiraEJornadaNomes,
   getPrazoPartes,
   getStatusAvaliacaoLabel,
@@ -21,6 +23,7 @@ import {
   getStatusParticipanteBadgeClass,
 } from '../utils/avaliacoes';
 import { LinhaMeta } from '../components/avaliacoes/LinhaMeta';
+import QuestionarioPreview from '../components/avaliacoes/QuestionarioPreview';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -375,6 +378,14 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
 
 function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   const navigate = useNavigate();
+  const [previewAberto, setPreviewAberto] = useState(false);
+  // Duas abas (Habilidades/Colaboradores) — mesma estrutura da
+  // AvaliacaoRascunhoView. Default 'colaboradores' (e não 'habilidades' como
+  // na Rascunho view): esta view sempre tem participantes reais, então abrir
+  // já na tabela de participantes preserva o que a pessoa vê hoje. Cada aba
+  // tem sua própria paginação — nunca compartilhar currentPage entre as duas.
+  const [abaAtiva, setAbaAtiva] = useState<'habilidades' | 'colaboradores'>('colaboradores');
+  const [currentPageHabilidades, setCurrentPageHabilidades] = useState(1);
   const [currentPageParticipantes, setCurrentPageParticipantes] = useState(1);
   const [participantesSortConfig, setParticipantesSortConfig] = useState<{
     column: 'nome' | 'cargo' | 'gerencia' | 'id';
@@ -424,6 +435,37 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
     participantesStart,
     participantesStart + participantesItemsPerPage
   );
+
+  // Habilidades da avaliação — .competencia lido direto (denormalizado, já é
+  // o padrão da listagem oficial de Habilidades em ContentArea.tsx). Mesma
+  // derivação da AvaliacaoRascunhoView.
+  const habilidadesDisplay = useMemo((): HabilidadeAvaliacaoDisplay[] => {
+    return (avaliacao.habilidades ?? [])
+      .map((id) => habilidadesData.find((h) => h.id === id))
+      .filter((h): h is (typeof habilidadesData)[number] => h != null)
+      .map((h) => ({ id: h.id, nome: h.nome, competencia: h.competencia }));
+  }, [avaliacao]);
+
+  const totalHabilidades = habilidadesDisplay.length;
+  const habilidadesItemsPerPage = 10;
+  const habilidadesStart = (currentPageHabilidades - 1) * habilidadesItemsPerPage;
+  const habilidadesPaginadas = habilidadesDisplay.slice(
+    habilidadesStart,
+    habilidadesStart + habilidadesItemsPerPage
+  );
+
+  const habilidadesColumns: Column[] = [
+    {
+      key: 'nome',
+      label: 'Nome',
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>,
+    },
+    {
+      key: 'competencia',
+      label: 'Competência',
+      render: (value) => <span className="text-gray-600">{value}</span>,
+    },
+  ];
 
   const sortHeader = (label: string, column: 'nome' | 'cargo' | 'gerencia') => (
     <button
@@ -499,16 +541,41 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   // 'Pendente' ou 'Expirada' na prática (ver calcularStatusEfetivo).
   const statusEfetivo = calcularStatusEfetivo(avaliacao, HOJE_SIMULADO);
 
+  // Prazo de resposta exibido no preview do QUESTIONÁRIO (visão do
+  // colaborador) — sempre uma DATA-LIMITE, mesmo espírito do
+  // prazoQuestionarioLabel do wizard (FormularioAvaliacao.tsx): reaproveita
+  // calcularPrazoParticipante (utils/avaliacoes.tsx), a mesma função que
+  // calcula o prazo individual real do colaborador. dataEntrada = a própria
+  // Data de Início da avaliação (base real: um colaborador presente no
+  // lançamento tem dataEntrada = periodoInicio). getPrazoPartes não serve
+  // aqui — devolve ReactNode[] (a linha "Inicia em / Termina em" do Admin),
+  // não a data-limite única que o preview espera como string.
+  const prazoQuestionarioParticipante = calcularPrazoParticipante(avaliacao, {
+    dataEntrada: avaliacao.periodoInicio,
+  });
+  const prazoQuestionarioLabel =
+    prazoQuestionarioParticipante != null ? formatData(prazoQuestionarioParticipante) : 'Sem prazo definido';
+
   return (
     <>
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 mb-2">
-          <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
-          <span className="text-sm text-gray-400 font-normal">{avaliacao.tipo}</span>
-          <StatusBadge label={getStatusAvaliacaoLabel(statusEfetivo)} colorClass={getStatusAvaliacaoBadgeClass(statusEfetivo)} />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">{avaliacao.nome}</h1>
+            <span className="text-sm text-gray-400 font-normal">{avaliacao.tipo}</span>
+            <StatusBadge label={getStatusAvaliacaoLabel(statusEfetivo)} colorClass={getStatusAvaliacaoBadgeClass(statusEfetivo)} />
+          </div>
+          <LinhaMeta partes={[...getPrazoPartes(avaliacao, statusEfetivo === 'Pendente'), getMetaOrigem(avaliacao)]} />
         </div>
-        <LinhaMeta partes={[...getPrazoPartes(avaliacao, statusEfetivo === 'Pendente'), getMetaOrigem(avaliacao)]} />
+        <button
+          type="button"
+          onClick={() => setPreviewAberto(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors flex-shrink-0"
+        >
+          <Eye className="w-4 h-4" />
+          Visualizar questionário
+        </button>
       </div>
 
       {/* Cards de resumo */}
@@ -542,21 +609,78 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
         />
       </div>
 
-      {/* Tabela de participantes */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <Table
-          columns={participantesColumns}
-          data={participantesPaginados}
-          actions={participantesActions}
-          pagination={{
-            currentPage: currentPageParticipantes,
-            itemsPerPage: participantesItemsPerPage,
-            totalItems: total,
-            onPageChange: setCurrentPageParticipantes,
-            onItemsPerPageChange: () => {},
-          }}
-        />
+      {/* Tabs de conteúdo Habilidades/Colaboradores — mesma estrutura das
+          abas da AvaliacaoRascunhoView e padrão "Tabs de conteúdo" de
+          03-navegacao.md: barra própria acima do card, ativa com border-b-2
+          brand, inativa transparente. */}
+      <div className="border-b border-gray-200 mb-6">
+        <div className="flex gap-4 overflow-x-auto">
+          {([
+            { id: 'habilidades' as const, label: 'Habilidades' },
+            { id: 'colaboradores' as const, label: 'Colaboradores' },
+          ]).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setAbaAtiva(tab.id)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                abaAtiva === tab.id
+                  ? 'border-[var(--brand-600)] text-[var(--brand-600)]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {abaAtiva === 'habilidades' ? (
+          totalHabilidades === 0 ? (
+            <EmptyState
+              icon={<ListChecks className="w-8 h-8" />}
+              title="Nenhuma habilidade selecionada"
+              description="Esta avaliação não tem habilidades vinculadas."
+            />
+          ) : (
+            <Table
+              columns={habilidadesColumns}
+              data={habilidadesPaginadas}
+              pagination={{
+                currentPage: currentPageHabilidades,
+                itemsPerPage: habilidadesItemsPerPage,
+                totalItems: totalHabilidades,
+                onPageChange: setCurrentPageHabilidades,
+                onItemsPerPageChange: () => {},
+              }}
+            />
+          )
+        ) : (
+          <Table
+            columns={participantesColumns}
+            data={participantesPaginados}
+            actions={participantesActions}
+            pagination={{
+              currentPage: currentPageParticipantes,
+              itemsPerPage: participantesItemsPerPage,
+              totalItems: total,
+              onPageChange: setCurrentPageParticipantes,
+              onItemsPerPageChange: () => {},
+            }}
+          />
+        )}
+      </div>
+
+      {previewAberto && (
+        <QuestionarioPreview
+          nome={avaliacao.nome}
+          tipo="Autoavaliação"
+          habilidadesIds={avaliacao.habilidades ?? []}
+          prazoLabel={prazoQuestionarioLabel}
+          onClose={() => setPreviewAberto(false)}
+        />
+      )}
     </>
   );
 }

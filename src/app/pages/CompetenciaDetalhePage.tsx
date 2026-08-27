@@ -191,14 +191,14 @@ export default function CompetenciaDetalhePage() {
                       // revelar o "gabarito" antes da autoavaliação (mesma regra já
                       // aplicada na antiga tabela "Cobertura por competência" desta
                       // tela, decisão de produto de Alice).
-                      row.status === 'sem' ? <span className="text-gray-400">—</span> : row.nivelEsperado,
+                      row.status === 'sem' ? <span className="text-gray-400">-</span> : row.nivelEsperado,
                   },
                   {
                     key: 'peso',
                     label: 'Peso',
                     render: (_value, row: (typeof habilidadesFiltradas)[number]) =>
                       row.status === 'sem' ? (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-400">-</span>
                       ) : (
                         <PesoBars pesoAtual={row.pesoAtual} pesoEsperado={row.pesoEsperado} />
                       ),

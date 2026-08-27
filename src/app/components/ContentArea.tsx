@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useHabilidades } from '../context/HabilidadesContext';
+import { useHabilidades, type Habilidade } from '../context/HabilidadesContext';
 import { useCompetencias } from '../context/CompetenciasContext';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
@@ -22,7 +22,7 @@ import { MinhasAvaliacoes } from './MinhasAvaliacoes';
 import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy } from 'lucide-react';
+import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy, Power } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
@@ -660,7 +660,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'nome',
             label: 'Nome da Habilidade',
-            width: '20%',
+            width: '16%',
             render: (value) => (
               <span className="text-sm text-gray-900">{value}</span>
             ),
@@ -679,9 +679,30 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             ),
           },
           {
+            key: 'descricao',
+            label: 'Descrição',
+            width: '25%',
+            render: (value) => {
+              const descricao = value as string;
+              if (!descricao) {
+                return <span className="text-gray-400 text-sm">-</span>;
+              }
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                      {descricao}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>{descricao}</TooltipContent>
+                </Tooltip>
+              );
+            },
+          },
+          {
             key: 'competencia',
             label: 'Competência',
-            width: '18%',
+            width: '15%',
             renderHeader: () => (
               <button
                 onClick={() => handleHabilidadesSort('competencia')}
@@ -699,13 +720,13 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'niveis',
             label: 'Níveis',
-            width: '25%',
+            width: '22%',
             render: (value) => {
               const niveis = value as Array<{ nivelId: string; criterio: string }> | undefined;
-              if (!niveis || niveis.length === 0) return <span className="text-gray-400 text-sm">—</span>;
+              if (!niveis || niveis.length === 0) return <span className="text-gray-400 text-sm">-</span>;
               const niveisMap = Object.fromEntries(niveisDefaultData.map((n) => [n.id, n]));
               const nomes = niveis.map(({ nivelId }) => niveisMap[nivelId]?.nome).filter(Boolean).join(', ');
-              return <span className="text-sm text-gray-700">{nomes || <span className="text-gray-400">—</span>}</span>;
+              return <span className="text-sm text-gray-700">{nomes || <span className="text-gray-400">-</span>}</span>;
             },
           },
           {
@@ -727,7 +748,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'status',
             label: 'Status',
-            width: '12%',
+            width: '10%',
             renderHeader: () => (
               <button
                 onClick={() => handleHabilidadesSort('status')}
@@ -755,6 +776,47 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           },
         ];
 
+        // Nome da cópia: sufixo " (N)" a partir de (2), igual ao padrão de
+        // Avaliações (gerarNomeDuplicado). Diferença: a checagem de colisão é
+        // contra a lista VIVA do Context (habilidadesData vem de
+        // useHabilidades()), não contra um array estático do mock — então
+        // cópias criadas na mesma sessão também contam.
+        const gerarNomeDuplicadoHabilidade = (nomeOriginal: string): string => {
+          const nomesExistentes = new Set(habilidadesData.map(h => h.nome));
+          let contador = 2;
+          let candidato = `${nomeOriginal} (${contador})`;
+          while (nomesExistentes.has(candidato)) {
+            contador++;
+            candidato = `${nomeOriginal} (${contador})`;
+          }
+          return candidato;
+        };
+
+        // Duplicar (item 3, sempre disponível): cria uma habilidade nova
+        // copiando nome (com sufixo incrementado), descrição, competência,
+        // tipo e os critérios por nível (cada { nivelId, criterio } clonado —
+        // nunca a mesma referência da original). status: 'Ativa', igual à
+        // original. Depois cai direto no drawer de edição já preenchido
+        // (mesmo espírito de "nunca fica só na listagem" de Avaliações) —
+        // como não há rota /habilidades/:id/editar, é setSelectedRow +
+        // setIsDrawerOpen, não navigate.
+        const handleDuplicarHabilidade = (row: Habilidade) => {
+          const nomeDuplicado = gerarNomeDuplicadoHabilidade(row.nome);
+          const dadosCopia: Omit<Habilidade, 'id'> = {
+            nome: nomeDuplicado,
+            descricao: row.descricao,
+            competencia: row.competencia,
+            competenciaId: row.competenciaId,
+            tipo: row.tipo,
+            status: 'Ativa',
+            niveis: row.niveis.map(n => ({ ...n })),
+          };
+          const novoId = addHabilidade(dadosCopia);
+          toast.success(`Habilidade duplicada: "${nomeDuplicado}"`);
+          setSelectedRow({ id: novoId, ...dadosCopia });
+          setIsDrawerOpen(true);
+        };
+
         const habilidadesActions: InlineAction[] = [
           {
             label: 'Visualizar',
@@ -770,22 +832,33 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             },
           },
           {
-            label: row => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
-            icon: (row) => (
-              <ToggleSwitch
-                checked={row.status === 'Ativa'}
-                onChange={() => {}}
-              />
-            ),
-            variant: 'toggle',
+            label: 'Duplicar',
+            icon: <Copy className="w-4 h-4" />,
+            onClick: (row) => handleDuplicarHabilidade(row as Habilidade),
+          },
+          // Toggle Ativar/Desativar migrado de variant:'toggle' + <ToggleSwitch>
+          // para item de menu normal, espelhando "Encerrar" de Avaliações:
+          // ação destrutiva (Desativar) só aparece quando faz sentido
+          // (status 'Ativa') e é a única em vermelho; a reativação é um item
+          // neutro. onClick de cada ramo é idêntico ao que o antigo toggle
+          // fazia (modal de confirmação ao desativar / reativação direta).
+          {
+            label: 'Desativar',
+            icon: <Power className="w-4 h-4" />,
+            variant: 'danger',
+            show: (row) => row.status === 'Ativa',
             onClick: (row) => {
-              if (row.status === 'Ativa') {
-                setSelectedRow(row);
-                setIsModalOpen(true);
-              } else {
-                updateHabilidade(row.id, { status: 'Ativa' });
-                toast.success(`Habilidade "${row.nome}" reativada com sucesso!`);
-              }
+              setSelectedRow(row);
+              setIsModalOpen(true);
+            },
+          },
+          {
+            label: 'Ativar',
+            icon: <Power className="w-4 h-4" />,
+            show: (row) => row.status !== 'Ativa',
+            onClick: (row) => {
+              updateHabilidade(row.id, { status: 'Ativa' });
+              toast.success(`Habilidade "${row.nome}" reativada com sucesso!`);
             },
           },
         ];

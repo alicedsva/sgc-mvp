@@ -313,7 +313,7 @@ export default function ParticipanteResultadoPage() {
                         row.nivelEsperadoLabel
                       ) : (
                         <span className="text-gray-500 flex items-center gap-1">
-                          <span>—</span>
+                          <span>-</span>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Info className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -334,7 +334,7 @@ export default function ParticipanteResultadoPage() {
                       row.info.tipo === 'configurado' ? (
                         <PesoBars pesoAtual={row.pesoAtual} pesoEsperado={row.pesoEsperado!} />
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-400">-</span>
                       ),
                   },
                   {

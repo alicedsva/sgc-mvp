@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { getCorFromPeso } from '../data/mockData';
 import type { Nivel } from '../../data/schema';
 
@@ -8,27 +7,7 @@ interface NiveisProficienciaProps {
 }
 
 export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
-  const [sortConfig, setSortConfig] = useState<{ column: 'nome' | 'peso'; direction: 'asc' | 'desc' }>({
-    column: 'peso',
-    direction: 'asc',
-  });
-
-  const handleSort = (column: 'nome' | 'peso') => {
-    setSortConfig(prev =>
-      prev.column === column
-        ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { column, direction: 'asc' }
-    );
-  };
-
-  const niveisOrdenados = [...niveisData].sort((a, b) => {
-    const dir = sortConfig.direction === 'asc' ? 1 : -1;
-    if (sortConfig.column === 'peso') {
-      if (a.peso !== b.peso) return (a.peso - b.peso) * dir;
-      return a.nome.localeCompare(b.nome);
-    }
-    return a.nome.localeCompare(b.nome) * dir;
-  });
+  const niveisOrdenados = [...niveisData].sort((a, b) => a.peso - b.peso);
 
   return (
     <div className="space-y-6">
@@ -46,37 +25,13 @@ export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
-                <button
-                  onClick={() => handleSort('nome')}
-                  className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-                >
-                  Nome do Nível
-                  {sortConfig.column === 'nome' ? (
-                    sortConfig.direction === 'asc'
-                      ? <ArrowUp className="w-3 h-3" />
-                      : <ArrowDown className="w-3 h-3" />
-                  ) : (
-                    <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-                  )}
-                </button>
+                Nome do Nível
               </th>
               <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Descrição
               </th>
-              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                <button
-                  onClick={() => handleSort('peso')}
-                  className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-                >
-                  Progressão
-                  {sortConfig.column === 'peso' ? (
-                    sortConfig.direction === 'asc'
-                      ? <ArrowUp className="w-3 h-3" />
-                      : <ArrowDown className="w-3 h-3" />
-                  ) : (
-                    <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-                  )}
-                </button>
+              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-36">
+                Peso do nível
               </th>
               <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-40 md:w-48">
                 Habilidades Vinculadas
@@ -99,7 +54,7 @@ export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
                 {/* Descrição — texto completo, sem truncamento (tabela curta, 5 linhas fixas) */}
                 <td className="px-6 py-4 align-middle">
                   <span className="text-sm text-gray-700 block max-w-md">
-                    {nivel.descricao || <span className="text-gray-400">—</span>}
+                    {nivel.descricao || <span className="text-gray-400">-</span>}
                   </span>
                 </td>
 
@@ -118,7 +73,7 @@ export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
                       </span>
                     </span>
                   ) : (
-                    <span className="text-sm text-gray-400">—</span>
+                    <span className="text-sm text-gray-400">-</span>
                   )}
                 </td>
               </tr>

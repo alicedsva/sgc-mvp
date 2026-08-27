@@ -237,14 +237,32 @@ fixa (sem CRUD pelo RH).
 
 | Campo | Significado |
 |---|---|
-| `id` | Identificador único |
+| `id` | Identificador único — **string arbitrária, NÃO indica o peso** (ver tabela abaixo) |
 | `nome` | Nome do nível (Aprendiz, Iniciante, Intermediário, Avançado ou Especialista) |
 | `descricao` | Descrição do que o nível representa |
 | `peso` | Peso numérico 1–5, usado para comparar posição na progressão |
 | `emUso` | Contador de quantas vezes o nível é usado — o valor bruto gravado no mock é decorativo; a exibição real sempre recalcula em runtime (`ContentArea.tsx`, `niveisComContagem`) a partir de `habilidadesData`, nunca lê este campo direto |
 
+**O `id` do registro NÃO indica o peso — sempre usar o campo `peso` para
+ordenação/comparação, nunca inferir por `id`.** Mapeamento real hoje
+(`niveisDefaultData` em `src/app/data/mockData.ts`):
+
+| `id` | `peso` | `nome` |
+|---|---|---|
+| `'1'` | 1 | Aprendiz |
+| `'2'` | 2 | Iniciante |
+| `'5'` | 3 | Intermediário |
+| `'3'` | 4 | Avançado |
+| `'4'` | 5 | Especialista |
+
+Ou seja: `id` `'3'`, `'4'` e `'5'` estão "trocados" em relação ao peso, por
+razões históricas (a consolidação das duas escalas antigas reaproveitou os
+ids existentes). Para comparar níveis entre si use `peso` diretamente, ou
+`getPesoFromNome(nome)` quando só tiver o nome.
+
 A tela "Níveis de Habilidades" é consulta pura — sem busca, filtros, criação
-ou edição; só lista os 5 registros fixos.
+ou edição; só lista os 5 registros fixos, sempre ordenados por `peso`
+ascendente (sem ordenação clicável).
 
 **Usado em:** Matriz, `HabilidadeDetalhePage`, `DesignSystemPage`, cálculo de cobertura, cores de badge (`getCorFromPeso`).
 

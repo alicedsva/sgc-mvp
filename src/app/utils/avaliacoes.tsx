@@ -424,7 +424,7 @@ export function getProximaAvaliacaoInfo(
   // vencem), mas esses ficam de fora do reduce de "próximo a vencer" logo
   // abaixo — sem prazo, não fazem sentido como candidato a "próxima
   // avaliação encerra em X dias". Se só houver participações 'indefinido'
-  // em aberto, diasAteVencimento fica null (exibido como "—").
+  // em aberto, diasAteVencimento fica null (exibido como "-").
   const emAberto = participacoes.filter(
     (pc) =>
       (pc.participante.status === 'Não iniciada' || pc.participante.status === 'Em andamento') &&
@@ -439,6 +439,6 @@ export function getProximaAvaliacaoInfo(
     : null;
   const diasLabel = diasAteVencimento !== null
     ? `${diasAteVencimento} ${diasAteVencimento === 1 ? 'dia' : 'dias'}`
-    : '—';
+    : '-';
   return { diasAteVencimento, diasLabel, avaliacaoId: proximaVencimento?.avaliacao.id ?? null };
 }

@@ -3456,7 +3456,7 @@ function SecaoFormularios() {
             <tbody className="divide-y divide-gray-100">
               {[
                 { el: 'Label', classes: 'text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block', obs: '* para obrigatório' },
-                { el: 'Input normal', classes: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent', obs: '—' },
+                { el: 'Input normal', classes: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent', obs: '-' },
                 { el: 'Input erro', classes: '+ border-red-300 focus:ring-red-500', obs: 'Substituir border-gray-300' },
                 { el: 'Textarea', classes: '+ resize-none', obs: 'rows=4 padrão' },
                 { el: 'Contador de chars', classes: 'text-xs text-gray-400 mt-1 text-right', obs: 'Quando há limite' },
@@ -5206,7 +5206,7 @@ function SecaoMinhasAvaliacoes() {
               {[
                 'Reusa ListingPage.tsx sem título/subtítulo próprios (title/subtitle omitidos) — o <h2> "Histórico de avaliações" fica fora do componente, mesmo padrão de título solto + container separado já usado no grid "Avaliações em aberto".',
                 'Sem primaryAction — colaborador não cria avaliação, então não há FAB nem botão principal na toolbar.',
-                'Colunas: Avaliação realizada, Conclusão (data ou "—" quando Expirada sem resposta), Habilidades (contagem), Status (badge).',
+                'Colunas: Avaliação realizada, Conclusão (data ou "-" quando Expirada sem resposta), Habilidades (contagem), Status (badge).',
                 'Ação por linha: ícone Eye isolado, visível só quando temResultado (status Concluída) — Expirada sem resposta fica sem ação, nunca desabilitada (mesmo padrão de outras tabelas do sistema que ocultam via show em vez de disabled).',
                 'Busca + filtro de status (Todas/Concluída/Expirada) + paginação: mesmo padrão de Table.tsx/ListingPage já usado pelo Admin. Resetar para página 1 ao aplicar busca ou filtro.',
               ].map((r, i) => (
@@ -5232,7 +5232,7 @@ function SecaoMinhasAvaliacoes() {
                 <tbody className="divide-y divide-gray-200">
                   {[
                     { nome: 'Avaliação Semestral 2025.2', conclusao: '15/01/2026', habilidades: 10, status: 'Concluída' as const },
-                    { nome: 'Competências Técnicas Q4', conclusao: '—', habilidades: 6, status: 'Expirada' as const },
+                    { nome: 'Competências Técnicas Q4', conclusao: '-', habilidades: 6, status: 'Expirada' as const },
                   ].map((row) => (
                     <tr key={row.nome} className="hover:bg-[rgba(0,159,194,0.06)] transition-colors">
                       <td className="px-4 md:px-6 py-3 text-xs md:text-sm text-gray-900">{row.nome}</td>
@@ -6359,7 +6359,7 @@ function SecaoMatrizHabilidadesAdmin() {
                     <td className="px-4 py-3 text-sm text-gray-900">Desmarcado (não estava)</td>
                     <td className="px-4 py-3 text-xs text-gray-500">hover:bg-gray-50</td>
                     <td className="px-4 py-3 text-xs text-gray-500">border-gray-300 vazio</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">—</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">-</td>
                   </tr>
                   <tr className="bg-blue-50">
                     <td className="px-4 py-3 text-sm text-gray-900">Marcado para adicionar</td>

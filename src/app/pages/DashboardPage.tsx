@@ -874,7 +874,7 @@ export default function DashboardPage() {
                             {row.habilidadesCriticas}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-400">—</span>
+                          <span className="text-sm text-gray-400">-</span>
                         )}
                       </td>
                     </tr>

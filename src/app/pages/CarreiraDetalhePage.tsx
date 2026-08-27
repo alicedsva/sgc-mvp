@@ -230,7 +230,7 @@ export default function CarreiraDetalhePage() {
       ),
       render: (_, row) => {
         const total = cargos.filter(c => c.jornadaId === row.id).length;
-        if (total === 0) return <span className="text-sm text-gray-500">—</span>;
+        if (total === 0) return <span className="text-sm text-gray-500">-</span>;
         return (
           <span className="text-sm text-gray-900">
             {total} {total === 1 ? 'cargo' : 'cargos'}

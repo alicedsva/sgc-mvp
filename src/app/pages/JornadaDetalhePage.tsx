@@ -433,7 +433,7 @@ function JornadaDetalheContent() {
       width: '25%',
       render: (_value, row) => {
         const cargo = cargos.find(c => c.id === row.cargoId);
-        return <span className="text-sm text-gray-500">{cargo?.cargoRM ?? '—'}</span>;
+        return <span className="text-sm text-gray-500">{cargo?.cargoRM ?? '-'}</span>;
       },
     },
     {

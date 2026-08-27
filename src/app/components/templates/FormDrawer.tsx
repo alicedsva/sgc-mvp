@@ -91,7 +91,7 @@ export function FormDrawer({
                 }`}
               >
                 <Info
-                  className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
                     alertBanner.variant === 'info'
                       ? 'text-[var(--brand-600)]'
                       : alertBanner.variant === 'warning'
@@ -105,7 +105,7 @@ export function FormDrawer({
                   <h3
                     className={`text-sm font-medium mb-1 ${
                       alertBanner.variant === 'info'
-                        ? 'text-blue-900'
+                        ? 'text-[var(--brand-700)]'
                         : alertBanner.variant === 'warning'
                         ? 'text-yellow-900'
                         : alertBanner.variant === 'success'
@@ -118,7 +118,7 @@ export function FormDrawer({
                   <p
                     className={`text-sm leading-relaxed ${
                       alertBanner.variant === 'info'
-                        ? 'text-blue-700'
+                        ? 'text-gray-700'
                         : alertBanner.variant === 'warning'
                         ? 'text-yellow-700'
                         : alertBanner.variant === 'success'

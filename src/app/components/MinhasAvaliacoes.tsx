@@ -183,7 +183,7 @@ export function MinhasAvaliacoes() {
 
   // Histórico (Concluídas + Expiradas) — Conclusão é sempre a dataResposta
   // mais recente do participante, nunca periodoFim da avaliação. Expirada
-  // nunca tem resposta (respostas sempre []), então fica "—". Status
+  // nunca tem resposta (respostas sempre []), então fica "-". Status
   // "Expirada" aqui é sempre o status EFETIVO (calculado), não o campo bruto
   // — cobre tanto o gravado no mock quanto o vencido por prazo.
   function toHistoricoRow(
@@ -235,7 +235,7 @@ export function MinhasAvaliacoes() {
       key: 'conclusaoData',
       label: 'Conclusão',
       width: '15%',
-      render: (value: string | null) => <span>{value ? formatData(value) : '—'}</span>,
+      render: (value: string | null) => <span>{value ? formatData(value) : '-'}</span>,
     },
     {
       key: 'totalHabilidades',

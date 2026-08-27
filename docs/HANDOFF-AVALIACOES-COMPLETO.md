@@ -2,9 +2,20 @@
 
 > Este fluxo já foi implementado de forma diferente da especificação abaixo pelo menos uma vez. Siga exatamente o que está aqui, mesmo que pareça mais simples, mais específico, ou diferente do que pareceria natural construir do zero. Não invente comportamento, não simplifique regra, não reorganize estrutura por conta própria.
 
-Este documento substitui, de forma consolidada e atualizada, o conteúdo de `docs/HANDOFF-CADASTRO-AVALIACOES.md`, `docs/HANDOFF-LISTAGEM-AVALIACOES.md`, `docs/AVALIACOES-INFO-CARDS-MODAIS-ALERTAS.md` e as rodadas de resposta (`docs/RESPOSTA-HANDOFF-CADASTRO-AVALIACOES.md`, `docs/RESPOSTA-HANDOFF-CADASTRO-AVALIACOES-RODADA-2.md`). Foi escrito lendo o código real em 2026-08-26, depois do redesign da etapa Revisão (múltiplos containers, tipografia própria). Onde o código antigo divergir deste documento, **este documento vale**.
+Este documento substitui, de forma consolidada e atualizada, o conteúdo de `docs/HANDOFF-CADASTRO-AVALIACOES.md`, `docs/HANDOFF-LISTAGEM-AVALIACOES.md`, `docs/AVALIACOES-INFO-CARDS-MODAIS-ALERTAS.md` e as rodadas de resposta (`docs/RESPOSTA-HANDOFF-CADASTRO-AVALIACOES.md`, `docs/RESPOSTA-HANDOFF-CADASTRO-AVALIACOES-RODADA-2.md`). Foi reescrito lendo o código real em **2026-08-27** (auditoria direta, sem apoio de resumo/histórico), depois de: o redesign da etapa Revisão (múltiplos containers, tipografia própria); a chegada do botão "Visualizar questionário" + abas Habilidades/Colaboradores na tela de detalhe de avaliação materializada; e o modelo de prazo final (Término + Prazo em dias podendo coexistir). Onde o código antigo, ou qualquer versão anterior deste handoff, divergir deste documento, **este documento vale**.
 
 Todo caminho de arquivo abaixo é relativo à raiz do repositório.
+
+---
+
+## 0. O que mudou desde a versão de 2026-08-26 (changelog de auditoria)
+
+Todos os itens abaixo foram **conferidos no código atual** — estão implementados e em produção, não são "aprovado, pendente de implementação".
+
+1. **Tela de detalhe — avaliação materializada (`AvaliacaoDetalheView`)**: ganhou um botão **"Visualizar questionário"** (ícone `Eye`, botão secundário/outline brand) no canto superior direito do header, e as tabelas de Participantes foram substituídas por **duas abas** ("Habilidades" / "Colaboradores", aba default **`colaboradores`**), no mesmo padrão de abas que a `AvaliacaoRascunhoView` já tinha (só que lá a default é `habilidades`). Ver seção **g**.
+2. **Modelo de prazo — combinações**: a tabela real é de **8 combinações** (3 campos binários = 2³). O comentário de código que dizia "9 casos" já foi corrigido para "8 casos" (`FormularioAvaliacao.tsx`, linha 50). O modo `datas_fixas_com_prazo` (Término + Prazo em dias juntos) **está implementado** em `montarCamposPrazo`, `calcularStatusEfetivo`, `calcularPrazoParticipante` e `formatPeriodoAvaliacao`. Ver seção **d**.
+3. **Listagem**: menu de ações com **4 entradas** (`Visualizar` / `Editar` / `Encerrar` / `Duplicar`) — pela regra `actions.length >= 4` de `02-design-system.md`, renderiza como menu de contexto (`MoreVertical` + `DropdownMenu`), não mais ícones soltos. Ver seção **f**.
+4. **Etapa Revisão do wizard**: containers separados por etapa real do caminho, ordem/títulos condicionais a `formData.caminho`, participantes agrupados pela **gerência real** de cada colaborador, tipografia própria (exceção documentada em `02-design-system.md`). Ver seção **e**.
 
 ---
 
@@ -407,13 +418,69 @@ Em `AvaliacaoRascunhoView`: `participantes` é sempre `[]` (a seleção do wizar
 
 `getMetaOrigem(avaliacao)` (função local desta página): cruza `origemJornadaId` → `jornadasData`/`carreirasData` (FK real, nunca `Jornada.carreira` denormalizado) e retorna `` `Carreira: {carreira} · Jornada: {jornada}` `` quando resolve. Se não resolver (FK órfã ou caminho público): retorna `avaliacao.publicoLabel` **somente se** ele começar com `"Jornada:"`; caso contrário retorna `null` (é filtrado por `LinhaMeta`, que já descarta partes falsy). Ou seja: **no caminho "Por Público-alvo", `getMetaOrigem` nunca adiciona nada à LinhaMeta** — a linha mostra só as partes de prazo.
 
-### Tabs de conteúdo do Rascunho
+### Abas de conteúdo — as duas views têm, com defaults diferentes
 
-`AvaliacaoRascunhoView` tem duas abas próprias (`abaAtiva`, padrão "Tabs de conteúdo"): **"Habilidades"** e **"Colaboradores"**, cada uma com paginação independente (`currentPageHabilidades`/`currentPageParticipantes`, nunca compartilhada). Banner amarelo fixo acima: **"Prévia:"** "esta avaliação ainda não foi ativada. Você está visualizando como ela será apresentada aos colaboradores." (ícone `Eye`).
+Tanto `AvaliacaoRascunhoView` quanto `AvaliacaoDetalheView` renderizam, no lugar de uma tabela única, **uma barra de abas** ("Tabs de conteúdo" de `03-navegacao.md`: `border-b border-gray-200 mb-6`; item ativo `border-b-2 border-[var(--brand-600)] text-[var(--brand-600)]`, inativo `border-b-2 border-transparent text-gray-600 hover:text-gray-900`; cada botão `px-4 py-3 text-sm font-medium whitespace-nowrap`) com duas abas: **"Habilidades"** e **"Colaboradores"**.
 
-Aba Habilidades: colunas Nome/Competência, sem ordenação. Aba Colaboradores: colunas Nome/Cargo (sem Gerência/Status — o status sempre seria "Não iniciada" pra todo mundo), com ordenação por Nome/Cargo.
+| | `AvaliacaoRascunhoView` | `AvaliacaoDetalheView` (Ativa / Agendada / Encerrada / Expirada) |
+|---|---|---|
+| `abaAtiva` default | **`'habilidades'`** | **`'colaboradores'`** (sempre há participantes reais; abrir na tabela deles preserva o que já se via) |
+| Paginação | `currentPageHabilidades` e `currentPageParticipantes` — **estados separados**, nunca compartilhados | idem |
+| `avaliacao.participantes` | sempre `[]` (a seleção do wizard não persiste até a ativação) | lista real |
 
-### Tabela de participantes (`AvaliacaoDetalheView`)
+**Aba Habilidades** (idêntica nas duas views): container `bg-white rounded-lg border border-gray-200 overflow-hidden`; `Table` com colunas **Nome** (`font-medium text-gray-900`) e **Competência** (`text-gray-600`), **sem ordenação**, 10 itens/página. `competencia` lida direto de `habilidadesData` (denormalizada, mesmo padrão da listagem oficial). Fonte: `avaliacao.habilidades ?? []` → `habilidadesData.find`.
+Empty state (`EmptyState`, ícone `ListChecks w-8 h-8`), título **"Nenhuma habilidade selecionada"** nas duas; descrição:
+- Rascunho: **"Esta avaliação ainda está em rascunho e não tem habilidades definidas. Edite o rascunho para escolher as habilidades na etapa Habilidades."**
+- Materializada: **"Esta avaliação não tem habilidades vinculadas."**
+
+**Aba Colaboradores**:
+- Rascunho: colunas **Nome** e **Cargo** apenas (sem Gerência/Status — seria "Não iniciada" para todo mundo), ordenáveis por Nome/Cargo, sem `actions`. Empty state (ícone `Users w-8 h-8`): título **"Nenhum colaborador selecionado"**, descrição **"Esta avaliação ainda está em rascunho e não tem participantes definidos. Edite o rascunho para escolher o público-alvo na etapa Colaboradores."**
+- Materializada: é a tabela de participantes descrita abaixo (com a ação Eye).
+
+### Banner de prévia (só `AvaliacaoRascunhoView`)
+
+Banner amarelo fixo acima dos cards (`flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 mb-6`, ícone `Eye w-4 h-4 text-yellow-600 mt-0.5`): **"Prévia:"** (em `font-semibold`) seguido de **" esta avaliação ainda não foi ativada. Você está visualizando como ela será apresentada aos colaboradores."**
+
+### Botão "Visualizar questionário" (só `AvaliacaoDetalheView`, ou seja Ativa / Agendada / Encerrada / Expirada)
+
+No header, à direita do bloco H1/badge/`LinhaMeta` (o wrapper do header vira `flex items-start justify-between gap-4`):
+
+```
+inline-flex items-center gap-2 px-4 py-2
+border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium
+rounded-lg hover:bg-[var(--brand-50)] transition-colors flex-shrink-0
+ícone: Eye w-4 h-4   ·   texto: "Visualizar questionário"
+```
+
+`onClick` → `setPreviewAberto(true)`, que monta `QuestionarioPreview` (`src/app/components/avaliacoes/QuestionarioPreview.tsx`, o **mesmo componente** usado pela etapa Revisão do wizard). Props:
+
+| Prop | Valor em `AvaliacaoDetalheView` | Valor na etapa Revisão do wizard |
+|---|---|---|
+| `nome` | `avaliacao.nome` | `formData.nome` (`|| 'Nova Avaliação'` no preview) |
+| `tipo` | `"Autoavaliação"` (literal fixo) | `"Autoavaliação"` |
+| `habilidadesIds` | `avaliacao.habilidades ?? []` | `formData.habilidades` |
+| `prazoLabel` | data-limite formatada (ver abaixo) | data-limite **simulada** |
+| `prazoSimulado` | **nunca passado** (`undefined`) → sem ícone de "simulação" | `true` quando o prazo foi calculado com data de entrada hipotética (`HOJE_ISO`), por não haver Data de Início nem colaborador real ainda |
+| `onClose` | `() => setPreviewAberto(false)` | fecha o overlay, não perde nada do formulário |
+
+**Cálculo de `prazoLabel` na tela de detalhe** (difere do wizard):
+```ts
+const prazoQuestionarioParticipante = calcularPrazoParticipante(avaliacao, {
+  dataEntrada: avaliacao.periodoInicio,   // base real: quem entra no lançamento tem dataEntrada = periodoInicio
+});
+const prazoQuestionarioLabel = prazoQuestionarioParticipante != null
+  ? formatData(prazoQuestionarioParticipante)   // "DD/MM/AAAA"
+  : 'Sem prazo definido';                        // modoPrazo 'indefinido'
+```
+Usa `calcularPrazoParticipante` + `formatData` (ambos `utils/avaliacoes.tsx`) — a **data-limite única** que o preview espera como string, nunca `getPrazoPartes` (que devolve `ReactNode[]`, a linha "Inicia em / Termina em" do Admin). Como a avaliação já existe e tem `periodoInicio` real, `prazoSimulado` **não** é passado; o wizard passa `true` porque simula a data com `dataEntrada = HOJE_ISO`, e aí o preview mostra um ícone `Info` com tooltip: "Simulação considerando que o colaborador entraria hoje. A data real vai variar conforme a data de entrada de cada participante."
+
+`QuestionarioPreview` é um **overlay fullscreen** (`fixed inset-0 z-[300] bg-gray-50 flex flex-col`), com barra de aviso amarela fixa no topo (**"Modo de visualização. Nenhuma resposta será salva."**, ícone `Eye`, botão **"Fechar"** com ícone `X`; `Esc` também fecha), passo `'instrucoes'` (card `max-w-xl bg-white border border-gray-200 rounded-lg`, badge do tipo, título, `{N} habilidades`, `Prazo de resposta: {prazoLabel}`, texto **"Como funciona a autoavaliação:"** + lista ordenada de 4 itens, botões **"Começar"** / **"Fechar"**) e passo `'perguntas'` (uma habilidade por vez via `NiveisHabilidadeCards` em modo leitura — sem `onSelecionar`, sem seleção — + `PainelLateralCompetencias` sem `restringirOrdem`, toda habilidade acessível). **Nunca escreve no `AvaliacoesContext`.** Os 4 itens da lista de instruções (copy literal):
+1. "Para cada habilidade, o colaborador escolhe a descrição que melhor representa seu conhecimento atual."
+2. "Não conhece a habilidade? O colaborador marca \"Sem conhecimento\" em vez de chutar uma resposta."
+3. "A resposta é comparada ao nível esperado do cargo atual e ajuda a identificar oportunidades de desenvolvimento. Não garante promoção."
+4. "O colaborador pode sair a qualquer momento. As respostas ficam salvas."
+
+### Tabela de participantes (`AvaliacaoDetalheView`, aba Colaboradores)
 
 Colunas: Nome, Cargo, Gerência (as três ordenáveis), Status (badge, não ordenável).
 
@@ -520,6 +587,20 @@ Reconstrua equivalentes destes — nunca improvise um substituto com comportamen
 ## l. Regra permanente de texto
 
 **Nunca usar travessão (—) em nenhum texto de interface.** Usar vírgula, ponto, ou reformular a frase.
+
+---
+
+## m. Pendências conhecidas (auditadas no código atual — 2026-08-27)
+
+Limitações/decisões conscientes que o dev deve conhecer antes de reconstruir com backend real:
+
+1. **`gerenciasComAutoInclusao` é decorativo.** O toggle "Incluir automaticamente novos colaboradores desta gerência" (etapa Colaboradores) grava o nome da gerência no campo, mas **nenhum mecanismo do sistema reage a ele** — não há fluxo de criar/editar colaborador que dispare inclusão automática. Registra intenção; o efeito real depende de integração futura com o RM. Comentário idêntico em `schema.ts` e `SeletorGerenciaGranular.tsx`.
+2. **`EditarAvaliacaoModal` é um modal centralizado, não um drawer.** O estado que o controla se chama `isDrawerOpen`/`setIsDrawerOpen` em `ContentArea.tsx` (compartilhado com 3 seções que usam `FormDrawer` de verdade), mas o componente renderizado para Avaliações é `fixed ... items-center justify-center` com container `w-[480px]` — não segue a anatomia de "Drawers" (`w-full md:w-[35%]`) do design system. Comportamento real, não bug a corrigir aqui.
+3. **`avaliacao.status` bruto vs. calculado.** Só 3 valores são gravados (`Rascunho`/`Ativa`/`Encerrada`). `Pendente` ("Agendada") e `Expirada` **nunca** são gravados — sempre derivados por `calcularStatusEfetivo`. Ao migrar para backend, a coluna de status persistida deve continuar guardando só os 3; o backend (ou o front) recalcula os outros 2 a partir de `periodoInicio`/`periodoFim`/`modoPrazo` × data atual. Exceções que leem o bruto de propósito: escolha de view em `AvaliacaoDetalhePage` (Rascunho vs. resto) e condição `show` da ação "Encerrar" (`row.status === 'Ativa'`).
+4. **Ativação/expiração "automática" é só cálculo, não job.** Não há cron/worker: uma avaliação Agendada "vira" Ativa porque `calcularStatusEfetivo` passa a devolver `Ativa` quando a data chega, no próximo render. Idem expiração. Com backend real, decidir se isso vira job agendado ou continua cálculo em leitura.
+5. **`HOJE_SIMULADO` / `HOJE_ISO`.** Toda a lógica de datas compara contra uma data simulada fixa exportada de `mockData.ts`, não contra `new Date()` real. Trocar por data do servidor na reconstrução.
+6. **Imutabilidade de avaliação Ativa.** Uma avaliação materializada (`participantes.length > 0`) só pode ser editada via `EditarAvaliacaoModal` (prorrogação: Término e/ou Prazo em dias). Nome, descrição, habilidades, público — nada disso é editável depois de ativada. A página de edição completa (`/avaliacoes/:id/editar` → wizard) só é alcançável para Rascunho sem participantes.
+7. **Persistência é `localStorage`.** `AvaliacoesContext` (chave `carreiras_avaliacoes`, versão `MOCK_DATA_VERSION`). Bump da versão descarta o que estiver salvo no navegador. Sem sincronização entre abas/dispositivos.
 
 ---
 
