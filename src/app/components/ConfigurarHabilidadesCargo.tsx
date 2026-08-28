@@ -178,7 +178,7 @@ export function ConfigurarHabilidadesCargo({
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full md:w-[35%] md:max-w-xl md:min-w-[400px] bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
+      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full md:w-[560px] bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white">
           <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">

@@ -5,6 +5,7 @@
 // Nunca redeclarar uma interface aqui ou em qualquer tela; campo novo entra
 // primeiro em schema.ts.
 import type {
+  Gerencia,
   Carreira,
   Jornada,
   Cargo,
@@ -28,25 +29,57 @@ export type {
   Competencia,
 };
 
+// Gerências vindas do RM (ver schema.ts). Fonte única de nome — Carreira
+// passará a se vincular a uma destas via gerenciaId (etapa futura). Ordem
+// mantida para conferência visual, não tem significado.
+export const gerenciasData: Gerencia[] = [
+  { id: 'g1', nome: 'Tecnologia' },
+  { id: 'g2', nome: 'Produto' },
+  { id: 'g3', nome: 'Infraestrutura' },
+  { id: 'g4', nome: 'Financeiro' },
+  { id: 'g5', nome: 'Desenvolvimento' },
+  { id: 'g6', nome: 'Operações' },
+  { id: 'g7', nome: 'Inovação' },
+  { id: 'g8', nome: 'Engenharia' },
+  { id: 'g9', nome: 'Segurança' },
+  { id: 'g10', nome: 'Design' },
+  { id: 'g11', nome: 'Dados' },
+  { id: 'g12', nome: 'Recursos Humanos' },
+  { id: 'g13', nome: 'Marketing' },
+  { id: 'g14', nome: 'Vendas' },
+  { id: 'g15', nome: 'Jurídico' },
+  { id: 'g16', nome: 'Atendimento ao Cliente' },
+  { id: 'g17', nome: 'Qualidade' },
+  { id: 'g18', nome: 'Projetos' },
+  { id: 'g19', nome: 'Logística' },
+  { id: 'g20', nome: 'Suprimentos' },
+  { id: 'g21', nome: 'Compliance' },
+  { id: 'g22', nome: 'Comunicação' },
+];
+
 export const carreirasData: Carreira[] = [
-  { id: '1', nome: 'Tecnologia da Informação', jornadas: 8, status: 'Ativa' },
-  { id: '2', nome: 'Recursos Humanos', jornadas: 5, status: 'Ativa' },
-  { id: '3', nome: 'Financeiro', jornadas: 3, status: 'Ativa' },
-  { id: '4', nome: 'Marketing', jornadas: 0, status: 'Ativa' },
-  { id: '5', nome: 'Vendas', jornadas: 0, status: 'Ativa' },
-  { id: '6', nome: 'Operações', jornadas: 3, status: 'Ativa' },
-  { id: '7', nome: 'Jurídico', jornadas: 0, status: 'Ativa' },
-  { id: '8', nome: 'Atendimento ao Cliente', jornadas: 0, status: 'Ativa' },
-  { id: '9', nome: 'Produto', jornadas: 3, status: 'Ativa' },
-  { id: '10', nome: 'Design', jornadas: 2, status: 'Ativa' },
-  { id: '11', nome: 'Engenharia', jornadas: 1, status: 'Ativa' },
-  { id: '12', nome: 'Qualidade', jornadas: 0, status: 'Ativa' },
-  { id: '13', nome: 'Projetos', jornadas: 0, status: 'Desativada' },
-  { id: '14', nome: 'Inovação', jornadas: 2, status: 'Ativa' },
-  { id: '15', nome: 'Suprimentos', jornadas: 0, status: 'Ativa' },
-  { id: '16', nome: 'Logística', jornadas: 0, status: 'Desativada' },
-  { id: '17', nome: 'Compliance', jornadas: 0, status: 'Ativa' },
-  { id: '18', nome: 'Comunicação', jornadas: 0, status: 'Ativa' },
+  // gerenciaId -> gerenciasData. Nome de exibição resolvido via Gerência.
+  { id: '1', gerenciaId: 'g1', jornadas: 8, status: 'Ativa' },   // Tecnologia (era "Tecnologia da Informação")
+  { id: '2', gerenciaId: 'g12', jornadas: 5, status: 'Ativa' },  // Recursos Humanos
+  { id: '3', gerenciaId: 'g4', jornadas: 3, status: 'Ativa' },   // Financeiro
+  // Marketing (g13), Vendas (g14), Jurídico (g15), Atendimento ao Cliente (g16)
+  // e Qualidade (g17) existem como Gerência mas ainda não têm Carreira —
+  // criação a partir do zero pelo fluxo de Criar Carreira.
+  { id: '6', gerenciaId: 'g6', jornadas: 3, status: 'Ativa' },   // Operações
+  { id: '9', gerenciaId: 'g2', jornadas: 3, status: 'Ativa' },   // Produto
+  { id: '10', gerenciaId: 'g10', jornadas: 2, status: 'Ativa' }, // Design
+  { id: '11', gerenciaId: 'g8', jornadas: 1, status: 'Ativa' },  // Engenharia
+  { id: '13', gerenciaId: 'g18', jornadas: 0, status: 'Desativada' }, // Projetos
+  { id: '14', gerenciaId: 'g7', jornadas: 2, status: 'Ativa' },  // Inovação
+  { id: '15', gerenciaId: 'g20', jornadas: 0, status: 'Ativa' }, // Suprimentos
+  { id: '16', gerenciaId: 'g19', jornadas: 0, status: 'Desativada' }, // Logística
+  { id: '17', gerenciaId: 'g21', jornadas: 0, status: 'Ativa' }, // Compliance
+  { id: '18', gerenciaId: 'g22', jornadas: 0, status: 'Ativa' }, // Comunicação
+  // Novas — gerências com colaborador alocado que não tinham Carreira
+  { id: '19', gerenciaId: 'g3', jornadas: 0, status: 'Ativa' },  // Infraestrutura
+  { id: '20', gerenciaId: 'g5', jornadas: 0, status: 'Ativa' },  // Desenvolvimento
+  { id: '21', gerenciaId: 'g9', jornadas: 0, status: 'Ativa' },  // Segurança
+  { id: '22', gerenciaId: 'g11', jornadas: 0, status: 'Ativa' }, // Dados
 ];
 
 export const jornadasData: Jornada[] = [

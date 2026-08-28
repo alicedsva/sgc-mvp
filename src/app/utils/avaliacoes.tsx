@@ -38,13 +38,15 @@ export function formatData(iso: string): string {
 export function getCarreiraEJornadaNomes(
   jornadaId: string | undefined,
   jornadas: { id: string; nome: string; carreiraId: string }[],
-  carreiras: { id: string; nome: string }[]
+  carreiras: { id: string; gerenciaId: string }[],
+  gerencias: { id: string; nome: string }[]
 ): { carreira: string; jornada: string } | null {
   if (!jornadaId) return null;
   const jornada = jornadas.find((j) => j.id === jornadaId);
   const carreira = jornada ? carreiras.find((c) => c.id === jornada.carreiraId) : undefined;
-  if (!jornada || !carreira) return null;
-  return { carreira: carreira.nome, jornada: jornada.nome };
+  const gerencia = carreira ? gerencias.find((g) => g.id === carreira.gerenciaId) : undefined;
+  if (!jornada || !carreira || !gerencia) return null;
+  return { carreira: gerencia.nome, jornada: jornada.nome };
 }
 
 // 'YYYY-MM-DD' + N dias corridos, em aritmética de data pura (UTC) — nunca

@@ -9,6 +9,7 @@ import {
   habilidadesData,
   jornadasData,
   carreirasData,
+  gerenciasData,
   HOJE_SIMULADO,
 } from '../data/mockData';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
@@ -119,7 +120,7 @@ export default function AvaliacaoDetalhePage() {
 // existir mais nos dados (FK órfã), cai de volta no publicoLabel original
 // em vez de quebrar a tela.
 function getMetaOrigem(avaliacao: Avaliacao): string | null {
-  const nomes = getCarreiraEJornadaNomes(avaliacao.origemJornadaId, jornadasData, carreirasData);
+  const nomes = getCarreiraEJornadaNomes(avaliacao.origemJornadaId, jornadasData, carreirasData, gerenciasData);
   if (nomes) {
     return `Carreira: ${nomes.carreira} · Jornada: ${nomes.jornada}`;
   }

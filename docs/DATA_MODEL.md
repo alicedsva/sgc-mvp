@@ -15,21 +15,83 @@ de outra entidade.
 
 ---
 
+## Changelog de auditoria
+
+### 2026-08-28 — Módulo Carreiras (Gerência + Carreira sem nome próprio)
+
+Auditoria direta do código atual. O que mudou nesta rodada:
+
+- **Diagrama ER**: adicionada a relação `GERENCIA ||--o{ CARREIRA`.
+- **Gerência**: `gerenciasData` (22 registros) é a **lista canônica** usada no
+  cadastro de Carreira. Seção "Usado em" completada (PerfilColaboradorPage,
+  FormularioAvaliacao, drawer de criação de Carreira em `ContentArea`).
+- **Carreira**: "Usado em" completado (PerfilColaboradorPage). Nome de exibição
+  resolvido **sempre** via `carreira.gerenciaId → gerenciasData`, nunca de
+  `carreirasData` (que não tem `nome`).
+- **Jornada.carreira**: corrigido o texto — a resolução do nome da carreira é
+  `carreira.gerenciaId → gerenciasData`, não "buscar em `carreirasData`".
+- **Bloco "Atenção" de Colaborador.gerencia**: reconciliada a contradição —
+  distinção explícita entre "gerência de colaborador" (texto livre, 12 valores
+  em uso, deriva de `colaboradoresData`, sem lista mestra) e "gerência para
+  cadastro de Carreira" (22, lista canônica `gerenciasData`).
+
+Handoff detalhado do módulo: `docs/HANDOFF-CARREIRAS.md`.
+
+---
+
+## Gerência
+
+Unidade organizacional vinda do RM (no sistema real, cadastro externo).
+É a **fonte única do nome** exibido para a Carreira vinculada.
+
+| Campo | Significado |
+|---|---|
+| `id` | Identificador único (`g1`..`g22` no mock) |
+| `nome` | Nome da gerência (ex: "Tecnologia", "Financeiro") |
+
+**Sem status:** uma Gerência sempre "existe". O que pode ser
+ativado/desativado é a Carreira daquela gerência, nunca a gerência em si.
+
+**Relações:** uma Gerência tem no máximo uma Carreira `Ativa` por vez
+(pode ter Carreiras `Desativada` além dela — histórico). `Carreira.gerenciaId` → Gerência.
+
+**Mock:** 22 gerências em `gerenciasData` (`g1`..`g22`) — **lista canônica**,
+única fonte válida de gerência no cadastro de Carreira. Os 12 nomes `g1`..`g12`
+coincidem com os valores de texto de `Colaborador.gerencia` usados hoje, mas
+**não há vínculo por id** (ver "Atenção" em Colaborador). Hoje **17 gerências
+têm Carreira**; **5 não têm** (`g13` Marketing, `g14` Vendas, `g15` Jurídico,
+`g16` Atendimento ao Cliente, `g17` Qualidade) — criadas de propósito para
+testar o fluxo de Criar Carreira do zero.
+
+**Usado em:** resolução do nome de Carreira em `ContentArea` (listagem de
+Carreiras + drawer de criação/edição), `CarreiraDetalhePage`, `CriarJornadaPage`,
+`EditarJornadaPage`, `JornadaDetalhePage`, `PerfilColaboradorPage`
+(card de identificação e aba Carreira), `FormularioAvaliacao` (card de Revisão,
+via `getCarreiraEJornadaNomes`), e `getCarreiraEJornadaNomes`
+(`utils/avaliacoes.tsx`).
+
+---
+
 ## Carreira
 
-Uma área profissional ampla (ex: "Tecnologia da Informação", "Recursos
-Humanos"). É o nível mais alto da hierarquia de carreira.
+Uma área profissional ampla, sempre correspondente a uma Gerência. É o nível
+mais alto da hierarquia de carreira.
 
 | Campo | Significado |
 |---|---|
 | `id` | Identificador único |
-| `nome` | Nome da carreira |
+| `gerenciaId` | FK → Gerência. A Carreira **não tem nome próprio**: o nome de exibição vem sempre de `gerenciasData.find(g => g.id === carreira.gerenciaId).nome` |
 | `jornadas` | Quantidade de jornadas dessa carreira. **Sempre recalcular** (`jornadasData.filter`), nunca ler este campo diretamente |
 | `status` | `Ativa` ou `Desativada` |
 
-**Relações:** uma Carreira tem várias Jornadas (`Jornada.carreiraId`).
+**Relações:** uma Carreira pertence a uma Gerência (`gerenciaId`) e tem
+várias Jornadas (`Jornada.carreiraId`). Uma Gerência pode ter várias Carreiras
+ao longo do tempo, mas **no máximo 1 `Ativa` por vez** — regra aplicada no
+drawer de criação (`getCarreiraAtivaDaGerencia`, `CarreirasContext`).
 
-**Usado em:** `CarreiraDetalhePage`, `CriarJornadaPage`, `EditarJornadaPage`, tela de listagem de Carreiras (via `ContentArea` — ver divergência #2 no diagnóstico).
+**Usado em:** `CarreiraDetalhePage`, `CriarJornadaPage`, `EditarJornadaPage`,
+`PerfilColaboradorPage` (via `colaborador.carreiraId`), tela de listagem de
+Carreiras + drawer de criação/edição (via `ContentArea`).
 
 ---
 
@@ -43,7 +105,7 @@ Uma trilha de carreira dentro de uma Carreira (ex: "Desenvolvedor",
 | `id` | Identificador único |
 | `carreiraId` | FK → Carreira |
 | `nome` | Nome da jornada |
-| `carreira` | Cópia do nome da carreira (nunca usar como fonte — buscar em `carreirasData`) |
+| `carreira` | Cópia denormalizada do nome da carreira (nunca usar como fonte). Para exibir o nome da carreira de uma jornada: `carreirasData.find(c => c.id === jornada.carreiraId)` → `gerenciasData.find(g => g.id === carreira.gerenciaId).nome`. **Nunca** ler `jornada.carreira` nem esperar um `nome` em `carreirasData` (não existe) |
 | `tipo` | `Contribuidor Individual` ou `Gestão` |
 | `quantidadeCargos` | Quantidade de cargos da jornada. **Sempre recalcular** ao exibir (exceção documentada — campo pode ser escrito, mas leitura na tela é sempre via `cargosData.filter`) |
 | `status` | `Ativa` ou `Desativada` |
@@ -110,7 +172,7 @@ Uma pessoa da empresa, ocupando um Cargo.
 | `cargoId` | FK → Cargo |
 | `jornadaId` | FK → Jornada (redundante com `cargoId`, armazenado separadamente) |
 | `carreiraId` | FK → Carreira (redundante com `cargoId`, armazenado separadamente) |
-| `gerencia` | Texto livre — **não é** referência a Carreira/Jornada, é um rótulo de área organizacional independente |
+| `gerencia` | Texto livre com o nome da gerência — **não** é FK para a entidade Gerência (os valores coincidem com 12 dos 22 `gerenciasData[].nome`, mas não há vínculo por id). Não é referência a Carreira/Jornada |
 | `ultimoAcesso` | Data por extenso em português (texto livre) |
 | `status` | Sempre `'Ativo'` nos dados atuais |
 | `atualizacaoDisponivel` | Se há uma nova versão de perfil disponível para sincronizar |
@@ -120,10 +182,23 @@ Uma pessoa da empresa, ocupando um Cargo.
 **Relações:** ocupa um Cargo; participa de várias Avaliações
 (`ParticipanteAvaliacao.colaboradorId`).
 
-**Atenção:** `gerencia` é texto livre com valores reais que **não** batem com
-a lista fixa hoje hardcoded em `NovaAvaliacaoDrawer`/`EditarAvaliacaoModal`
-(ver diagnóstico #3) — a lista correta de gerências deve sempre ser derivada
-de `colaboradoresData`, nunca mantida como constante separada.
+**Atenção — duas noções de "gerência" coexistem no sistema, propositalmente:**
+
+1. **Gerência de colaborador** (`Colaborador.gerencia`): texto livre, **12
+   valores distintos em uso**, derivado sempre de `colaboradoresData`
+   (`Array.from(new Set(colaboradoresData.map(c => c.gerencia))).sort()`).
+   Não há lista mestra — a lista é a projeção dos dados. Usada como filtro em
+   `DashboardPage`, `Perfis`, e como público-alvo no seletor "Por Público-alvo"
+   de `FormularioAvaliacao` (`SeletorGerenciaGranular`). Nunca manter como
+   constante hardcoded.
+2. **Gerência para cadastro de Carreira** (`Gerencia` / `gerenciasData`):
+   entidade real, **22 registros**, lista canônica com `id`. É a FK de
+   `Carreira.gerenciaId`. Só aparece no módulo Carreiras.
+
+Os 12 nomes do grupo (1) coincidem com 12 dos 22 nomes do grupo (2), mas os
+dois **não** estão ligados por id hoje. Unificar os dois é uma decisão
+consciente de escopo adiada (ver `docs/HANDOFF-CARREIRAS.md` > Pendências),
+não uma lacuna esquecida.
 
 **Usado em:** praticamente todas as telas (Perfis, Dashboard, Avaliações, Carreiras/Matriz, telas do Colaborador).
 
@@ -296,6 +371,7 @@ sistema — se isso virar feature real, avaliar generalizar por `colaboradorId`.
 
 ```mermaid
 erDiagram
+    GERENCIA ||--o{ CARREIRA : "tem (máx. 1 Ativa por vez)"
     CARREIRA ||--o{ JORNADA : possui
     JORNADA ||--o{ CARGO : possui
     CARGO ||--o{ HABILIDADE_CARGO : "matriz"

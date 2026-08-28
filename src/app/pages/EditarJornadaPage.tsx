@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import { cargosData, jornadasData } from '../data/mockData';
+import { cargosData, jornadasData, gerenciasData } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
 import type { Cargo } from '../../data/schema';
 import { toast } from 'sonner';
@@ -41,6 +41,8 @@ function EditarJornadaPageContent() {
   const { carreiras, jornadas, cargos: todosCargos, atualizarJornada, atualizarCargosJornada } = useCarreiras();
 
   const carreira = carreiras.find(c => c.id === carreiraId);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreiraNome = carreira ? gerenciasData.find(g => g.id === carreira.gerenciaId)?.nome ?? '' : '';
   const jornada = jornadas.find(j => j.id === jornadaId);
   const cargosExistentes = todosCargos.filter(c => c.jornadaId === jornadaId);
 
@@ -151,7 +153,7 @@ function EditarJornadaPageContent() {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Editar jornada de carreira</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Altere como será a evolução profissional dentro de {carreira.nome}
+            Altere como será a evolução profissional dentro de {carreiraNome}
           </p>
         </div>
 

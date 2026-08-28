@@ -6,6 +6,28 @@ Todo caminho de arquivo abaixo é relativo à raiz do repositório.
 
 ---
 
+## 0. Changelog de auditoria
+
+### 2026-08-28 — `HabilidadeFormDrawer` (footer contextual + banners + campo Competência)
+
+Conferido no código atual:
+
+1. **Footer contextual do drawer** (via `submitSlot` do `FormDrawer`): na aba
+   **Cadastro** o botão da direita é **"Continuar"** (outline brand, ícone
+   `ChevronRight`) — **não submete**, só troca para a aba "Níveis de
+   Habilidades". Na aba **Níveis de Habilidades** o botão volta a ser o submit
+   real (**"Salvar"** / **"Salvar alterações"**). Ver seção **g**.
+2. **Dois banners de orientação** (Variante B / slate, `Info`), um por aba:
+   "Como funciona o cadastro" (Cadastro) e "Como preencher os níveis" (Níveis).
+   Copy literal na seção **g**.
+3. **Campo Competência**: agora é `SearchableSelect` (era Radix `Select`
+   simples). Ver seção **g** > "Aba Cadastro".
+4. **Largura do drawer**: `w-full` / `md:w-[560px]` fixa (padrão dos 3 painéis
+   laterais — ver `02-design-system.md` > Drawers; o "pulo" horizontal por
+   scroll-lock do Radix foi resolvido fixando a largura).
+
+---
+
 ## a. Visão geral e arquitetura
 
 O módulo Habilidades é **uma única rota** (`/habilidades` → `HabilidadesPage.tsx`, casca fina) que delega para `src/app/components/ContentArea.tsx` com `selectedItem === 'habilidades'`. Toda a UI das 3 abas vive dentro de `ContentArea.tsx` (função `renderTabContent()`), não em componentes/páginas separados.
@@ -276,9 +298,40 @@ interface HabilidadeFormValues {
 interface NivelFixo { id: string; nome: string; peso: number; descricao?: string }
 ```
 
-O drawer é montado sobre o `FormDrawer` genérico com `fields={[]}` e todo o conteúdo em `customContent` (o `FormDrawer` só provê a casca: header `title`, footer com Cancelar + submit).
+O drawer é montado sobre o `FormDrawer` genérico com `fields={[]}` e todo o conteúdo em `customContent` (o `FormDrawer` só provê a casca: header `title`, footer com Cancelar + submit). Largura: `w-full md:w-[560px]` (fixa — padrão dos 3 painéis laterais).
 - `title`: `isEdicao ? 'Editar Habilidade' : 'Nova Habilidade'`
 - `submitLabel`: `isEdicao ? 'Salvar alterações' : 'Salvar'`
+
+### Footer contextual (`submitSlot`)
+
+O footer padrão (Cancelar + submit) muda de comportamento conforme `activeTab`:
+
+| `activeTab` | Botão da direita | Tipo | Ação |
+|---|---|---|---|
+| `'cadastro'` | **"Continuar"** + `ChevronRight` (outline brand) | `type="button"` | `setActiveTab('niveis')` — **não valida, não salva, não fecha** |
+| `'niveis'` | **"Salvar"** / **"Salvar alterações"** | `type="submit"` | dispara `handleSubmit` (validação + `onSave`) |
+
+Trecho real (`HabilidadeFormDrawer.tsx`):
+
+```tsx
+submitSlot={
+  activeTab === 'cadastro' ? (
+    <button
+      type="button"
+      onClick={() => setActiveTab('niveis')}
+      className="inline-flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]"
+    >
+      Continuar
+      <ChevronRight className="w-4 h-4" />
+    </button>
+  ) : undefined
+}
+```
+
+Quando `submitSlot` é `undefined` (aba Níveis), o `FormDrawer` renderiza o
+botão de submit padrão. O toggle de abas continua livre — "Continuar" é só um
+atalho para a mesma ação. Convenção registrada em `02-design-system.md` >
+Botões > "Continuar".
 
 ### Reset ao (re)abrir — `useEffect([isOpen, initialValues, niveis])`
 
@@ -304,15 +357,26 @@ inativo: text-gray-600 hover:text-gray-900
 
 ### Aba "Cadastro"
 
-`div className="space-y-4 md:space-y-5"`. Campos, nesta ordem (todos `label block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2`):
+`div className="space-y-4 md:space-y-5"`. Começa pelo **banner "Como funciona o cadastro"** (ver abaixo). Campos, nesta ordem (todos `label block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2`):
 
 | Campo | Controle | Placeholder / opções | Obrigatório | Erro |
 |---|---|---|---|---|
 | **"Nome da Habilidade"** `*` | `input type="text"` | "Ex: React" | sim | `errors.nome` → borda `border-red-300 focus:ring-red-500` + `<p className="mt-1 text-sm text-red-600">` |
 | **"Descrição"** | `textarea rows={3}` `resize-none` | "Descreva esta habilidade..." | não | — |
-| **"Competência"** `*` | `Select` (Radix) | "Selecione..." + uma opção por `competenciasAtivas` | sim | `errors.competenciaId` → mesma borda vermelha + `<p>` |
-| **"Tipo"** `*` | `Select` | `Técnica` / `Comportamental` | sim (default `Técnica`) | — |
-| **"Status"** `*` | `Select` | `Ativa` / `Desativada` | sim (default `Ativa`) | — |
+| **"Competência"** `*` | **`SearchableSelect`** (era `Select` Radix simples) | `placeholder="Selecione..."`, `searchPlaceholder="Buscar competência..."`, `options` = `competenciasAtivas.map(c => ({ value: c.id, label: c.nome }))` | sim | `errors.competenciaId` → `className` recebe `border-red-300 focus:ring-red-500` + `<p className="mt-1 text-sm text-red-600">` |
+| **"Tipo"** `*` | `Select` (Radix) | `Técnica` / `Comportamental` | sim (default `Técnica`) | — |
+| **"Status"** `*` | `Select` (Radix) | `Ativa` / `Desativada` | sim (default `Ativa`) | — |
+
+**Banner "Como funciona o cadastro"** (Variante B / slate — copy literal):
+```
+bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3
+ícone: Info w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0
+título (p text-sm font-semibold text-slate-700): "Como funciona o cadastro"
+corpo (p text-sm text-slate-700 mt-1):
+  "Aqui você define os dados básicos da habilidade. Depois, na aba "Níveis de
+   Habilidades", você escolhe quais níveis serão avaliados e define o critério
+   esperado para cada um."
+```
 
 Ao escolher a competência, grava **os dois** campos: `competenciaId: value` e `competencia: comp?.nome ?? ''`.
 
@@ -322,17 +386,19 @@ Input base: `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus
 
 `div className="space-y-6"`. Três blocos:
 
-**1. Banner de orientação (Variante A / brand com título — copy literal)**
+**1. Banner "Como preencher os níveis" (Variante B / slate — copy literal)**
 ```
 bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3
 ícone: Info w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0
-título (text-sm font-semibold text-slate-700): "Como preencher os níveis"
-corpo (text-sm text-slate-700 mt-1):
-  "Selecione quais níveis serão avaliados nesta habilidade e defina o
-   critério esperado para cada um."
+título (p text-sm font-semibold text-slate-700): "Como preencher os níveis"
+corpo (p text-sm text-slate-700 mt-1):
+  "Selecione quais níveis serão avaliados nesta habilidade e defina o critério
+   esperado para cada um."
 ```
 
-> Observação de auditoria: o banner usa a paleta **slate** (`bg-slate-100 / border-slate-300 / text-slate-500 / text-slate-700`), que em `02-design-system.md` corresponde à **Variante B — "Instrução de formulário"** (não à Variante A/brand). O texto do pedido de handoff descreve "Variante A/brand"; o código atual é slate. Documentado aqui como está no código.
+> É a **Variante B ("Instrução de formulário", slate)** de `02-design-system.md`,
+> igual ao banner "Como funciona o cadastro" da aba Cadastro. As duas abas têm
+> um banner slate cada.
 
 **2. "Níveis Aplicáveis" `*`** — linha com o label (`text-sm font-medium text-gray-700`) e, à direita, contador `"{N} selecionado(s)"` (`text-xs text-gray-500`) quando `formData.niveis.length > 0`. Abaixo, os 5 níveis como **pills toggláveis** (`flex flex-wrap gap-2`), ordenados por peso:
 ```

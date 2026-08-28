@@ -1,11 +1,12 @@
 import { ReactNode, FormEvent } from 'react';
 import { X, Info } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SearchableSelect } from '../ui/SearchableSelect';
 
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'textarea' | 'select' | 'checkbox' | 'number' | 'multiselect' | 'date';
+  type: 'text' | 'email' | 'textarea' | 'select' | 'checkbox' | 'number' | 'multiselect' | 'date' | 'searchable-select';
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
@@ -13,6 +14,12 @@ export interface FormField {
   value?: any;
   onChange?: (value: any) => void;
   rows?: number;
+  /** Só para type 'searchable-select' — placeholder do campo de busca interno. */
+  searchPlaceholder?: string;
+  /** Só para type 'searchable-select' — texto quando a busca não retorna nada. */
+  emptyMessage?: string;
+  /** Só para type 'searchable-select' — desabilita o campo (mesmo efeito visual dos demais). */
+  disabled?: boolean;
 }
 
 interface AlertBanner {
@@ -30,11 +37,26 @@ interface FormDrawerProps {
   submitLabel?: string;
   isLoading?: boolean;
   alertBanner?: AlertBanner;
+  /** Conteúdo livre renderizado no topo, logo após o alertBanner e antes dos campos. */
+  headerContent?: ReactNode;
   secondaryAction?: {
     label: string;
     onClick: (e: FormEvent) => void;
+    /**
+     * 'primary' (padrão): botão preenchido/brand, mais proeminente que o submit.
+     * 'secondary': botão outline/brand — e o submit passa a ser o preenchido.
+     * Usado quando a ação secundária deve ficar visualmente abaixo do "Salvar".
+     */
+    variant?: 'primary' | 'secondary';
   };
   customContent?: ReactNode;
+  /**
+   * Substitui o botão de submit padrão do footer por um nó customizado.
+   * Usado quando a ação principal do footer muda de comportamento conforme
+   * o estado interno do formulário (ex: "Continuar" que só navega de aba,
+   * sem submeter). Quando ausente, o botão de submit padrão é renderizado.
+   */
+  submitSlot?: ReactNode;
 }
 
 export function FormDrawer({
@@ -46,8 +68,10 @@ export function FormDrawer({
   submitLabel = 'Salvar',
   isLoading = false,
   alertBanner,
+  headerContent,
   secondaryAction,
   customContent,
+  submitSlot,
 }: FormDrawerProps) {
   if (!isOpen) return null;
 
@@ -60,7 +84,7 @@ export function FormDrawer({
       />
 
       {/* Drawer - lateral direito, respeitando sidebar e header, full width no mobile */}
-      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full md:w-[35%] md:max-w-xl md:min-w-[400px] bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
+      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full md:w-[560px] bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white">
           <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">{title}</h2>
@@ -132,6 +156,8 @@ export function FormDrawer({
               </div>
             )}
 
+            {headerContent && <div>{headerContent}</div>}
+
             {fields.map((field) => (
               <div key={field.name}>
                 <label
@@ -197,6 +223,21 @@ export function FormDrawer({
                       ))}
                     </SelectContent>
                   </Select>
+                ) : field.type === 'searchable-select' ? (
+                  <SearchableSelect
+                    value={field.value || ''}
+                    onValueChange={(value) => field.onChange?.(value)}
+                    options={field.options ?? []}
+                    placeholder={field.placeholder || 'Selecione...'}
+                    searchPlaceholder={field.searchPlaceholder}
+                    emptyMessage={field.emptyMessage}
+                    disabled={field.disabled}
+                    className={`w-full ${
+                      field.error
+                        ? 'border-red-300 focus:ring-red-500'
+                        : 'border-gray-300'
+                    }`}
+                  />
                 ) : field.type === 'multiselect' ? (
                   <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
                     {field.options?.map((option) => (
@@ -258,21 +299,31 @@ export function FormDrawer({
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-3 md:px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-xs md:text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Salvando...' : submitLabel}
-            </button>
             {secondaryAction && (
               <button
                 type="button"
                 onClick={secondaryAction.onClick}
                 disabled={isLoading}
-                className="px-3 md:px-4 py-2 bg-[var(--brand-600)] text-white text-xs md:text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  secondaryAction.variant === 'secondary'
+                    ? 'border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]'
+                    : 'bg-[var(--brand-600)] text-white hover:bg-[var(--brand-700)]'
+                }`}
               >
                 {secondaryAction.label}
+              </button>
+            )}
+            {submitSlot ?? (
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  secondaryAction?.variant === 'secondary'
+                    ? 'bg-[var(--brand-600)] text-white hover:bg-[var(--brand-700)]'
+                    : 'border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]'
+                }`}
+              >
+                {isLoading ? 'Salvando...' : submitLabel}
               </button>
             )}
           </div>

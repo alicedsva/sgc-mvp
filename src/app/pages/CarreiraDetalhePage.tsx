@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { useCarreiras } from '../context/CarreirasContext';
+import { gerenciasData } from '../data/mockData';
 import { Table, Column } from '../components/ui/Table';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
@@ -38,6 +39,8 @@ export default function CarreiraDetalhePage() {
 
   // Buscar dados da carreira
   const carreira = carreiras.find(c => c.id === carreiraId);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreiraNome = carreira ? gerenciasData.find(g => g.id === carreira.gerenciaId)?.nome ?? '' : '';
   const jornadasDaCarreira = jornadas.filter(j => j.carreiraId === carreiraId);
 
   const jornadasFiltradas = jornadasDaCarreira.filter(j => {
@@ -340,7 +343,7 @@ export default function CarreiraDetalhePage() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">{carreira.nome}</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">{carreiraNome}</h1>
           <p className="text-sm text-gray-600 mt-2">
             Gerencie as jornadas e trilhas de progressão desta carreira
           </p>

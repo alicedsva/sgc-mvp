@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext, useNavigate } from 'react-router';
 import { User, Briefcase, TrendingUp, Award, ClipboardCheck, ArrowLeft } from 'lucide-react';
-import { colaboradoresData, jornadasData, cargosData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
+import { colaboradoresData, jornadasData, cargosData, gerenciasData, getPesoFromNome, historicoAvaliacoesData, niveisDefaultData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
 import { useCompetencias } from '../context/CompetenciasContext';
 import { calcularHabilidadesComGap, calcularCobertura } from '../utils/aderenciaColaborador';
@@ -46,6 +46,8 @@ export default function PerfilColaboradorPage() {
   const cargo = cargosData.find(c => c.id === colaborador.cargoId);
   const jornada = jornadasData.find(j => j.id === colaborador.jornadaId);
   const carreira = carreiras.find(c => c.id === colaborador.carreiraId);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreiraNome = carreira ? gerenciasData.find(g => g.id === carreira.gerenciaId)?.nome ?? '' : undefined;
 
   const habilidadesComGap = calcularHabilidadesComGap(colaborador.cargoId, colaborador.id);
 
@@ -171,7 +173,7 @@ export default function PerfilColaboradorPage() {
                 </div>
                 <div>
                   <span className="text-gray-600">Carreira: </span>
-                  <span className="font-medium text-gray-900">{carreira?.nome}</span>
+                  <span className="font-medium text-gray-900">{carreiraNome}</span>
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
@@ -360,7 +362,7 @@ export default function PerfilColaboradorPage() {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Progressão de Carreira</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Jornada: {jornada?.nome} • Carreira: {carreira?.nome}
+                Jornada: {jornada?.nome} • Carreira: {carreiraNome}
               </p>
             </div>
             

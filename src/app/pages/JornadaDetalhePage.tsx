@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Plus, Edit, Trash2, AlertCircle, X, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, ClipboardCheck } from 'lucide-react';
-import { habilidadesData, niveisDefaultData, colaboradoresData, getCompetenciaNome } from '../data/mockData';
+import { Edit, Trash2, AlertCircle, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, Power, ClipboardCheck } from 'lucide-react';
+import { habilidadesData, niveisDefaultData, colaboradoresData, gerenciasData, getCompetenciaNome } from '../data/mockData';
 import { useCarreiras } from '../context/CarreirasContext';
 import { useCompetencias } from '../context/CompetenciasContext';
 import type { Cargo, HabilidadeCargo, NivelNome } from '../../data/schema';
@@ -45,6 +45,8 @@ function JornadaDetalheContent() {
 
   // Buscar dados
   const carreira = carreiras.find(c => c.id === carreiraId);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreiraNome = carreira ? gerenciasData.find(g => g.id === carreira.gerenciaId)?.nome ?? '' : '';
   const jornada = jornadas.find(j => j.id === jornadaId);
   const cargosDaJornadaIniciais = todosOsCargos.filter(c => c.jornadaId === jornadaId);
 
@@ -58,10 +60,6 @@ function JornadaDetalheContent() {
 
   // Estado do drawer de habilidades da matriz
   const [isHabilidadesMatrizDrawerOpen, setIsHabilidadesMatrizDrawerOpen] = useState(false);
-
-  // Estado do menu dropdown de ações
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Estado do menu de ações por coluna de cargo
   const [openCargoMenu, setOpenCargoMenu] = useState<string | null>(null);
@@ -97,23 +95,6 @@ function JornadaDetalheContent() {
     competenciaId: string;
     niveis: Array<{ nivelId: string; criterio: string }>;
   }>>([]);
-
-  // Fechar menu ao clicar fora
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
 
   // Fechar menu de cargo ao clicar fora
   useEffect(() => {
@@ -530,7 +511,7 @@ function JornadaDetalheContent() {
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          {carreira.nome}
+          {carreiraNome}
         </button>
 
         {/* Header */}
@@ -549,61 +530,34 @@ function JornadaDetalheContent() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Mais opções"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-              {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <button
-                    onClick={() => { setIsMenuOpen(false); handleEditarJornada(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar jornada
-                  </button>
-                  <button
-                    onClick={() => { setIsMenuOpen(false); handleToggleStatus(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    {jornada.status === 'Ativa' ? (
-                      <>
-                        <X className="w-4 h-4" />
-                        Desativar jornada
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Ativar jornada
-                      </>
-                    )}
-                  </button>
-                  <div className="my-1 border-t border-gray-100" />
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      navigate('/avaliacoes/nova', { state: { jornadaPreSelecionada: jornadaId } });
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <ClipboardCheck className="w-4 h-4" />
-                    Criar avaliação para esta matriz
-                  </button>
-                  <div className="my-1 border-t border-gray-100" />
-                  <button
-                    onClick={() => { setIsMenuOpen(false); handleExcluirJornada(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Excluir jornada
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handleEditarJornada}
+              title="Editar jornada"
+              className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleToggleStatus}
+              title={jornada.status === 'Ativa' ? 'Desativar jornada' : 'Ativar jornada'}
+              className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Power className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleExcluirJornada}
+              title="Excluir jornada"
+              className="p-1.5 md:p-2 bg-white border border-red-300 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => navigate('/avaliacoes/nova', { state: { jornadaPreSelecionada: jornadaId } })}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors flex-shrink-0"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Criar avaliação
+            </button>
           </div>
         </div>
 

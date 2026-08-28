@@ -1,5 +1,24 @@
 ---
 
+## Changelog
+
+### 2026-08-28 — auditoria (módulo Carreiras + drawers)
+
+- **Dropdowns**: `SearchableSelect` (`ui/SearchableSelect.tsx`) registrado como
+  **variante aprovada** do Radix Select para listas longas (ver "Filtros e
+  Pills").
+- **Drawers**: largura padrão passou a ser **fixa** — `w-full` no mobile,
+  `md:w-[560px]` no desktop (antes `md:w-[35%] md:max-w-xl md:min-w-[400px]`,
+  relativa à viewport). Motivo técnico: uma largura relativa recalculava o
+  layout quando o scroll-lock do Radix (menus/selects internos) somia/somava a
+  barra de rolagem da página, causando um "pulo" horizontal do drawer.
+- **Botão "Continuar"**: registrado como convenção de navegação entre
+  abas/etapas fora do wizard de Avaliações (ver "Botões" > "Continuar").
+- Variante C (aviso de estado, amarelo, sem título, `AlertTriangle`): sem
+  alteração — já estava registrada.
+
+---
+
 # Design System — regras visuais obrigatórias
 
 ## Cores
@@ -189,6 +208,21 @@ Ação em tabela (ícone):
 - Desabilitado: `opacity-50 cursor-not-allowed` + atributo `disabled`
 - Carregando: `opacity-75 cursor-not-allowed` + `animate-spin` no ícone
 
+### Continuar (navegação entre abas/etapas)
+
+`inline-flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]` + ícone `ChevronRight w-4 h-4` **à direita** do texto.
+
+Convenção do sistema (não exclusiva do wizard de Avaliações): quando um
+formulário/tela tem etapas ou abas sequenciais, o botão que avança para a
+próxima chama-se **"Continuar"**. **Não é submit** — não valida, não salva,
+não fecha. Só troca a etapa/aba ativa (mesma ação que clicar no toggle/stepper,
+que continua disponível). Aparece no lugar do botão de submit apenas nas
+etapas que não são a última.
+
+Exemplos: wizard de Avaliações (`FormularioAvaliacao.tsx`); toggle
+Cadastro → Níveis de Habilidades do `HabilidadeFormDrawer` (via `submitSlot`
+do `FormDrawer`).
+
 ### Regras
 - Máximo 1 botão primário por contexto visível
 - Nunca `font-bold` — sempre `font-medium`
@@ -329,7 +363,13 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
 
 ### Regras
 - Aba padrão: sempre "Ativos/Ativas" — nunca "Todos"
-- Dropdowns: Radix Select — nunca `<select>` nativo
+- Dropdowns: Radix Select — nunca `<select>` nativo. Para listas longas
+  (ex: as 22 gerências no cadastro de Carreira, competências no drawer de
+  Habilidade), usar `SearchableSelect` (`ui/SearchableSelect.tsx`) — variante
+  aprovada que envolve o Radix Select com um campo de busca interno; mesma
+  aparência de trigger, `placeholder`/`searchPlaceholder`/`emptyMessage`/
+  `disabled` como props. Também disponível via `FormDrawer` com
+  `type: 'searchable-select'`.
 - Filtros com seleção: contador no botão ("Gerência (2)") — nunca tags separadas
 - Ao aplicar filtro ou busca: resetar para página 1
 
@@ -380,7 +420,12 @@ nos cards com significado de status definido:
 
 ### Anatomia completa
 ```
-Largura:  w-full md:w-[35%] md:max-w-xl md:min-w-[400px]
+Largura:  w-full (mobile) · md:w-[560px] (desktop) — FIXA, nunca relativa à
+          viewport. Vale para os 3 painéis laterais: FormDrawer,
+          SelectionDrawer, ConfigurarHabilidadesCargo.
+          Motivo: largura relativa (%/vw) recalculava o layout quando o
+          scroll-lock do Radix aparecia/somia a barra de rolagem da página,
+          fazendo o drawer "pular" na horizontal.
 Header:   px-4 md:px-6 py-3 md:py-4 border-b border-gray-200
           título: text-base md:text-lg lg:text-xl font-semibold text-gray-900
           X:      p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg
@@ -514,10 +559,15 @@ label "Instruções:": font-medium text-slate-800
 
 ### C — Aviso de estado (yellow)
 ```
-bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex items-start gap-3
-ícone: Eye w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5
-label: font-semibold; texto: text-sm text-yellow-800
+bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 flex items-start gap-2
+ícone: AlertTriangle w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5
+texto: text-sm text-yellow-800 (texto corrido — sem título/label separado)
 ```
+Quando usar: indica o estado atual da tela ou o resultado de uma ação recente
+que o usuário deve saber antes de prosseguir — nunca bloqueia.
+Ex.: duplicidade de nome / "sem colaboradores selecionados" em
+`FormularioAvaliacao.tsx`; "gerência com carreira anterior" no drawer de
+Criar Carreira (`ContentArea.tsx`, via `customContent` do `FormDrawer`).
 
 ### Regras
 - Sempre `items-start` — nunca `items-center`

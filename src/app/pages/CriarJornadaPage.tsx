@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Search, AlertCircle, Plus, ArrowLeft, ChevronRight, HelpCircle, Check } from 'lucide-react';
-import { cargosData, jornadasData } from '../data/mockData';
+import { cargosData, jornadasData, gerenciasData } from '../data/mockData';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import type { Jornada, Cargo } from '../../data/schema';
 import { toast } from 'sonner';
@@ -40,6 +40,8 @@ function CriarJornadaPageContent() {
   const { carreiras, adicionarJornada, atualizarCargosJornada } = useCarreiras();
 
   const carreira = carreiras.find(c => c.id === carreiraId);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreiraNome = carreira ? gerenciasData.find(g => g.id === carreira.gerenciaId)?.nome ?? '' : '';
 
   const [nomeJornada, setNomeJornada] = useState('');
   const [tipoJornada, setTipoJornada] = useState<'Contribuidor Individual' | 'Gestão'>('Contribuidor Individual');
@@ -78,7 +80,7 @@ function CriarJornadaPageContent() {
       id: generateId('jornada'),
       carreiraId: carreiraId!,
       nome: nomeJornada,
-      carreira: carreira?.nome || '',
+      carreira: carreiraNome,
       tipo: tipoJornada,
       quantidadeCargos: cargosSelecionados.length,
       status: 'Ativa',
@@ -129,13 +131,13 @@ function CriarJornadaPageContent() {
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          {carreira.nome}
+          {carreiraNome}
         </button>
 
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Criar jornada de carreira</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Defina como será a evolução profissional dentro de {carreira.nome}
+            Defina como será a evolução profissional dentro de {carreiraNome}
           </p>
         </div>
 

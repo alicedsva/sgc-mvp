@@ -4,7 +4,7 @@ import { useCompetencias } from '../context/CompetenciasContext';
 import { useCarreiras, generateId } from '../context/CarreirasContext';
 import { useAvaliacoes } from '../context/AvaliacoesContext';
 import { useNavigate, useLocation } from 'react-router';
-import { niveisDefaultData, colaboradoresData, cargosData, HOJE_SIMULADO } from '../data/mockData';
+import { niveisDefaultData, colaboradoresData, cargosData, gerenciasData, HOJE_SIMULADO } from '../data/mockData';
 import { formatData, calcularStatusEfetivo, calcularDiasAteVencimento, getStatusAvaliacaoLabel, getStatusAvaliacaoBadgeClass, AvisoAtivacaoAgendada } from '../utils/avaliacoes';
 import type { Carreira, Avaliacao, ParticipanteAvaliacao } from '../../data/schema';
 import { ListingPage } from './templates/ListingPage';
@@ -22,7 +22,7 @@ import { MinhasAvaliacoes } from './MinhasAvaliacoes';
 import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy, Power } from 'lucide-react';
+import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy, Power, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
@@ -85,8 +85,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   const [buscaCarreira, setBuscaCarreira] = useState('');
   const [currentPageCarreiras, setCurrentPageCarreiras] = useState(1);
   const [itemsPerPageCarreiras, setItemsPerPageCarreiras] = useState(10);
-  const [carreiraFormData, setCarreiraFormData] = useState<{ nome: string; status: 'Ativa' | 'Desativada' }>({
-    nome: '',
+  const [carreiraFormData, setCarreiraFormData] = useState<{ gerenciaId: string; status: 'Ativa' | 'Desativada' }>({
+    gerenciaId: '',
     status: 'Ativa',
   });
   
@@ -170,6 +170,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     carreiras: carreirasData,
     adicionarCarreira,
     atualizarCarreira,
+    getCarreirasDaGerencia,
+    getCarreiraAtivaDaGerencia,
     jornadas: jornadasDoContexto,
   } = useCarreiras();
   // Perfis derivados de colaboradoresData — fonte única de verdade
@@ -1264,9 +1266,15 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
   // Módulo Carreiras
   if (selectedItem === 'carreiras') {
+    // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+    const carreirasComNome = carreirasData.map(c => ({
+      ...c,
+      nome: gerenciasData.find(g => g.id === c.gerenciaId)?.nome ?? '',
+    }));
+
     // Filtrar dados baseado no filtro de status
     const getFilteredCarreiras = () => {
-      return carreirasData.filter(item => {
+      return carreirasComNome.filter(item => {
         // Filtro de busca (nome)
         const matchBusca = buscaCarreira === '' || 
           item.nome.toLowerCase().includes(buscaCarreira.toLowerCase());
@@ -1408,7 +1416,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         onClick: (row) => {
           setSelectedRow(row);
           setCarreiraFormData({
-            nome: row.nome,
+            gerenciaId: row.gerenciaId,
             status: row.status,
           });
           setIsDrawerOpen(true);
@@ -1438,54 +1446,101 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     // Abrir drawer de criação
     const handleOpenCreateDrawer = () => {
       setSelectedRow(null);
-      setCarreiraFormData({ nome: '', status: 'Ativa' });
+      setCarreiraFormData({ gerenciaId: '', status: 'Ativa' });
       setIsDrawerOpen(true);
     };
 
-    // Campos do formulário
+    // Regra de criação (só vale no fluxo de CRIAÇÃO — no modo Edição o campo
+    // fica travado): uma Gerência só pode ter UMA Carreira 'Ativa'. Se já tem
+    // → bloqueia. Se só tem Carreira(s) 'Desativada' → aviso, não bloqueia.
+    const gerenciaSelecionadaId = carreiraFormData.gerenciaId;
+    const carreiraAtivaDaGerenciaSelecionada = !selectedRow && gerenciaSelecionadaId
+      ? getCarreiraAtivaDaGerencia(gerenciaSelecionadaId)
+      : undefined;
+    const temCarreiraDesativadaNaGerenciaSelecionada = !selectedRow && gerenciaSelecionadaId
+      && !carreiraAtivaDaGerenciaSelecionada
+      && getCarreirasDaGerencia(gerenciaSelecionadaId).length > 0;
+
+    // Campos do formulário. No modo Edição o campo Gerência aparece preenchido
+    // mas travado — trocar a Gerência de uma Carreira já existente é uma
+    // pergunta em aberto (só o fluxo de CRIAÇÃO foi definido).
     const carreirasFormFields: FormField[] = [
       {
-        name: 'nome',
-        label: 'Nome da Carreira',
-        type: 'text',
-        placeholder: 'Ex: Tecnologia da Informação',
+        name: 'gerenciaId',
+        label: 'Gerência',
+        type: 'searchable-select',
+        placeholder: 'Selecione uma gerência',
+        searchPlaceholder: 'Buscar gerência...',
+        emptyMessage: 'Nenhuma gerência encontrada',
         required: true,
-        value: carreiraFormData.nome,
+        disabled: !!selectedRow,
+        error: carreiraAtivaDaGerenciaSelecionada ? 'Esta gerência já tem uma carreira ativa.' : undefined,
+        options: gerenciasData.map(g => ({ value: g.id, label: g.nome })),
+        value: carreiraFormData.gerenciaId,
         onChange: (value) =>
-          setCarreiraFormData({ ...carreiraFormData, nome: value }),
+          setCarreiraFormData({ ...carreiraFormData, gerenciaId: value }),
       },
     ];
+
+    const fecharDrawerCarreira = () => {
+      setIsDrawerOpen(false);
+      setSelectedRow(null);
+      setCarreiraFormData({ gerenciaId: '', status: 'Ativa' });
+    };
+
+    // Criação de Carreira compartilhada por "Salvar" e "Criar Jornada".
+    // Retorna o id da Carreira criada, ou null se bloqueada (gerência não
+    // selecionada ou já com Carreira Ativa) — nesse caso já emite o toast.
+    const criarCarreira = (): string | null => {
+      if (!carreiraFormData.gerenciaId) {
+        toast.error('Selecione uma gerência.');
+        return null;
+      }
+      // Guarda além do feedback imediato no campo (dupla proteção).
+      if (getCarreiraAtivaDaGerencia(carreiraFormData.gerenciaId)) {
+        toast.error('Esta gerência já tem uma carreira ativa.');
+        return null;
+      }
+      // jornadas nunca é lido diretamente na exibição (sempre calculado via
+      // jornadasDoContexto.filter), então começa em 0 por convenção.
+      const newCarreira: Carreira = {
+        id: generateId('carreira'),
+        gerenciaId: carreiraFormData.gerenciaId,
+        status: carreiraFormData.status,
+        jornadas: 0,
+      };
+      setCarreirasSortConfig({ column: 'id', direction: 'desc' });
+      setCurrentPageCarreiras(1);
+      adicionarCarreira(newCarreira);
+      return newCarreira.id;
+    };
 
     // Submeter formulário
     const handleCarreiraFormSubmit = (e: React.FormEvent) => {
       e.preventDefault();
 
       if (selectedRow) {
-        // Editar carreira existente
-        atualizarCarreira(selectedRow.id, {
-          nome: carreiraFormData.nome,
-          status: carreiraFormData.status,
-        });
+        // Editar carreira existente — Gerência não é editável nesta etapa.
+        atualizarCarreira(selectedRow.id, { status: carreiraFormData.status });
         toast.success('Carreira atualizada com sucesso!');
-      } else {
-        // Criar nova carreira — jornadas nunca é lido diretamente na
-        // exibição (sempre calculado via jornadasDoContexto.filter), então
-        // começa em 0 por convenção, igual às outras carreiras existentes.
-        const newCarreira: Carreira = {
-          id: generateId('carreira'),
-          nome: carreiraFormData.nome,
-          status: carreiraFormData.status,
-          jornadas: 0,
-        };
-        setCarreirasSortConfig({ column: 'id', direction: 'desc' });
-        setCurrentPageCarreiras(1);
-        adicionarCarreira(newCarreira);
-        toast.success('Carreira criada com sucesso!');
+        fecharDrawerCarreira();
+        return;
       }
 
-      setIsDrawerOpen(false);
-      setSelectedRow(null);
-      setCarreiraFormData({ nome: '', status: 'Ativa' });
+      const novaCarreiraId = criarCarreira();
+      if (!novaCarreiraId) return;
+      toast.success('Carreira criada com sucesso!');
+      fecharDrawerCarreira();
+    };
+
+    // "Criar Jornada" — cria a Carreira e navega direto para a criação de
+    // jornada dessa Carreira (a rota já lê :carreiraId, sem state/prop nova).
+    const handleCriarCarreiraEJornada = () => {
+      const novaCarreiraId = criarCarreira();
+      if (!novaCarreiraId) return;
+      toast.success('Carreira criada com sucesso!');
+      fecharDrawerCarreira();
+      navigate(`/carreiras/${novaCarreiraId}/jornadas/criar`);
     };
 
     // Desativar carreira
@@ -1501,6 +1556,46 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     const totalJornadasSelecionada = selectedRow
       ? jornadasDoContexto.filter(j => j.carreiraId === selectedRow.id).length
       : 0;
+
+    // Só o banner "Carreira vinculada" (estado da entidade em edição) vai pelo
+    // alertBanner/topo. O aviso "Gerência com carreira anterior" é resultado de
+    // uma ação no formulário → renderizado abaixo do campo, via customContent.
+    const carreiraAlertBanner =
+      selectedRow && totalJornadasSelecionada > 0
+        ? {
+            title: 'Carreira vinculada',
+            description: `Esta carreira está vinculada a ${totalJornadasSelecionada} ${
+              totalJornadasSelecionada === 1 ? 'jornada' : 'jornadas'
+            }. Alterações no nome serão refletidas automaticamente ${
+              totalJornadasSelecionada === 1 ? 'nessa jornada' : 'nessas jornadas'
+            }.`,
+            variant: 'info' as const,
+          }
+        : undefined;
+
+    // Card conceitual — aparece nos dois modos, no topo (Variante B/slate).
+    const carreiraHeaderContent = (
+      <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Como funciona</p>
+          <p className="text-sm text-slate-700 mt-1">
+            Cada carreira representa uma gerência real da empresa. Ao escolher a gerência, você define a trajetória profissional (as jornadas de carreira) para os colaboradores dessa área.
+          </p>
+        </div>
+      </div>
+    );
+
+    // Aviso pós-seleção da Gerência (Variante C/yellow — "Aviso de estado",
+    // mesma estrutura dos avisos de FormularioAvaliacao), abaixo do campo.
+    const carreiraCustomContent = temCarreiraDesativadaNaGerenciaSelecionada ? (
+      <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">
+          Esta gerência já teve uma carreira anterior, que está desativada. Uma nova carreira será criada — os dados da carreira anterior permanecem preservados e não serão substituídos.
+        </p>
+      </div>
+    ) : undefined;
 
     return (
       <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
@@ -1550,25 +1645,20 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
 
           <FormDrawer
             isOpen={isDrawerOpen}
-            onClose={() => {
-              setIsDrawerOpen(false);
-              setSelectedRow(null);
-              setCarreiraFormData({ nome: '', status: 'Ativa' });
-            }}
+            onClose={fecharDrawerCarreira}
             title={selectedRow ? 'Editar Carreira' : 'Nova Carreira'}
             fields={carreirasFormFields}
             onSubmit={handleCarreiraFormSubmit}
             submitLabel={selectedRow ? 'Salvar alterações' : 'Salvar'}
-            alertBanner={
-              selectedRow && totalJornadasSelecionada > 0
+            alertBanner={carreiraAlertBanner}
+            headerContent={carreiraHeaderContent}
+            customContent={carreiraCustomContent}
+            secondaryAction={
+              !selectedRow && !carreiraAtivaDaGerenciaSelecionada
                 ? {
-                    title: 'Carreira vinculada',
-                    description: `Esta carreira está vinculada a ${totalJornadasSelecionada} ${
-                      totalJornadasSelecionada === 1 ? 'jornada' : 'jornadas'
-                    }. Alterações no nome serão refletidas automaticamente ${
-                      totalJornadasSelecionada === 1 ? 'nessa jornada' : 'nessas jornadas'
-                    }.`,
-                    variant: 'info',
+                    label: 'Criar Jornada',
+                    onClick: handleCriarCarreiraEJornada,
+                    variant: 'secondary' as const,
                   }
                 : undefined
             }

@@ -15,7 +15,7 @@ import { getCorFromPeso, niveisDefaultData } from '../data/mockData';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
-import { getStatusAvaliacaoBadgeClass, getStatusParticipanteBadgeClass } from '../utils/avaliacoes';
+import { getStatusAvaliacaoBadgeClass, getStatusAvaliacaoLabel, getStatusParticipanteBadgeClass } from '../utils/avaliacoes';
 
 type SectionId =
   | 'home'
@@ -144,9 +144,10 @@ const ALL_ITEMS = NAV_GROUPS.flatMap((g) =>
   g.items ?? g.subgroups?.flatMap(sg => sg.items) ?? []
 );
 
-// Slug de URL por seção — sempre o último segmento do SectionId (já único
-// entre as 26 seções, checado manualmente; nenhum novo SectionId deve
-// reutilizar um slug já usado por outro, mesmo em grupos diferentes).
+// Slug de URL por seção — sempre o último segmento do SectionId (único entre
+// as Object.keys(SECTIONS_META).length seções, checado manualmente; nenhum
+// novo SectionId deve reutilizar um slug já usado por outro, mesmo em grupos
+// diferentes).
 // Permite compartilhar o link de uma seção específica via /design-system/:secao
 // sem expor a estrutura de grupo/subgrupo interna na URL.
 const SECTION_TO_SLUG: Record<SectionId, string> = Object.fromEntries(
@@ -166,6 +167,58 @@ type SectionMetaProps = {
   ultimaAtualizacao: string | null;
   debitosTecnicos: number;
   alertas: number;
+};
+
+type SectionGrupo =
+  | 'Fundamentos'
+  | 'Componentes'
+  | 'Padrões'
+  | 'Regras de negócio'
+  | 'Especificação de Telas';
+
+type SectionMetaEntry = SectionMetaProps & {
+  titulo: string;
+  grupo: SectionGrupo;
+};
+
+// Registro central — FONTE ÚNICA de status/débitos/alertas por seção do DS.
+// Cada Secao*() consome sua entrada via <SectionMeta {...SECTIONS_META['<slug>']} />;
+// o painel "Status" (home) e a tabela "Atenção necessária" são CALCULADOS daqui.
+// Nunca reescreva números soltos no JSX — altere só este objeto.
+// A chave é o slug da seção (último segmento do SectionId, igual a SECTION_TO_SLUG).
+const SECTIONS_META: Record<string, SectionMetaEntry> = {
+  // Fundamentos
+  'cores':                  { titulo: 'Cores',                   grupo: 'Fundamentos',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  'tipografia':             { titulo: 'Tipografia',              grupo: 'Fundamentos',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  'espacamento':            { titulo: 'Espaçamento',             grupo: 'Fundamentos',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  'icones':                 { titulo: 'Ícones',                  grupo: 'Fundamentos',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  // Componentes
+  'botoes':                 { titulo: 'Botões',                  grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'badges':                 { titulo: 'Badges',                  grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  'tabelas':                { titulo: 'Tabelas',                 grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'filtros-pills':          { titulo: 'Filtros e Pills',         grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  'cards':                  { titulo: 'Cards',                   grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'drawers':                { titulo: 'Drawers',                 grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'modais':                 { titulo: 'Modais',                  grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'formularios':            { titulo: 'Formulários',             grupo: 'Componentes',            status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  // Padrões
+  'navegacao':              { titulo: 'Navegação',               grupo: 'Padrões',                status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 1 },
+  'mensagens-orientacao':   { titulo: 'Mensagens de orientação', grupo: 'Padrões',                status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'estados-vazios':         { titulo: 'Estados vazios',          grupo: 'Padrões',                status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 4, alertas: 1 },
+  'paginacao':              { titulo: 'Paginação',               grupo: 'Padrões',                status: 'documentado',   ultimaAtualizacao: '10/06/2026', debitosTecnicos: 1, alertas: 0 },
+  // Regras de negócio
+  'niveis-cores':           { titulo: 'Níveis e cores',          grupo: 'Regras de negócio',     status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  'cobertura-habilidades':  { titulo: 'Cobertura de habilidades',grupo: 'Regras de negócio',     status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  'estados-avaliacao':      { titulo: 'Estados de avaliação',    grupo: 'Regras de negócio',     status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  'badges-status':          { titulo: 'Badges de status',        grupo: 'Regras de negócio',     status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  'jornadas-e-matriz':      { titulo: 'Jornadas e Matriz',       grupo: 'Regras de negócio',     status: 'documentado',   ultimaAtualizacao: '28/08/2026', debitosTecnicos: 0, alertas: 0 },
+  // Especificação de Telas
+  'matriz-habilidades':     { titulo: 'Matriz de Habilidades',   grupo: 'Especificação de Telas', status: 'documentado',   ultimaAtualizacao: '15/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'criar-editar-jornada':   { titulo: 'Criar / Editar Jornada',  grupo: 'Especificação de Telas', status: 'documentado',   ultimaAtualizacao: '15/06/2026', debitosTecnicos: 0, alertas: 0 },
+  'meu-perfil':             { titulo: 'Meu Perfil',              grupo: 'Especificação de Telas', status: 'em-construcao', ultimaAtualizacao: null,        debitosTecnicos: 0, alertas: 0 },
+  'minhas-avaliacoes':      { titulo: 'Minhas Avaliações',       grupo: 'Especificação de Telas', status: 'documentado',   ultimaAtualizacao: '27/07/2026', debitosTecnicos: 0, alertas: 0 },
+  'responder-avaliacao':    { titulo: 'Responder Avaliação',     grupo: 'Especificação de Telas', status: 'documentado',   ultimaAtualizacao: '30/07/2026', debitosTecnicos: 0, alertas: 0 },
+  'minha-carreira':         { titulo: 'Minha Carreira',          grupo: 'Especificação de Telas', status: 'em-construcao', ultimaAtualizacao: null,        debitosTecnicos: 0, alertas: 0 },
 };
 
 function SectionMeta({ status, ultimaAtualizacao, debitosTecnicos, alertas }: SectionMetaProps) {
@@ -224,27 +277,18 @@ function SectionMeta({ status, ultimaAtualizacao, debitosTecnicos, alertas }: Se
 // ─── Seção: Níveis e cores ────────────────────────────────────────────────────
 
 const ORDENS_PROGRESSAO = [
-  { ordem: 1, label: 'Mínimo', hex: '#60A5FA', token: 'Blue/400' },
-  { ordem: 2, label: 'Baixo', hex: '#2563EB', token: 'Blue/600' },
-  { ordem: 3, label: 'Médio', hex: '#4338CA', token: 'Indigo/700' },
-  { ordem: 4, label: 'Alto', hex: '#5B21B6', token: 'Violet/800' },
-  { ordem: 5, label: 'Máximo', hex: '#581C87', token: 'Purple/900' },
-];
-
-const DESCRICOES_SUGERIDAS = [
-  { ordem: '1 — Mínimo', desc: 'Conhecimento inicial. Realiza atividades simples com supervisão constante.' },
-  { ordem: '2 — Baixo', desc: 'Executa tarefas com autonomia em situações conhecidas. Busca suporte em contextos novos.' },
-  { ordem: '3 — Médio', desc: 'Aplica conhecimento de forma consistente. Resolve problemas com pouca supervisão.' },
-  { ordem: '4 — Alto', desc: 'Atua com autonomia em situações complexas e orienta outros profissionais.' },
-  { ordem: '5 — Máximo', desc: 'Referência na área. Define padrões, resolve problemas críticos e forma outros profissionais.' },
+  { ordem: 1, label: 'Aprendiz',      hex: '#60A5FA' },
+  { ordem: 2, label: 'Iniciante',     hex: '#2563EB' },
+  { ordem: 3, label: 'Intermediário', hex: '#4338CA' },
+  { ordem: 4, label: 'Avançado',      hex: '#5B21B6' },
+  { ordem: 5, label: 'Especialista',  hex: '#581C87' },
 ];
 
 const REGRAS_NIVEIS = [
-  'A cor não é configurável — é sempre derivada da ordem.',
-  'O RH define o nome do nível livremente (ex: "Iniciante" no lugar de "Básico").',
-  'A ordem de progressão define a hierarquia, não o nome.',
+  'Os 5 nomes são fixos (Aprendiz, Iniciante, Intermediário, Avançado, Especialista), sem CRUD pelo RH.',
+  'A cor não é configurável — é sempre derivada da ordem (peso 1–5).',
+  'A ordem de progressão (peso) define a hierarquia, não o nome.',
   'O vínculo é nível × habilidade, não nível × avaliação.',
-  'Ordens com o mesmo valor: desempate por ordem alfabética do nome.',
 ];
 
 function SecaoNiveisCores() {
@@ -255,10 +299,10 @@ function SecaoNiveisCores() {
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Níveis e cores</h1>
       <p className="text-sm text-gray-600 mb-4">
-        Níveis são cadastrados pelo RH com nome livre e ordem de progressão (1–5). A cor é derivada
-        automaticamente da ordem — não é configurável.
+        Os níveis de habilidade são 5 e fixos, com ordem de progressão (peso) 1–5. A cor é derivada
+        automaticamente da ordem — não é configurável, e não há CRUD de níveis pelo RH.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['niveis-cores']} />
 
       {/* Bloco 1 — Tabela de ordens */}
       <div className="mb-8">
@@ -267,20 +311,18 @@ function SecaoNiveisCores() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Ordem</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Label</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Ordem (peso)</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Nome</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Hex</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Token Tailwind</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Badge</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {ORDENS_PROGRESSAO.map(({ ordem, label, hex, token }) => (
+              {ORDENS_PROGRESSAO.map(({ ordem, label, hex }) => (
                 <tr key={ordem} className="bg-white">
                   <td className="px-4 py-3 text-gray-600">{ordem}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{label}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{nomesPorOrdem[ordem] ?? label}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{hex}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{token}</td>
                   <td className="px-4 py-3">
                     <span
                       className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium text-white"
@@ -294,6 +336,10 @@ function SecaoNiveisCores() {
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+          Os hex vêm de <code className="font-mono">getCorFromPeso(peso)</code> (mockData.ts) — devolvem
+          o valor cru, sem equivalente em token Tailwind.
+        </p>
       </div>
 
       {/* Bloco 2 — Regras importantes */}
@@ -308,61 +354,26 @@ function SecaoNiveisCores() {
         </div>
       </div>
 
-      {/* Bloco 3 — Ciclo de vida */}
+      {/* Bloco 3 — Onde aparece no código */}
       <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Estados de um nível</h2>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-center font-mono text-xs text-gray-700 leading-loose">
-          <p>Ativo → Desativado → Arquivado</p>
-          <p className="text-gray-400 tracking-wide">↑</p>
-          <p className="text-gray-400">(restaurar volta para Desativado)</p>
-        </div>
-        <div className="flex flex-col gap-2">
-          {[
-            { estado: 'Ativo', desc: 'Visível e selecionável no sistema.' },
-            { estado: 'Desativado', desc: 'Não aparece em novas seleções, histórico preservado.' },
-            { estado: 'Arquivado', desc: 'Removido das listas, histórico preservado nos relatórios.' },
-          ].map(({ estado, desc }) => (
-            <div key={estado} className="flex gap-3 text-sm">
-              <span className="font-medium text-gray-900 w-24 flex-shrink-0">{estado}</span>
-              <span className="text-gray-500">{desc}</span>
-            </div>
-          ))}
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Onde aparece no código</h2>
+        <div className="flex flex-col gap-2 text-sm">
+          <div className="flex gap-3">
+            <span className="font-medium text-gray-900 w-44 flex-shrink-0">NiveisProficiencia.tsx</span>
+            <span className="text-gray-500">Tela real — aba "Níveis de Habilidades", consulta pura (5 linhas fixas, sem busca, filtro, criação ou edição).</span>
+          </div>
+          <div className="flex gap-3">
+            <span className="font-medium text-gray-900 w-44 flex-shrink-0">getPesoFromNome(nome)</span>
+            <span className="text-gray-500">Lookup nome → peso (mockData.ts). Sempre comparar níveis por peso, nunca por string de nome.</span>
+          </div>
         </div>
       </div>
 
-      {/* Bloco 4 — Descrições sugeridas */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Descrições pré-definidas automáticas</h2>
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 w-36">Ordem</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Descrição sugerida</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {DESCRICOES_SUGERIDAS.map(({ ordem, desc }) => (
-                <tr key={ordem} className="bg-white">
-                  <td className="px-4 py-3 font-medium text-gray-900 text-xs whitespace-nowrap">{ordem}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{desc}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-          O RH pode editar a descrição sugerida ao criar o nível. Na habilidade, pode complementar
-          com uma descrição específica para aquela habilidade.
-        </p>
-      </div>
-
-      {/* Bloco 5 — Código de referência */}
+      {/* Bloco 4 — Código de referência */}
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Como usar no front-end</h2>
         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">
-{`// A função getCorFromPeso recebe o campo 'peso' do nível
-// e retorna o hex correspondente
+{`// getCorFromPeso recebe o campo 'peso' do nível e retorna o hex
 import { getCorFromPeso } from '@/app/data/mockData';
 
 // Renderizar badge de nível
@@ -400,7 +411,7 @@ function SecaoCoberturaHabilidades() {
         Mede o percentual de habilidades onde o nível atual do colaborador atende ou supera o nível
         esperado na matriz para o cargo.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['cobertura-habilidades']} />
 
       {/* Bloco 1 — Fórmula */}
       <div className="mb-8">
@@ -487,8 +498,40 @@ export function calcularCobertura(
 export function calcularCoberturaCargo(
   habilidadesColaborador: HabilidadeColaborador[],
   matrizCargo: MatrizCargo[],
-): ResultadoCobertura`}
+): ResultadoCobertura
+// Caso de borda: matrizCargo vazia →
+//   { percentual: 0, label: 'Sem dados',
+//     cor: 'text-gray-500', bgCor: 'bg-gray-400' }`}
         </pre>
+      </div>
+
+      {/* Bloco 5 — Nota: habilidade fora da matriz */}
+      <div className="mb-8 bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-slate-700">
+          <span className="font-medium text-slate-800">Habilidade sem entrada na matriz do cargo: </span>
+          o peso do colaborador cai em <code className="font-mono text-xs">?? 0</code>, então essa
+          habilidade conta como <strong>não coberta</strong> e permanece no denominador. É diferente da
+          regra de "Aderência ao cargo" (Meu Perfil / Minha Carreira), onde habilidades com status{' '}
+          <code className="font-mono text-xs">'sem'</code> são excluídas de numerador <em>e</em>{' '}
+          denominador.
+        </p>
+      </div>
+
+      {/* Bloco 6 — Exceção do Dashboard */}
+      <div className="mb-8 bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-[var(--brand-700)]">
+          <span className="font-medium">Exceção — Dashboard:</span>{' '}
+          <code className="font-mono text-xs">DashboardPage.tsx</code> (funções{' '}
+          <code className="font-mono text-xs">getBarColor</code> /{' '}
+          <code className="font-mono text-xs">getCoberturaTextColor</code>) usa paleta azul/brand com
+          limiares <strong>70/50</strong> (<code className="font-mono text-xs">#009FC2</code> /{' '}
+          <code className="font-mono text-xs">#33BFDF</code> /{' '}
+          <code className="font-mono text-xs">#99DFEF</code>), não a paleta verde/amarelo/vermelho
+          80/50 desta seção. É decisão consciente de produto, não bug — já documentada em{' '}
+          <code className="font-mono text-xs">04-regras-negocio.md</code>.
+        </p>
       </div>
     </div>
   );
@@ -504,7 +547,7 @@ function SecaoEstadosAvaliacao() {
         O Admin gerencia o status da avaliação. O Colaborador tem um estado próprio que reflete
         sua participação naquela avaliação.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="19/08/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['estados-avaliacao']} />
 
       <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
@@ -539,6 +582,13 @@ function SecaoEstadosAvaliacao() {
                 <td className="px-4 py-3 text-xs text-gray-500">Avaliação criada mas não publicada. Não visível para o colaborador.</td>
               </tr>
               <tr className="bg-white">
+                <td className="px-4 py-3 font-medium text-gray-900">Pendente</td>
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Pendente')}`}>{getStatusAvaliacaoLabel('Pendente')}</span>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-500">Data de Início ainda no futuro. Exibida como "Agendada" — ativa sozinha na data, sem ação do Admin.</td>
+              </tr>
+              <tr className="bg-white">
                 <td className="px-4 py-3 font-medium text-gray-900">Ativa</td>
                 <td className="px-4 py-3">
                   <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Ativa')}`}>Ativa</span>
@@ -550,11 +600,54 @@ function SecaoEstadosAvaliacao() {
                 <td className="px-4 py-3">
                   <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Encerrada')}`}>Encerrada</span>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-500">Período encerrado. Não aceita mais respostas.</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Encerrada manualmente pelo Admin. Não aceita mais respostas.</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3 font-medium text-gray-900">Expirada</td>
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Expirada')}`}>Expirada</span>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-500">Data de Término passou (só nos modos <code className="font-mono">datas_fixas</code> e <code className="font-mono">datas_fixas_com_prazo</code>). Encerra sozinha, sem ação do Admin.</td>
               </tr>
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Bloco 1b — status gravado × efetivo */}
+      <div className="mb-8 bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-slate-700">
+          <span className="font-medium text-slate-800">Status gravado × status efetivo: </span>
+          <code className="font-mono text-xs">calcularStatusEfetivo(avaliacao, hoje)</code>{' '}
+          (utils/avaliacoes.ts) é a fonte única — nenhuma tela deve ler{' '}
+          <code className="font-mono text-xs">avaliacao.status</code> bruto. O campo gravado só registra
+          decisão explícita do Admin (<code className="font-mono text-xs">Rascunho</code>,{' '}
+          <code className="font-mono text-xs">Ativa</code> ao ativar,{' '}
+          <code className="font-mono text-xs">Encerrada</code> ao encerrar);{' '}
+          <code className="font-mono text-xs">Pendente</code> e{' '}
+          <code className="font-mono text-xs">Expirada</code> nunca são gravados — são sempre calculados
+          a partir de <code className="font-mono text-xs">periodoInicio</code>/
+          <code className="font-mono text-xs">periodoFim</code> comparados a HOJE.
+        </p>
+      </div>
+
+      {/* Bloco 1c — modos de prazo */}
+      <div className="mb-8 bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-[var(--brand-700)]">
+          <span className="font-medium">Modelo de prazo:</span> há 4 modos (
+          <code className="font-mono text-xs">ModoPrazoAvaliacao</code>:{' '}
+          <code className="font-mono text-xs">datas_fixas</code> ·{' '}
+          <code className="font-mono text-xs">prazo_em_dias</code> ·{' '}
+          <code className="font-mono text-xs">datas_fixas_com_prazo</code> ·{' '}
+          <code className="font-mono text-xs">indefinido</code>), inferidos de 8 combinações possíveis
+          dos 3 campos Início / Término / Dias (3 campos binários = 2³ = 8 — o "9" antigo era erro de
+          contagem, já corrigido em <code className="font-mono text-xs">FormularioAvaliacao.tsx</code>).
+          A tabela completa das 8 combinações está em{' '}
+          <code className="font-mono text-xs">docs/HANDOFF-AVALIACOES-COMPLETO.md</code> — não é
+          duplicada aqui.
+        </p>
       </div>
 
       {/* Bloco 2 — Estado do colaborador */}
@@ -623,7 +716,7 @@ function SecaoBadgesStatus() {
       <p className="text-sm text-gray-600 mb-4">
         Badges usados em todo o sistema para comunicar estado de registros.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['badges-status']} />
 
       {/* Bloco 1 — Tabela completa */}
       <div className="mb-8">
@@ -668,10 +761,24 @@ function SecaoBadgesStatus() {
               </tr>
               <tr className="bg-white">
                 <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Pendente')}`}>{getStatusAvaliacaoLabel('Pendente')}</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusAvaliacaoBadgeClass('Pendente')</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Avaliações — status calculado "Pendente", exibido como "Agendada"</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
                   <span className={`${BADGE_BASE} ${getStatusAvaliacaoBadgeClass('Encerrada')}`}>Encerrada</span>
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">getStatusAvaliacaoBadgeClass('Encerrada')</td>
-                <td className="px-4 py-3 text-xs text-gray-500">Avaliações</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Avaliações — encerrada manualmente. Mesma cor cinza para "Expirada" (encerrada por data)</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} bg-gray-100 text-gray-700`}>Arquivado</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-gray-100 text-gray-700</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Níveis arquivados (não aparecem em novas seleções)</td>
               </tr>
 
               {/* Grupo: Estado do colaborador */}
@@ -736,18 +843,104 @@ function SecaoBadgesStatus() {
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">text-red-500 (texto, sem fundo)</td>
                 <td className="px-4 py-3 text-xs text-gray-500">Detalhamento</td>
               </tr>
+
+              {/* Grupo: Nível de habilidade */}
+              <tr className="bg-gray-50">
+                <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Nível de habilidade
+                </td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} text-white`} style={{ backgroundColor: getCorFromPeso(3) }}>Nível (ex.: peso 3)</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">getCorFromPeso(peso) · text-white</td>
+                <td className="px-4 py-3 text-xs text-gray-500">
+                  Matriz, cadastro de habilidade, questionário. A cor <strong>varia por peso</strong> (1–5),
+                  não é fixa como as demais — ver seção "Níveis e cores".
+                </td>
+              </tr>
+
+              {/* Grupo: Tipo de habilidade */}
+              <tr className="bg-gray-50">
+                <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Tipo de habilidade
+                </td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} bg-[var(--brand-100)] text-[var(--brand-800)]`}>Técnica</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-[var(--brand-100)] text-[var(--brand-800)]</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Habilidades, Competências, questionário de avaliação</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className={`${BADGE_BASE} bg-purple-100 text-purple-800`}>Comportamental</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-purple-100 text-purple-800</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Habilidades, Competências, questionário de avaliação</td>
+              </tr>
+
+              {/* Grupo: Variação percentual (Dashboard) */}
+              <tr className="bg-gray-50">
+                <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Variação percentual (Dashboard)
+                </td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">↑ 4%</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-green-100 text-green-700</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Cards de métrica do Dashboard — variação positiva vs. período anterior</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">↓ 8%</span>
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">bg-red-100 text-red-700</td>
+                <td className="px-4 py-3 text-xs text-gray-500">Cards de métrica do Dashboard — variação negativa vs. período anterior</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Bloco 2 — Código de referência */}
+      {/* Bloco 2 — Regras de uso (semântica) */}
       <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Classe base dos badges</h2>
-        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">
-{`inline-flex px-1.5 md:px-2 py-0.5 md:py-1
-text-[10px] md:text-xs font-medium rounded-full`}
-        </pre>
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Regras de uso</h2>
+        <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0" />
+            <span className="text-sm font-medium text-[var(--brand-700)]">Significado das cores</span>
+          </div>
+          <ul className="text-sm text-gray-700 space-y-2 pl-2 list-disc list-inside">
+            <li>Verde = positivo / ativo / concluído / no ou acima do esperado</li>
+            <li>Vermelho = negativo / desativado / erro / abaixo do esperado</li>
+            <li>Amarelo = atenção / rascunho (não publicado)</li>
+            <li>Azul = em progresso / agendado (Em andamento, Pendente/"Agendada")</li>
+            <li>Cinza = neutro / encerrado / expirado / arquivado</li>
+            <li>Laranja = ainda não começou (Não iniciada)</li>
+            <li>Roxo = tipo Comportamental (não é status — categoria)</li>
+            <li>Nunca reaproveite uma cor com outro significado, e nunca torne um badge clicável (<code className="font-mono text-xs">onClick</code>).</li>
+            <li>Status de <strong>registro</strong> ≠ status de <strong>participação do colaborador</strong> — são universos distintos, nunca misturados.</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Bloco 3 — Nota: duas classes-base */}
+      <div className="mb-8 bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-slate-700">
+          <span className="font-medium text-slate-800">Duas classes-base no sistema: </span>
+          <code className="font-mono text-xs">BADGE_BASE</code> (<code className="font-mono text-xs">px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs</code>)
+          para badges inline em tabelas/listas, e <code className="font-mono text-xs">StatusBadge.tsx</code>{' '}
+          (<code className="font-mono text-xs">px-2 py-1 text-xs</code>) para o badge ao lado do H1 numa
+          tela de detalhe. A diferença é <strong>técnica</strong> (onde cada uma é usada), não de
+          significado — a cor e o que ela comunica são idênticos nos dois. Detalhes de implementação
+          em "Componentes › Badges".
+        </p>
       </div>
     </div>
   );
@@ -766,7 +959,7 @@ const REGRAS_CRIACAO_JORNADA = [
 
 const REGRAS_MATRIZ = [
   'As habilidades disponíveis na matriz são as cadastradas no módulo Habilidades — técnicas e comportamentais.',
-  'Para cada habilidade, o RH define o nível mínimo exigido por cargo usando os níveis cadastrados (ex: Básico para Júnior, Intermediário para Pleno, Avançado para Sênior).',
+  'Para cada habilidade, o RH define o nível mínimo exigido por cargo usando os níveis cadastrados (ex: Aprendiz para Júnior, Intermediário para Pleno, Avançado para Sênior).',
   'Uma habilidade pode ter níveis diferentes para cada cargo da mesma jornada.',
   'O colaborador é avaliado contra a matriz do cargo atual na sua jornada.',
   'Habilidades não incluídas na matriz não afetam a cobertura do colaborador naquela jornada.',
@@ -785,7 +978,7 @@ function SecaoJornadasEMatriz() {
       <p className="text-sm text-gray-600 mb-4">
         Regras que governam a construção de jornadas de carreira e a definição de habilidades exigidas por cargo.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="12/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['jornadas-e-matriz']} />
 
       {/* Bloco 1 — Hierarquia de carreiras */}
       <div className="mb-8">
@@ -841,6 +1034,52 @@ function SecaoJornadasEMatriz() {
             </li>
           ))}
         </ul>
+
+        <h3 className="text-xs font-semibold text-gray-900 mt-6 mb-3">Estados da célula da matriz</h3>
+        <div className="flex flex-col gap-3 text-sm">
+          <div className="flex items-start gap-3">
+            <span className="w-24 h-14 flex-shrink-0 rounded-lg border border-dashed border-gray-300 bg-white" />
+            <div>
+              <p className="font-medium text-gray-900">Não configurado (<code className="font-mono text-xs">null</code>)</p>
+              <p className="text-gray-500">Borda tracejada cinza. O RH ainda não definiu nível para essa habilidade nesse cargo.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="w-24 h-14 flex-shrink-0 rounded-lg border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-amber-500">–</span>
+            <div>
+              <p className="font-medium text-gray-900">Não exigido (<code className="font-mono text-xs">'not_required'</code>)</p>
+              <p className="text-gray-500">Borda tracejada âmbar, mostra "–". Decisão explícita do RH de que o cargo não exige essa habilidade.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="w-24 flex-shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-2 space-y-0.5" style={{ borderLeftWidth: 3, borderLeftColor: getCorFromPeso(4) }}>
+              <span className="block text-xs font-semibold leading-tight" style={{ color: getCorFromPeso(4) }}>Avançado</span>
+              <span className="block text-[10px] text-gray-400 leading-tight">Nível 4</span>
+            </span>
+            <div>
+              <p className="font-medium text-gray-900">Preenchido (nome de nível)</p>
+              <p className="text-gray-500">Borda esquerda 3px via <code className="font-mono text-xs">getCorFromPeso(peso)</code> + nome do nível, critério (<code className="font-mono text-xs">line-clamp-3</code>) e "Nível N".</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3 mt-4">
+          <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-slate-700">
+            <span className="font-medium text-slate-800">Distinção obrigatória: </span>
+            "Não configurado" (célula <code className="font-mono text-xs">null</code>) e "Não exigido"
+            (<code className="font-mono text-xs">'not_required'</code>) são conceitos diferentes e nunca
+            devem ser tratados como iguais — ver <code className="font-mono text-xs">04-regras-negocio.md</code>.
+          </p>
+        </div>
+
+        <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+          Fonte de dado real da matriz: <code className="font-mono">habilidadesCargoData</code>{' '}
+          (mockData.ts, com <code className="font-mono">nivelEsperado</code> = nome de nível ou{' '}
+          <code className="font-mono">'not_required'</code>); o nível esperado por colaborador vem de{' '}
+          <code className="font-mono">getNivelEsperadoPorColaborador</code> (utils/avaliacoes.ts),
+          filtrado por <code className="font-mono">colaborador.cargoId</code>.
+        </p>
       </div>
 
       {/* Bloco 4 — Vínculo com o colaborador */}
@@ -951,7 +1190,7 @@ function SecaoCores() {
         <code className="bg-gray-100 px-1 rounded text-xs">var(--brand-600)</code>
         ) em vez de valores hex diretamente.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['cores']} />
 
       {/* Bloco 1 — Paleta de marca */}
       <div className="mb-8">
@@ -1158,7 +1397,7 @@ function SecaoTipografia() {
         <code className="bg-gray-100 px-1 rounded text-xs">src/styles/fonts.css</code>.{' '}
         Tamanho base: 16px. Line-height padrão: 1.5.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['tipografia']} />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -1365,7 +1604,7 @@ function SecaoEspacamento() {
         O sistema usa a escala de espaçamento padrão do Tailwind CSS. Não há tokens customizados
         de espaçamento — use sempre as classes Tailwind.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['espacamento']} />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -1479,6 +1718,7 @@ const STATUS_REGISTRO = [
   { label: 'Ativa',      classes: 'bg-green-100 text-green-800',   uso: 'Competências, Habilidades, Carreiras, Jornadas, Avaliações ativas' },
   { label: 'Desativada', classes: 'bg-red-100 text-red-700',      uso: 'Registros desativados' },
   { label: 'Rascunho',   classes: 'bg-yellow-100 text-yellow-800', uso: 'Avaliações não publicadas' },
+  { label: 'Agendada',   classes: 'bg-blue-100 text-blue-800',    uso: "Avaliações — status calculado 'Pendente' (getStatusAvaliacaoBadgeClass). Nunca gravado; vem de calcularStatusEfetivo." },
   { label: 'Encerrada',  classes: 'bg-gray-100 text-gray-700',    uso: 'Avaliações com período encerrado' },
   { label: 'Arquivado',  classes: 'bg-gray-100 text-gray-700',    uso: 'Níveis arquivados (não aparece em seleções)' },
 ];
@@ -1491,7 +1731,7 @@ const ESTADO_COLABORADOR_BADGES = [
 ];
 
 function SecaoBadges() {
-  const nomesMock = niveisDefaultData.map((n) => `${n.nome} (${n.peso})`).join(' / ');
+  const nomesMock = niveisDefaultData.map((n) => `${n.nome} · Nível ${n.peso}`).join(' / ');
 
   return (
     <div>
@@ -1500,7 +1740,7 @@ function SecaoBadges() {
         Badges comunicam estado de forma compacta. Nunca use badges para decoração — cada cor tem
         significado semântico definido.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="19/08/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['badges']} />
 
       {/* Bloco 1 — Classe base */}
       <div className="mb-8">
@@ -1510,9 +1750,16 @@ className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1
            text-[10px] md:text-xs font-medium rounded-full"
 
 // Badges de nível (cor derivada de getCorFromPeso)
-style={{ backgroundColor: getCorFromPeso(ordem) }}
+style={{ backgroundColor: getCorFromPeso(peso) }}
 className="inline-flex px-2.5 py-1 rounded-full
-           text-xs font-medium text-white"`}</pre>
+           text-xs font-medium text-white"
+
+// Badge de tipo de habilidade (span inline com ternário — sem helper)
+className={\`\${BADGE_BASE} \${
+  h.tipo === 'Técnica'
+    ? 'bg-[var(--brand-100)] text-[var(--brand-800)]'
+    : 'bg-purple-100 text-purple-800'
+}\`}`}</pre>
       </div>
 
       {/* Bloco 1b — Badge ao lado de H1 (StatusBadge) */}
@@ -1624,14 +1871,45 @@ className="inline-flex px-2.5 py-1 rounded-full
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <p className="text-xs text-gray-600 mb-1">
-            <span className="font-medium">Nomes no mock atual:</span>{' '}
+            <span className="font-medium">Os 5 nomes:</span>{' '}
             {nomesMock}
           </p>
           <p className="text-xs text-gray-500">
-            Os nomes são definidos pelo RH e podem variar. A cor é sempre determinada pela ordem
-            de progressão, não pelo nome.
+            Os 5 nomes são fixos (Aprendiz, Iniciante, Intermediário, Avançado, Especialista). A cor é
+            sempre determinada pela ordem de progressão (peso), não pelo nome.
           </p>
         </div>
+      </div>
+
+      {/* Bloco 4b — Badge de tipo de habilidade */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Badge de tipo de habilidade</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Marca uma habilidade ou competência como Técnica ou Comportamental. Aparece em Habilidades,
+          Competências e no questionário de avaliação. O que cada tom significa está em{' '}
+          <span className="font-medium">Regras de negócio › Badges de status</span>.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className={`${BADGE_BASE} bg-[var(--brand-100)] text-[var(--brand-800)]`}>Técnica</span>
+          <span className={`${BADGE_BASE} bg-purple-100 text-purple-800`}>Comportamental</span>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 flex items-start gap-2 mb-4">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-yellow-800">
+            Não há componente nem helper para este badge hoje — é um <code className="font-mono text-xs">&lt;span&gt;</code>{' '}
+            inline com ternário sobre <code className="font-mono text-xs">habilidade.tipo</code>, repetido em
+            ~8 telas com padding variável (<code className="font-mono text-xs">px-2 py-0.5</code>,{' '}
+            <code className="font-mono text-xs">px-2 py-1</code>, <code className="font-mono text-xs">px-1.5 md:px-2 py-0.5 md:py-1</code>).
+            Padronizar o sizing em <code className="font-mono text-xs">BADGE_BASE</code>.
+          </p>
+        </div>
+        <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">{`<span className={\`\${BADGE_BASE} \${
+  h.tipo === 'Técnica'
+    ? 'bg-[var(--brand-100)] text-[var(--brand-800)]'
+    : 'bg-purple-100 text-purple-800'
+}\`}>
+  {h.tipo}
+</span>`}</pre>
       </div>
 
       {/* Bloco 5 — Indicadores de status em texto */}
@@ -1796,7 +2074,7 @@ function SecaoIcones() {
         O sistema usa exclusivamente a biblioteca Lucide React. Nunca use outras bibliotecas de ícones
         ou SVGs inline não documentados.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['icones']} />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -1953,7 +2231,7 @@ function SecaoBotoes() {
       <p className="text-sm text-gray-600 mb-4">
         Botões comunicam ações. Use a variante correta para cada nível de hierarquia de ação.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['botoes']} />
 
       {/* Bloco 1 — Variantes */}
       <div className="mb-8">
@@ -2171,7 +2449,7 @@ function SecaoTabelas() {
           toolbar, thead, tbody e paginação.
         </p>
       </div>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['tabelas']} />
 
       {/* Bloco 1 — Estrutura completa */}
       <div className="mb-8">
@@ -2427,7 +2705,7 @@ function SecaoFiltrosEPills() {
           pills de status + campo de busca + dropdowns.
         </p>
       </div>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['filtros-pills']} />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -2741,7 +3019,7 @@ function SecaoCards() {
           card de métrica, card de conteúdo e card de estado.
         </p>
       </div>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['cards']} />
 
       {/* Bloco 1 — Card de métrica */}
       <div className="mb-8">
@@ -2907,7 +3185,7 @@ function SecaoDrawers() {
         Painéis laterais deslizantes usados para criar e editar registros. Sempre surgem
         pela direita e cobrem parcialmente o conteúdo.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['drawers']} />
 
       {/* Bloco 1 — Anatomia */}
       <div className="mb-8">
@@ -3105,7 +3383,7 @@ function SecaoModais() {
         Janelas de confirmação para ações críticas ou irreversíveis. Sempre bloqueiam
         a interação com o restante da página.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['modais']} />
 
       {/* Bloco 1 — Modal vs Drawer */}
       <div className="mb-8 max-w-2xl">
@@ -3350,7 +3628,7 @@ function SecaoFormularios() {
         Campos de entrada usados em drawers e wizards. Sempre use os padrões definidos —
         nunca crie variações não documentadas.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+      <SectionMeta {...SECTIONS_META['formularios']} />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-8 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -3647,7 +3925,7 @@ function SecaoNavegacao() {
         <p className="text-sm text-gray-500 leading-relaxed mb-4">
           Padrões de navegação do sistema. Sempre siga a hierarquia definida — nunca crie novos padrões sem documentar.
         </p>
-        <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={1} />
+        <SectionMeta {...SECTIONS_META['navegacao']} />
       </div>
 
       {/* ── Bloco 1: Sidebar ── */}
@@ -3925,7 +4203,7 @@ function SecaoMensagensOrientacao() {
         <p className="text-sm text-gray-500 leading-relaxed mb-4">
           Banners informativos, instruções e avisos de estado usados no SGC. Existem 3 variantes — escolha pela semântica, não pela preferência de cor.
         </p>
-        <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={0} alertas={0} />
+        <SectionMeta {...SECTIONS_META['mensagens-orientacao']} />
       </div>
 
       {/* ── Bloco 1: Variante A — Informativo contextual (brand) ── */}
@@ -4165,7 +4443,7 @@ function SecaoEstadosVazios() {
         Levantamento de todos os estados vazios encontrados no SGC. Quatro variantes existem no código real —
         cada uma com estrutura, ícone e hierarquia de texto distintos.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={4} alertas={1} />
+      <SectionMeta {...SECTIONS_META['estados-vazios']} />
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3 mb-10 max-w-2xl">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-yellow-800">
@@ -4612,7 +4890,7 @@ function SecaoPaginacao() {
         <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">ColaboradorView.tsx</code> foi migrada para{' '}
         <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Table.tsx</code> — débito técnico residual registrado ao final.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="10/06/2026" debitosTecnicos={1} alertas={0} />
+      <SectionMeta {...SECTIONS_META['paginacao']} />
 
       {/* Demo 1 — poucas páginas */}
       <section className="mb-10">
@@ -4818,12 +5096,13 @@ function SecaoMeuPerfil() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-4">Meu Perfil</h1>
-      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['meu-perfil']} />
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-yellow-800">
-          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
-          O conteúdo será documentado após as decisões de produto serem tomadas.
+          Esta seção ainda não foi documentada em detalhe. A tela já está em produção — a
+          documentação completa (regras, mockups, referência de arquivos) será adicionada
+          numa próxima rodada da auditoria do Design System.
         </p>
       </div>
     </div>
@@ -4851,7 +5130,7 @@ function SecaoMinhasAvaliacoes() {
         <code className="bg-gray-100 px-1 rounded text-xs">utils/avaliacoes.ts</code>,{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">ListingPage.tsx</code>.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="27/07/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['minhas-avaliacoes']} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
@@ -5319,7 +5598,7 @@ function SecaoResponderAvaliacao() {
         fora da árvore de <code className="bg-gray-100 px-1 rounded text-xs">Layout.tsx</code>.
         Fonte: <code className="bg-gray-100 px-1 rounded text-xs">RespostaAvaliacaoPage.tsx</code>.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="30/07/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['responder-avaliacao']} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
@@ -5680,12 +5959,13 @@ function SecaoMinhaCarreira() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 mb-4">Minha Carreira</h1>
-      <SectionMeta status="em-construcao" ultimaAtualizacao={null} debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['minha-carreira']} />
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-yellow-800">
-          Esta seção está em construção. A Visão do Colaborador ainda tem regras de negócio em aberto.
-          O conteúdo será documentado após as decisões de produto serem tomadas.
+          Esta seção ainda não foi documentada em detalhe. A tela já está em produção — a
+          documentação completa (regras, mockups, referência de arquivos) será adicionada
+          numa próxima rodada da auditoria do Design System.
         </p>
       </div>
     </div>
@@ -5714,7 +5994,7 @@ function SecaoCriarEditarJornada() {
         <code className="bg-gray-100 px-1 rounded text-xs">DraggableCargo.tsx</code>,{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">cargosRM.ts</code>.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="15/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['criar-editar-jornada']} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
@@ -6121,7 +6401,7 @@ function SecaoMatrizHabilidadesAdmin() {
         <code className="bg-gray-100 px-1 rounded text-xs">MatrizCell.tsx</code>,{' '}
         <code className="bg-gray-100 px-1 rounded text-xs">HabilidadesSelectionModal.tsx</code>.
       </p>
-      <SectionMeta status="documentado" ultimaAtualizacao="15/06/2026" debitosTecnicos={0} alertas={0} />
+      <SectionMeta {...SECTIONS_META['matriz-habilidades']} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
@@ -6218,7 +6498,7 @@ function SecaoMatrizHabilidadesAdmin() {
                       <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#2563EB' }}>
                         <div className="px-2.5 py-2 space-y-0.5">
                           <span className="block text-xs font-semibold leading-tight" style={{ color: '#2563EB' }}>Básico</span>
-                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 1</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Nível 1</span>
                         </div>
                       </div>
                     </td>
@@ -6226,7 +6506,7 @@ function SecaoMatrizHabilidadesAdmin() {
                       <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
                         <div className="px-2.5 py-2 space-y-0.5">
                           <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Avançado</span>
-                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 4</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Nível 4</span>
                         </div>
                       </div>
                     </td>
@@ -6262,7 +6542,7 @@ function SecaoMatrizHabilidadesAdmin() {
                       <div className="rounded-lg border border-gray-200 bg-white text-left" style={{ borderLeftWidth: 3, borderLeftColor: '#4338CA' }}>
                         <div className="px-2.5 py-2 space-y-0.5">
                           <span className="block text-xs font-semibold leading-tight" style={{ color: '#4338CA' }}>Intermediário</span>
-                          <span className="block text-[10px] text-gray-400 leading-tight">Progressão 2</span>
+                          <span className="block text-[10px] text-gray-400 leading-tight">Nível 2</span>
                         </div>
                       </div>
                     </td>
@@ -6487,7 +6767,7 @@ function SecaoMatrizHabilidadesAdmin() {
                     <div className="px-2.5 py-2 space-y-0.5">
                       <span className="block text-xs font-semibold leading-tight" style={{ color: '#5B21B6' }}>Especialista</span>
                       <p className="text-xs text-gray-500 leading-snug">Usa hooks, gerencia estado local e consome APIs REST</p>
-                      <span className="block text-[10px] text-gray-400 leading-tight">Progressão 5</span>
+                      <span className="block text-[10px] text-gray-400 leading-tight">Nível 5</span>
                     </div>
                   </div>
                 </div>
@@ -6526,7 +6806,7 @@ function SecaoMatrizHabilidadesAdmin() {
                 ].map((n, idx, arr) => (
                   <div key={n.nome} className={`px-4 py-2.5 flex items-center gap-2 hover:bg-[#F3F4F6] transition-colors ${idx < arr.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap text-white" style={{ backgroundColor: n.cor }}>{n.nome}</span>
-                    <span className="text-xs text-gray-400">{n.peso}</span>
+                    <span className="text-xs text-gray-400">Nível {n.peso}</span>
                   </div>
                 ))}
                 <div className="border-t border-[#E5E7EB]" />
@@ -6792,6 +7072,88 @@ function SecaoMatrizHabilidadesAdmin() {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
+// Painel "Status" (home) — TODOS os números são calculados a partir de
+// SECTIONS_META. Não existe mais lista/contador escrito à mão.
+function StatusOverview() {
+  const metas = Object.values(SECTIONS_META);
+  const documentadas = metas.filter((m) => m.status === 'documentado').length;
+  const emConstrucao = metas.filter((m) => m.status === 'em-construcao').length;
+  const totalDebitos = metas.reduce((acc, m) => acc + m.debitosTecnicos, 0);
+  const totalAlertas = metas.reduce((acc, m) => acc + m.alertas, 0);
+  const atencao = metas.filter((m) => m.debitosTecnicos > 0 || m.alertas > 0);
+
+  return (
+    <>
+      <p className="text-base font-semibold text-gray-900 mb-4">Visão geral da documentação</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="border rounded-lg p-4 flex flex-col gap-3 bg-green-50 border-green-200">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
+            <p className="text-sm font-semibold leading-tight">{documentadas}</p>
+          </div>
+        </div>
+        <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
+          <Clock className="w-4 h-4 flex-shrink-0 text-yellow-600" />
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Em construção</p>
+            <p className="text-sm font-semibold leading-tight">{emConstrucao}</p>
+          </div>
+        </div>
+        <div className="border rounded-lg p-4 flex flex-col gap-3 bg-orange-50 border-orange-200">
+          <Wrench className="w-4 h-4 flex-shrink-0 text-orange-600" />
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Débitos técnicos</p>
+            <p className="text-sm font-semibold leading-tight">{totalDebitos}</p>
+          </div>
+        </div>
+        <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-yellow-600" />
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Alertas ativos</p>
+            <p className="text-sm font-semibold leading-tight">{totalAlertas}</p>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-sm font-medium text-gray-700 mb-3">Atenção necessária</p>
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Seção</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Status</th>
+              <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Débitos</th>
+              <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Alertas</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {atencao.map((m) => (
+              <tr key={m.titulo} className="bg-white">
+                <td className="px-4 py-3 text-sm text-gray-900">{m.titulo}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                    m.status === 'documentado' ? 'text-green-700' :
+                    m.status === 'em-construcao' ? 'text-yellow-700' :
+                    'text-red-700'
+                  }`}>
+                    {m.status === 'documentado' && <CheckCircle2 className="w-3 h-3" />}
+                    {m.status === 'em-construcao' && <Clock className="w-3 h-3" />}
+                    {m.status === 'desatualizado' && <AlertCircle className="w-3 h-3" />}
+                    {m.status === 'documentado' ? 'Documentado' : m.status === 'em-construcao' ? 'Em construção' : 'Desatualizado'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-center text-sm text-gray-600">{m.debitosTecnicos}</td>
+                <td className="px-4 py-3 text-center text-sm text-gray-600">{m.alertas}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 const IMPLEMENTED: SectionId[] = [
   'fundamentos/cores',
   'fundamentos/tipografia',
@@ -6941,94 +7303,7 @@ export default function DesignSystemPage() {
               Documentação de componentes, padrões visuais e regras de negócio do Sistema de Gestão de Carreiras.
             </p>
 
-            <p className="text-base font-semibold text-gray-900 mb-4">Visão geral da documentação</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-green-50 border-green-200">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Seções documentadas</p>
-                  <p className="text-sm font-semibold leading-tight">24</p>
-                </div>
-              </div>
-              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
-                <Clock className="w-4 h-4 flex-shrink-0 text-yellow-600" />
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Em construção</p>
-                  <p className="text-sm font-semibold leading-tight">3</p>
-                </div>
-              </div>
-              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-orange-50 border-orange-200">
-                <Wrench className="w-4 h-4 flex-shrink-0 text-orange-600" />
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Débitos técnicos</p>
-                  <p className="text-sm font-semibold leading-tight">5</p>
-                </div>
-              </div>
-              <div className="border rounded-lg p-4 flex flex-col gap-3 bg-yellow-50 border-yellow-200">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-yellow-600" />
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Alertas ativos</p>
-                  <p className="text-sm font-semibold leading-tight">11</p>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-sm font-medium text-gray-700 mb-3">Atenção necessária</p>
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Seção</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">Status</th>
-                    <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Débitos</th>
-                    <th className="px-4 py-2.5 text-xs font-semibold text-gray-600 text-center">Alertas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {([
-                    { secao: 'Cores',             status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Tipografia',        status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Espaçamento',       status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Badges',            status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Ícones',            status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Filtros e Pills',   status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Cards',             status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Formulários',       status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Navegação',         status: 'documentado',   debitos: 0, alertas: 1 },
-                    { secao: 'Estados de avaliação', status: 'documentado', debitos: 0, alertas: 1 },
-                    { secao: 'Estados vazios',    status: 'documentado',   debitos: 4, alertas: 1 },
-                    { secao: 'Paginação',         status: 'documentado',   debitos: 1, alertas: 0 },
-                    { secao: 'Meu Perfil',        status: 'em-construcao', debitos: 0, alertas: 0 },
-                    { secao: 'Minhas Avaliações', status: 'documentado',   debitos: 0, alertas: 0 },
-                    { secao: 'Responder Avaliação', status: 'documentado', debitos: 0, alertas: 0 },
-                    { secao: 'Minha Carreira',    status: 'em-construcao', debitos: 0, alertas: 0 },
-                  ] as Array<{
-                    secao: string;
-                    status: 'documentado' | 'em-construcao' | 'desatualizado';
-                    debitos: number;
-                    alertas: number;
-                  }>).map(({ secao, status, debitos, alertas }) => (
-                    <tr key={secao} className="bg-white">
-                      <td className="px-4 py-3 text-sm text-gray-900">{secao}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                          status === 'documentado' ? 'text-green-700' :
-                          status === 'em-construcao' ? 'text-yellow-700' :
-                          'text-red-700'
-                        }`}>
-                          {status === 'documentado' && <CheckCircle2 className="w-3 h-3" />}
-                          {status === 'em-construcao' && <Clock className="w-3 h-3" />}
-                          {status === 'desatualizado' && <AlertCircle className="w-3 h-3" />}
-                          {status === 'documentado' ? 'Documentado' : status === 'em-construcao' ? 'Em construção' : 'Desatualizado'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">{debitos}</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">{alertas}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <StatusOverview />
 
             <p className="text-sm font-medium text-gray-700 mb-3">Especificação de Telas — Admin / RH</p>
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">

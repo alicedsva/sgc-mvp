@@ -8,13 +8,30 @@
 // src/app/data/mockData.ts tipa seus arrays exportados com estas interfaces —
 // o build quebra se um dado não corresponder ao formato definido aqui.
 
+// ─── Gerência ─────────────────────────────────────────────────────────────
+
+/**
+ * Unidade organizacional vinda do RM (no sistema real, cadastro externo).
+ * Fonte única do nome — Carreira se vincula a uma Gerência via gerenciaId.
+ * Não tem status: uma Gerência sempre "existe"; o que pode ser
+ * ativado/desativado é a Carreira daquela gerência, nunca a gerência em si.
+ */
+export interface Gerencia {
+  id: string;
+  nome: string;
+}
+
 // ─── Carreira ─────────────────────────────────────────────────────────────
 
 export type StatusRegistro = 'Ativa' | 'Desativada';
 
 export interface Carreira {
   id: string;
-  nome: string;
+  /**
+   * FK real -> Gerencia.id. A Carreira não tem nome próprio: o nome de
+   * exibição vem sempre de gerenciasData.find(g => g.id === carreira.gerenciaId).nome.
+   */
+  gerenciaId: string;
   /** Denormalizado — sempre ler via cálculo (jornadas.filter), nunca exibir este campo diretamente. */
   jornadas: number;
   status: StatusRegistro;

@@ -114,7 +114,7 @@ export default function HabilidadeDetalhePage() {
                   >
                     {nivel.nome}
                   </span>
-                  <span className="text-sm text-gray-500">{nivel.peso}</span>
+                  <span className="text-sm text-gray-500">Nível {nivel.peso}</span>
                 </div>
 
                 {criterio.trim() ? (

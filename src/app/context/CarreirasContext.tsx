@@ -11,6 +11,10 @@ interface CarreirasContextType {
   carreiras: Carreira[];
   adicionarCarreira: (carreira: Carreira) => void;
   atualizarCarreira: (carreiraId: string, dadosAtualizados: Partial<Carreira>) => void;
+  /** Todas as Carreiras (qualquer status) vinculadas a uma Gerência. */
+  getCarreirasDaGerencia: (gerenciaId: string) => Carreira[];
+  /** A Carreira 'Ativa' de uma Gerência, se existir (só pode haver uma). */
+  getCarreiraAtivaDaGerencia: (gerenciaId: string) => Carreira | undefined;
   jornadas: Jornada[];
   cargos: Cargo[];
   habilidadesCargo: HabilidadeCargo[];
@@ -77,7 +81,7 @@ function saveToStorage<T>(key: string, data: T): void {
 // do mockData.ts atualizado. Sem isso, mudanças
 // no código não aparecem na interface para
 // usuários com dados antigos no localStorage.
-const MOCK_DATA_VERSION = '2026-07-21-5';
+const MOCK_DATA_VERSION = '2026-08-28-2';
 const VERSION_KEY = 'carreiras_mock_version';
 
 function shouldResetStorage(): boolean {
@@ -160,6 +164,12 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
       )
     );
   };
+
+  const getCarreirasDaGerencia = (gerenciaId: string): Carreira[] =>
+    carreiras.filter((c) => c.gerenciaId === gerenciaId);
+
+  const getCarreiraAtivaDaGerencia = (gerenciaId: string): Carreira | undefined =>
+    carreiras.find((c) => c.gerenciaId === gerenciaId && c.status === 'Ativa');
 
   const adicionarJornada = (novaJornada: Jornada) => {
     setJornadas((prev) => [...prev, novaJornada]);
@@ -272,6 +282,8 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
         carreiras,
         adicionarCarreira,
         atualizarCarreira,
+        getCarreirasDaGerencia,
+        getCarreiraAtivaDaGerencia,
         jornadas,
         cargos,
         habilidadesCargo,

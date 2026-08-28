@@ -114,7 +114,7 @@ export function MatrizCell({ nivel, onChange, niveisAplicaveis }: MatrizCellProp
               </p>
             )}
             <span className="block text-[10px] text-gray-400 leading-tight">
-              Progressão {nivelAtual?.peso}
+              Nível {nivelAtual?.peso}
             </span>
           </div>
         </div>
@@ -140,7 +140,7 @@ export function MatrizCell({ nivel, onChange, niveisAplicaveis }: MatrizCellProp
               >
                 {op.nome}
               </span>
-              <span className="text-xs text-gray-400">{op.peso}</span>
+              <span className="text-xs text-gray-400">Nível {op.peso}</span>
             </button>
           ))}
 

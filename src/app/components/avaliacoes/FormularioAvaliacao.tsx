@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, Fragment, type ReactNode } from 'react';
 import { ArrowLeft, Check, ChevronRight, Eye, GitBranch, Users as UsersIcon, AlertTriangle, Info, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { colaboradoresData, cargosData, HOJE_SIMULADO, type Avaliacao } from '../../data/mockData';
+import { colaboradoresData, cargosData, gerenciasData, HOJE_SIMULADO, type Avaliacao } from '../../data/mockData';
 import { useCarreiras } from '../../context/CarreirasContext';
 import { HabilidadesMasterDetail, type HabilidadeItem } from '../templates/HabilidadesMasterDetail';
 import { SeletorGerenciaGranular } from '../templates/SeletorGerenciaGranular';
@@ -337,7 +337,13 @@ export function FormularioAvaliacao({
 
   const { jornadas, carreiras, getHabilidadesAgregadasDaJornada, getColaboradoresPorJornada } = useCarreiras();
   const jornadasAtivas = useMemo(() => jornadas.filter(j => j.status === 'Ativa'), [jornadas]);
-  const carreirasAtivas = useMemo(() => carreiras.filter(c => c.status === 'Ativa'), [carreiras]);
+  // Nome de exibição da Carreira vem sempre da Gerência vinculada (ver schema.ts).
+  const carreirasAtivas = useMemo(
+    () => carreiras
+      .filter(c => c.status === 'Ativa')
+      .map(c => ({ id: c.id, nome: gerenciasData.find(g => g.id === c.gerenciaId)?.nome ?? '' })),
+    [carreiras],
+  );
 
   const [formData, setFormData] = useState<NovaAvaliacaoFormData>(() =>
     avaliacaoExistente ? montarFormDeAvaliacao(avaliacaoExistente) : montarFormVazio(jornadaPreSelecionada)
@@ -620,7 +626,7 @@ export function FormularioAvaliacao({
   // carreirasData de mockData) para refletir qualquer edição feita no
   // Context. Usado só pelo card "Público-alvo" da Etapa Revisão.
   const carreiraEJornada = useMemo(
-    () => getCarreiraEJornadaNomes(formData.jornadaId, jornadas, carreiras),
+    () => getCarreiraEJornadaNomes(formData.jornadaId, jornadas, carreiras, gerenciasData),
     [formData.jornadaId, jornadas, carreiras],
   );
 
@@ -1172,6 +1178,14 @@ export function FormularioAvaliacao({
                       <p className="text-xs text-gray-500 mt-1">Escolha gerências, colaboradores e habilidades livremente.</p>
                     </button>
                   </div>
+                  {jornadaPreSelecionada && (
+                    <div className="bg-[var(--brand-50)] border border-[var(--brand-100)] rounded-lg p-4 flex items-start gap-3">
+                      <Info className="w-4 h-4 text-[var(--brand-600)] flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-gray-700">
+                        Esta avaliação está sendo criada a partir da jornada "{jornadaSelecionada?.nome}". O caminho e a jornada já vêm pré-selecionados nas próximas etapas.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

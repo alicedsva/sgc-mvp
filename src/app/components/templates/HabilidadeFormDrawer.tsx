@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Info, ListChecks } from 'lucide-react';
+import { ChevronRight, Info, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { FormDrawer } from './FormDrawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { Accordion, AccordionItem } from '../ui/Accordion';
 import { getCorFromPeso } from '../../data/mockData';
 
@@ -154,6 +155,21 @@ export function HabilidadeFormDrawer({
       fields={[]}
       onSubmit={handleSubmit}
       submitLabel={isEdicao ? 'Salvar alterações' : 'Salvar'}
+      submitSlot={
+        activeTab === 'cadastro' ? (
+          // Atalho de navegação — mesma ação que clicar no toggle "Níveis de
+          // Habilidades" (o toggle continua livre). Não é submit: não valida,
+          // não salva, não fecha o drawer.
+          <button
+            type="button"
+            onClick={() => setActiveTab('niveis')}
+            className="inline-flex items-center gap-1.5 px-3 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors border border-[var(--brand-600)] text-[var(--brand-600)] hover:bg-[var(--brand-50)]"
+          >
+            Continuar
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : undefined
+      }
       customContent={
         <div className="space-y-4 md:space-y-5">
           {/* Toggle de abas — mesmo padrão do segmented control de
@@ -187,6 +203,18 @@ export function HabilidadeFormDrawer({
 
           {activeTab === 'cadastro' ? (
             <div className="space-y-4 md:space-y-5">
+              <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Como funciona o cadastro</p>
+                  <p className="text-sm text-slate-700 mt-1">
+                    Aqui você define os dados básicos da habilidade. Depois, na aba "Níveis de
+                    Habilidades", você escolhe quais níveis serão avaliados e define o critério
+                    esperado para cada um.
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
                   Nome da Habilidade <span className="text-red-500">*</span>
@@ -220,28 +248,19 @@ export function HabilidadeFormDrawer({
                 <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
                   Competência <span className="text-red-500">*</span>
                 </label>
-                <Select
+                <SearchableSelect
                   value={formData.competenciaId}
                   onValueChange={(value) => {
                     const comp = competenciasAtivas.find((c) => c.id === value);
                     setFormData((prev) => ({ ...prev, competenciaId: value, competencia: comp?.nome ?? '' }));
                   }}
-                >
-                  <SelectTrigger
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent ${
-                      errors.competenciaId ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-                    }`}
-                  >
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {competenciasAtivas.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={competenciasAtivas.map((c) => ({ value: c.id, label: c.nome }))}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar competência..."
+                  className={`w-full ${
+                    errors.competenciaId ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.competenciaId && <p className="mt-1 text-sm text-red-600">{errors.competenciaId}</p>}
               </div>
 
