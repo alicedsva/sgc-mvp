@@ -448,9 +448,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed, initia
                   value={statusFilterPerfis}
                   onChange={setStatusFilterPerfis}
                   options={[
-                    { value: 'todas', label: 'Todas' },
-                    { value: 'ativa', label: 'Ativas' },
-                    { value: 'desativada', label: 'Desativadas' },
+                    { value: 'todas', label: 'Todos' },
+                    { value: 'ativa', label: 'Ativos' },
+                    { value: 'desativada', label: 'Desativados' },
                   ]}
                 />
                 <ChipFiltro
