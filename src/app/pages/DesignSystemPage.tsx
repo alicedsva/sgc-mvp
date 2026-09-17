@@ -4565,44 +4565,11 @@ function SecaoEstadosVazios() {
         </div>
       </div>
 
-      {/* ── Variante C: Inline em painel compacto ── */}
-      <div className="mb-14">
-        <div className="flex items-baseline gap-3 mb-2">
-          <h2 className="text-sm font-semibold text-gray-900">C — Inline em painel compacto</h2>
-          <span className="text-xs text-gray-400 font-mono">ConfigurarHabilidadesCargo.tsx</span>
-        </div>
-        <p className="text-sm text-gray-600 mb-6 max-w-2xl">
-          Usado dentro de drawers ou painéis com espaço reduzido. Sem ícone. Fundo{' '}
-          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">bg-gray-50</code> com borda para
-          delimitar a área. Texto principal + texto orientativo.
-        </p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Tabela vazia dentro de drawer</p>
-            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Nenhuma habilidade configurada para este cargo</p>
-              <p className="text-xs text-gray-400 mt-1">Clique em "Adicionar" para vincular habilidades</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Classes — Variante C</p>
-          <div className="space-y-1.5 font-mono text-xs text-gray-600">
-            <div><span className="text-gray-400">container</span>{"  "}<code>text-center py-8 bg-gray-50 rounded-lg border border-gray-200</code></div>
-            <div><span className="text-gray-400">sem ícone</span></div>
-            <div><span className="text-gray-400">texto principal</span>{"  "}<code>text-sm text-gray-500</code></div>
-            <div><span className="text-gray-400">texto orientativo</span>{"  "}<code>text-xs text-gray-400 mt-1</code></div>
-          </div>
-        </div>
-      </div>
-
       {/* ── Variante D: Inline mínimo ── */}
       <div className="mb-14">
         <div className="flex items-baseline gap-3 mb-2">
           <h2 className="text-sm font-semibold text-gray-900">D — Inline mínimo</h2>
-          <span className="text-xs text-gray-400 font-mono">ColaboradorView.tsx · ConfigurarHabilidadesCargo.tsx</span>
+          <span className="text-xs text-gray-400 font-mono">ColaboradorView.tsx</span>
         </div>
         <p className="text-sm text-gray-600 mb-6 max-w-2xl">
           Somente texto, sem ícone, sem estrutura. Usado diretamente dentro de células de tabela{' '}
@@ -4610,7 +4577,7 @@ function SecaoEstadosVazios() {
           listas de busca com espaço muito reduzido.
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 gap-6 mb-6">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
               Dentro de tabela (ColaboradorView — tabela e barras)
@@ -4627,15 +4594,6 @@ function SecaoEstadosVazios() {
               </table>
             </div>
           </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-              Dentro de lista de busca (ConfigurarHabilidadesCargo — panel add)
-            </p>
-            <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg border border-gray-200 p-3">
-              <p className="text-xs text-gray-500 text-center py-4">Nenhuma habilidade disponível</p>
-            </div>
-          </div>
         </div>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
@@ -4643,7 +4601,6 @@ function SecaoEstadosVazios() {
           <div className="space-y-1.5 font-mono text-xs text-gray-600">
             <div><span className="text-gray-400">td (ColaboradorView)</span>{"  "}<code>px-3 md:px-6 py-8 text-center text-sm text-gray-500</code></div>
             <div><span className="text-gray-400">p (ColaboradorView barras)</span>{"  "}<code>py-8 text-center text-sm text-gray-500</code></div>
-            <div><span className="text-gray-400">p (panel add)</span>{"  "}<code>text-xs text-gray-500 text-center py-4</code></div>
           </div>
         </div>
       </div>
@@ -4682,15 +4639,6 @@ function SecaoEstadosVazios() {
                 <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">p-8 text-center</code></td>
                 <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm font-medium text-gray-700</code></td>
                 <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code></td>
-                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 border border-gray-200 font-medium">C — Painel compacto</td>
-                <td className="px-4 py-3 border border-gray-200 text-gray-600">Dentro de drawers, espaço reduzido</td>
-                <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
-                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">py-8 bg-gray-50 rounded-lg border border-gray-200 text-center</code></td>
-                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-sm text-gray-500</code></td>
-                <td className="px-4 py-3 border border-gray-200"><code className="bg-gray-100 px-1 rounded">text-xs text-gray-400 mt-1</code></td>
                 <td className="px-4 py-3 border border-gray-200 text-gray-400">Não</td>
               </tr>
               <tr className="bg-gray-50">

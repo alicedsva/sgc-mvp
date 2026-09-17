@@ -18,8 +18,6 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  console.log('🎯 Header renderizado:', { viewMode, menuAberto });
-
   // Fechar menu ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -32,12 +30,15 @@ export function Header({ viewMode, onChangeViewMode, isSidebarCollapsed, onToggl
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const nomeUsuario = 'João Silva';
+  // Usuário logado. Convenção do projeto: João Silva nos fluxos reais;
+  // Ana Silva nas rotas de teste que simulam o Admin (/testes/*), onde a
+  // exploração precisa de um usuário Admin distinto do colaborador João.
+  const nomeUsuario = location.pathname.startsWith('/testes/') ? 'Ana Silva' : 'João Silva';
   const tipoUsuario = viewMode === 'admin' ? 'Administrador' : 'Desenvolvedor Frontend';
   
   return (
     <header className={`h-16 bg-white border-b border-gray-200 fixed top-0 right-0 z-50 transition-all duration-300 ${
-      isDesignSystem ? 'left-0' : `left-0 md:left-20${!isSidebarCollapsed ? ' lg:left-64' : ''}`
+      isDesignSystem ? 'left-0' : `left-0 ${isSidebarCollapsed ? 'md:left-20' : 'md:left-64'}`
     }`}>
       <div className="h-full flex items-center justify-between px-4 md:px-6">
         {/* Botão hamburger - apenas mobile, apenas fora do design-system */}

@@ -1,8 +1,8 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, type UIEvent } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
-import { Edit, Trash2, AlertCircle, Search, MoreVertical, ArrowLeft, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, Power, ClipboardCheck } from 'lucide-react';
+import { Edit, Trash2, AlertCircle, Search, MoreVertical, ArrowLeft, ArrowUp, ArrowDown, Eye, EyeOff, Users, UserMinus, Settings2, UserPlus, Power, ClipboardCheck } from 'lucide-react';
 import { habilidadesData, niveisDefaultData, colaboradoresData, gerenciasData, getCompetenciaNome } from '../data/mockData';
-import { useCarreiras } from '../context/CarreirasContext';
+import { useCarreiras, JORNADA_EXCLUSAO_TITULO, JORNADA_EXCLUSAO_MENSAGEM } from '../context/CarreirasContext';
 import { useCompetencias } from '../context/CompetenciasContext';
 import type { Cargo, HabilidadeCargo, NivelNome } from '../../data/schema';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
@@ -76,6 +76,19 @@ function JornadaDetalheContent() {
   // Estado da busca de habilidades
   const [searchText, setSearchText] = useState('');
 
+  // Sombra da coluna fixa de Habilidade na Matriz — mesmo mecanismo (e
+  // mesma histerese) de `isScrolled` em ui/Table.tsx, para não coexistirem
+  // dois comportamentos de sombra de scroll diferentes no sistema.
+  const [matrizScrolled, setMatrizScrolled] = useState(false);
+  const handleMatrizScroll = (e: UIEvent<HTMLDivElement>) => {
+    const x = e.currentTarget.scrollLeft;
+    setMatrizScrolled(prev => {
+      if (!prev && x > 2) return true;
+      if (prev && x <= 0) return false;
+      return prev;
+    });
+  };
+
   // Estado de alterações não salvas na matriz
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -86,6 +99,11 @@ function JornadaDetalheContent() {
   const [isAddColabModalOpen, setIsAddColabModalOpen] = useState(false);
   const [colaboradorParaDesvincular, setColaboradorParaDesvincular] = useState<{ id: string; nome: string } | null>(null);
   const [paginaColabs, setPaginaColabs] = useState(1);
+  const [colabsItemsPerPage, setColabsItemsPerPage] = useState(10);
+  const [colaboradoresSortConfig, setColaboradoresSortConfig] = useState<{
+    column: 'nome' | 'cargo' | 'gerencia' | 'status';
+    direction: 'asc' | 'desc';
+  }>({ column: 'nome', direction: 'asc' });
 
   const [habilidadesNaMatriz, setHabilidadesNaMatriz] = useState<Array<{
     id: string;
@@ -395,41 +413,86 @@ function JornadaDetalheContent() {
     .filter(c => !colaboradoresVinculadosIds.includes(c.id))
     .map((c: any) => ({ id: c.id, nome: c.nome, cargoId: c.cargoId, gerencia: c.gerencia }));
 
-  const COLABS_PER_PAGE = 10;
-  const colaboradoresPaginados = colaboradoresVinculados.slice(
-    (paginaColabs - 1) * COLABS_PER_PAGE,
-    paginaColabs * COLABS_PER_PAGE
+  const handleColaboradoresSort = (column: 'nome' | 'cargo' | 'gerencia' | 'status') => {
+    setColaboradoresSortConfig(prev =>
+      prev.column === column
+        ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { column, direction: 'asc' }
+    );
+    setPaginaColabs(1);
+  };
+
+  const colaboradoresOrdenados = [...colaboradoresVinculados].sort((a, b) => {
+    const dir = colaboradoresSortConfig.direction === 'asc' ? 1 : -1;
+    if (colaboradoresSortConfig.column === 'cargo') {
+      const cargoA = cargos.find(c => c.id === a.cargoId)?.cargoRM ?? '';
+      const cargoB = cargos.find(c => c.id === b.cargoId)?.cargoRM ?? '';
+      return cargoA.localeCompare(cargoB) * dir;
+    }
+    return String(a[colaboradoresSortConfig.column] ?? '').localeCompare(String(b[colaboradoresSortConfig.column] ?? '')) * dir;
+  });
+
+  const colaboradoresPaginados = colaboradoresOrdenados.slice(
+    (paginaColabs - 1) * colabsItemsPerPage,
+    paginaColabs * colabsItemsPerPage
+  );
+
+  const handleColabsItemsPerPageChange = (items: number) => {
+    setColabsItemsPerPage(items);
+    setPaginaColabs(1);
+  };
+
+  const renderColaboradoresSortHeader = (column: 'nome' | 'cargo' | 'gerencia' | 'status', label: string) => (
+    <button
+      onClick={() => handleColaboradoresSort(column)}
+      className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
+    >
+      {label}
+      {colaboradoresSortConfig.column === column ? (
+        colaboradoresSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+      ) : (
+        <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+      )}
+    </button>
   );
 
   const colaboradoresColumns: Column[] = [
     {
       key: 'nome',
       label: 'Nome',
-      width: '30%',
-      render: (value) => <span className="text-sm font-medium text-gray-900">{value}</span>,
+      width: '33%',
+      renderHeader: () => renderColaboradoresSortHeader('nome', 'Nome'),
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>,
     },
     {
       key: 'cargo',
       label: 'Cargo',
-      width: '25%',
+      width: '28%',
+      renderHeader: () => renderColaboradoresSortHeader('cargo', 'Cargo'),
       render: (_value, row) => {
         const cargo = cargos.find(c => c.id === row.cargoId);
-        return <span className="text-sm text-gray-500">{cargo?.cargoRM ?? '-'}</span>;
+        return <span className="text-gray-500">{cargo?.cargoRM ?? '-'}</span>;
       },
     },
     {
       key: 'gerencia',
       label: 'Gerência',
-      width: '20%',
-      render: (value) => <span className="text-sm text-gray-500">{value}</span>,
+      width: '22%',
+      renderHeader: () => renderColaboradoresSortHeader('gerencia', 'Gerência'),
+      render: (value) => <span className="text-gray-500">{value}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '15%',
-      render: () => (
-        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-          Ativo
+      width: '17%',
+      renderHeader: () => renderColaboradoresSortHeader('status', 'Status'),
+      render: (value) => (
+        <span
+          className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+            value === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'
+          }`}
+        >
+          {value}
         </span>
       ),
     },
@@ -452,7 +515,7 @@ function JornadaDetalheContent() {
 
   if (!carreira || !jornada) {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           <div className="max-w-2xl mx-auto mt-16">
             <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
@@ -504,7 +567,7 @@ function JornadaDetalheContent() {
   ];
 
   return (
-    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''} h-[calc(100vh-4rem)]`}>
+    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} h-[calc(100vh-4rem)]`}>
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <button
           onClick={() => navigate(`/carreiras/${carreiraId}`)}
@@ -530,27 +593,39 @@ function JornadaDetalheContent() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleEditarJornada}
-              title="Editar jornada"
-              className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleToggleStatus}
-              title={jornada.status === 'Ativa' ? 'Desativar jornada' : 'Ativar jornada'}
-              className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Power className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleExcluirJornada}
-              title="Excluir jornada"
-              className="p-1.5 md:p-2 bg-white border border-red-300 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleEditarJornada}
+                  className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Editar jornada</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleToggleStatus}
+                  className="p-1.5 md:p-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Power className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{jornada.status === 'Ativa' ? 'Desativar jornada' : 'Ativar jornada'}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleExcluirJornada}
+                  className="p-1.5 md:p-2 bg-white border border-red-300 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Excluir jornada</TooltipContent>
+            </Tooltip>
             <button
               onClick={() => navigate('/avaliacoes/nova', { state: { jornadaPreSelecionada: jornadaId } })}
               className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--brand-600)] text-[var(--brand-600)] text-sm font-medium rounded-lg hover:bg-[var(--brand-50)] transition-colors flex-shrink-0"
@@ -604,25 +679,29 @@ function JornadaDetalheContent() {
             </div>
 
             {/* Modo completude */}
-            <button
-              onClick={() => setModoCompletude(!modoCompletude)}
-              className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                modoCompletude
-                  ? 'bg-[var(--brand-50)] border-[var(--brand-200)] text-[var(--brand-700)]'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-              title="Destacar habilidades com cargos sem definição"
-            >
-              {modoCompletude ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              Habilidades incompletas
-              {totalHabilidadesIncompletas > 0 && (
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold ${
-                  modoCompletude ? 'bg-[var(--brand-100)] text-[var(--brand-700)]' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {totalHabilidadesIncompletas}
-                </span>
-              )}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setModoCompletude(!modoCompletude)}
+                  className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                    modoCompletude
+                      ? 'bg-[var(--brand-50)] border-[var(--brand-200)] text-[var(--brand-700)]'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {modoCompletude ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Habilidades incompletas
+                  {totalHabilidadesIncompletas > 0 && (
+                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold ${
+                      modoCompletude ? 'bg-[var(--brand-100)] text-[var(--brand-700)]' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {totalHabilidadesIncompletas}
+                    </span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Destacar habilidades com cargos sem definição</TooltipContent>
+            </Tooltip>
 
             <div className="flex-1" />
             <button onClick={() => setIsHabilidadesMatrizDrawerOpen(true)} className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors">
@@ -631,13 +710,12 @@ function JornadaDetalheContent() {
             </button>
           </div>
 
-          <div className="relative">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" onScroll={handleMatrizScroll}>
             <table className="w-full">
               {/* Cabeçalho */}
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
                 <tr>
-                  <th className="sticky left-0 bg-gray-50 z-30 w-[220px] px-4 py-3 text-left">
+                  <th className={`sticky left-0 bg-gray-50 z-30 w-[220px] px-3 md:px-6 py-3 md:py-4 text-left border-r transition-colors ${matrizScrolled ? 'border-gray-200 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.15)]' : 'border-transparent'}`}>
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Habilidade</span>
                   </th>
                   {cargos.map((cargo) => {
@@ -646,12 +724,15 @@ function JornadaDetalheContent() {
                     const textColor = percentual === 100 ? '#16A34A' : '#6B7280';
 
                     return (
-                      <th key={cargo.id} className="px-4 py-3 text-center min-w-[160px] max-w-[240px] group/col relative">
+                      <th key={cargo.id} className="px-3 md:px-6 py-3 md:py-4 text-center min-w-[160px] max-w-[240px] group/col relative">
                         <div className="flex flex-col items-center">
                           {/* Nome + botão de ações */}
                           <div className="flex items-center justify-center gap-0.5 w-full">
                             {/* overflow-hidden só aqui, para não clipar o dropdown absoluto */}
                             <div className="flex-1 min-w-0 overflow-hidden">
+                              {/* truncate (1 linha) — exceção documentada em 02-design-system.md
+                                  > "Cabeçalho nunca trunca": cabeçalho de coluna dinâmica da Matriz
+                                  (nome de cargo), não um cabeçalho de listagem comum. */}
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <span className="block text-sm font-medium text-gray-900 truncate">
@@ -662,16 +743,20 @@ function JornadaDetalheContent() {
                               </Tooltip>
                             </div>
                             <div className="relative flex-shrink-0 w-5">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenCargoMenu(openCargoMenu === cargo.id ? null : cargo.id);
-                                }}
-                                className="p-0.5 text-gray-300 hover:text-gray-600 rounded transition-colors"
-                                title="Opções do cargo"
-                              >
-                                <MoreVertical className="w-3.5 h-3.5" />
-                              </button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenCargoMenu(openCargoMenu === cargo.id ? null : cargo.id);
+                                    }}
+                                    className="p-0.5 text-gray-300 hover:text-gray-600 rounded transition-colors"
+                                  >
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Opções do cargo</TooltipContent>
+                              </Tooltip>
                               {openCargoMenu === cargo.id && (
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[200]">
                                   <button
@@ -701,20 +786,24 @@ function JornadaDetalheContent() {
                             </div>
                           </div>
                           {/* Barra de progresso com contador — C */}
-                          <div
-                            className="w-full mt-2 flex items-center gap-1.5"
-                            title={`${configuradas} de ${total} habilidades definidas${percentual === 100 ? ' — completo' : ''}`}
-                          >
-                            <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{ width: `${percentual}%`, backgroundColor: barColor }}
-                              />
-                            </div>
-                            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: textColor }}>
-                              {configuradas}/{total}
-                            </span>
-                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="w-full mt-2 flex items-center gap-1.5">
+                                <div className="flex-1 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{ width: `${percentual}%`, backgroundColor: barColor }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-medium flex-shrink-0" style={{ color: textColor }}>
+                                  {configuradas}/{total}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {`${configuradas} de ${total} habilidades definidas${percentual === 100 ? ' — completo' : ''}`}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </th>
                     );
@@ -755,20 +844,24 @@ function JornadaDetalheContent() {
 
                       rows.push(
                         <tr key={hab.id} className={`${bgClass} group`}>
-                          <td className={`sticky left-0 ${bgClass} group-hover:bg-gray-50 px-4 py-3 z-10`}>
+                          <td className={`sticky left-0 ${bgClass} group-hover:bg-gray-50 px-3 md:px-6 py-3 md:py-4 z-10 border-r transition-colors ${matrizScrolled ? 'border-gray-200 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.15)]' : 'border-transparent'}`}>
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-gray-900 flex-1">{hab.nome}</span>
                               <div className="relative flex-shrink-0">
+                                <Tooltip>
+                                <TooltipTrigger asChild>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setOpenHabilidadeMenu(openHabilidadeMenu === hab.id ? null : hab.id);
                                   }}
                                   className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-300 hover:text-gray-600 rounded transition-all"
-                                  title="Opções da habilidade"
                                 >
                                   <MoreVertical className="w-3.5 h-3.5" />
                                 </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Opções da habilidade</TooltipContent>
+                                </Tooltip>
                                 {openHabilidadeMenu === hab.id && (
                                   <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[200]">
                                     <button
@@ -797,7 +890,7 @@ function JornadaDetalheContent() {
                                 : 'bg-amber-50 group-hover:bg-amber-100'
                               : 'group-hover:bg-gray-50';
                             return (
-                              <td key={cargo.id} className={`px-4 py-3 text-center transition-colors ${completudeBg}`}>
+                              <td key={cargo.id} className={`px-3 md:px-6 py-3 md:py-4 text-center transition-colors ${completudeBg}`}>
                                 <MatrizCell
                                   nivel={cellNivel || null}
                                   onChange={(nivel) => handleCellChange(hab.id, cargo.id, nivel)}
@@ -815,9 +908,6 @@ function JornadaDetalheContent() {
                 )}
               </tbody>
             </table>
-          </div>
-          {/* Fade horizontal */}
-          <div className="absolute top-0 right-0 bottom-0 w-10 pointer-events-none bg-gradient-to-l from-white to-transparent"></div>
           </div>
         </div>
         )}
@@ -839,28 +929,30 @@ function JornadaDetalheContent() {
               </button>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              {colaboradoresVinculados.length === 0 ? (
+            {/* Moldura do card já vem de dentro de ui/Table.tsx; reaplicada
+                aqui só para o EmptyState, que não passa por Table.tsx. */}
+            {colaboradoresVinculados.length === 0 ? (
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <EmptyState
                   icon={<Users className="w-8 h-8 text-gray-300" />}
                   title="Nenhum colaborador vinculado"
                   description="Adicione colaboradores para acompanhar o progresso nesta jornada."
                 />
-              ) : (
-                <Table
-                  columns={colaboradoresColumns}
-                  data={colaboradoresPaginados}
-                  actions={colaboradoresActions}
-                  pagination={{
-                    currentPage: paginaColabs,
-                    itemsPerPage: COLABS_PER_PAGE,
-                    totalItems: colaboradoresVinculados.length,
-                    onPageChange: (p) => setPaginaColabs(p),
-                    onItemsPerPageChange: () => {},
-                  }}
-                />
-              )}
-            </div>
+              </div>
+            ) : (
+              <Table
+                columns={colaboradoresColumns}
+                data={colaboradoresPaginados}
+                actions={colaboradoresActions}
+                pagination={{
+                  currentPage: paginaColabs,
+                  itemsPerPage: colabsItemsPerPage,
+                  totalItems: colaboradoresVinculados.length,
+                  onPageChange: (p) => setPaginaColabs(p),
+                  onItemsPerPageChange: handleColabsItemsPerPageChange,
+                }}
+              />
+            )}
           </>
         )}
 
@@ -920,8 +1012,8 @@ function JornadaDetalheContent() {
         isOpen={jornadaParaExcluir}
         onClose={() => setJornadaParaExcluir(false)}
         onConfirm={handleConfirmarExclusaoJornada}
-        title="Excluir jornada?"
-        message="Esta ação não pode ser desfeita. Todos os cargos e habilidades configurados serão removidos."
+        title={JORNADA_EXCLUSAO_TITULO}
+        message={JORNADA_EXCLUSAO_MENSAGEM}
         confirmLabel="Excluir"
         variant="danger"
       />

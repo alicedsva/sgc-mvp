@@ -13,35 +13,50 @@ import { HabilidadeFormDrawer, type HabilidadeFormValues } from './templates/Hab
 import { ConfirmationModal } from './templates/ConfirmationModal';
 import { Column, InlineAction, Table } from './ui/Table';
 import { ToggleSwitch } from './ui/ToggleSwitch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { ChipFiltro } from './ui/ChipFiltro';
+import { QuantityLabel } from './ui/QuantityLabel';
 import { EmptyState } from './ui/EmptyState';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { NiveisProficiencia } from './NiveisProficiencia';
 import { ColaboradorView } from './ColaboradorView';
 import { MinhasAvaliacoes } from './MinhasAvaliacoes';
-import { Perfis } from './Perfis';
 import { ComponentShowcase } from './ComponentShowcase';
 import { EditarAvaliacaoModal } from './avaliacoes/EditarAvaliacaoModal';
-import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy, Power, Info, AlertTriangle } from 'lucide-react';
+import { Edit, Award, Layers, Search, Plus, Briefcase, ClipboardCheck, Eye, ArrowUp, ArrowDown, StopCircle, Copy, Power, Info, AlertTriangle, RefreshCw, Circle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ContentAreaProps {
   selectedItem: string;
   viewMode: 'admin' | 'colaborador';
   isSidebarCollapsed: boolean;
+  // `initialTab` força a sub-tab inicial do módulo Habilidades.
+  initialTab?: string;
 }
 
 // Gerências reais (derivadas de colaboradoresData) — nunca lista fixa, para
 // que público-alvo de Avaliações sempre reflita as gerências que existem de
 // fato no sistema. Mesmo padrão já usado em DashboardPage.tsx.
 
-export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: ContentAreaProps) {
+// Parsing de data por extenso em pt-BR ("15 de março de 2026") — só usado
+// pela ordenação da coluna "Último Acesso" de Perfis.
+const mesesPt: Record<string, number> = {
+  janeiro: 0, fevereiro: 1, março: 2, abril: 3, maio: 4, junho: 5,
+  julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
+};
+
+function parsePtDate(str: string): number {
+  const parts = str.toLowerCase().split(' de ');
+  if (parts.length !== 3) return 0;
+  return new Date(parseInt(parts[2]), mesesPt[parts[1]] ?? 0, parseInt(parts[0])).getTime();
+}
+
+export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed, initialTab }: ContentAreaProps) {
   // ========== ALL HOOKS MUST BE DECLARED FIRST (before any early returns) ==========
   const navigate = useNavigate();
   const location = useLocation();
 
   // Estado para controlar qual tab está ativa no módulo Habilidades
-  const [activeTab, setActiveTab] = useState<string>((location.state as any)?.tab ?? 'competencias');
+  const [activeTab, setActiveTab] = useState<string>((location.state as any)?.tab ?? initialTab ?? 'competencias');
   
   // Ref para o container das tabs (para auto-scroll)
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -97,6 +112,21 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   const [itemsPerPageAvaliacoes, setItemsPerPageAvaliacoes] = useState(10);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Estados para Perfis
+  const [buscaPerfil, setBuscaPerfil] = useState('');
+  const [statusFilterPerfis, setStatusFilterPerfis] = useState('ativa');
+  const [gerenciaFilterPerfis, setGerenciaFilterPerfis] = useState('todas');
+  const [cargoFilterPerfis, setCargoFilterPerfis] = useState('todos');
+  const [currentPagePerfis, setCurrentPagePerfis] = useState(1);
+  const [itemsPerPagePerfis, setItemsPerPagePerfis] = useState(10);
+  // Sem sort inicial (column: null) — mesmo comportamento de antes da
+  // migração: a tabela nasce na ordem natural de profilesData, só ordena
+  // depois que o usuário clica num cabeçalho.
+  const [perfisSortConfig, setPerfisSortConfig] = useState<{
+    column: 'nome' | 'cargo' | 'gerencia' | 'ultimoAcesso' | 'status' | null;
+    direction: 'asc' | 'desc';
+  }>({ column: null, direction: 'asc' });
+
   // Reset da paginação quando filtros de Competências mudarem
   useEffect(() => {
     setCurrentPage(1);
@@ -111,6 +141,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   useEffect(() => {
     setCurrentPageCarreiras(1);
   }, [buscaCarreira, statusFilterCarreiras]);
+
+  // Reset da paginação quando filtros de Perfis mudarem
+  useEffect(() => {
+    setCurrentPagePerfis(1);
+  }, [buscaPerfil, statusFilterPerfis, gerenciaFilterPerfis, cargoFilterPerfis]);
 
   // Reset da paginação quando filtros de Avaliações mudarem
   useEffect(() => {
@@ -189,6 +224,14 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     })),
     [syncedProfileIds]
   );
+  const gerenciasUnicasPerfis = useMemo(
+    () => [...new Set(profilesData.map(p => p.gerencia))].sort(),
+    [profilesData]
+  );
+  const cargosUnicosPerfis = useMemo(
+    () => [...new Set(profilesData.map(p => p.cargo))].sort(),
+    [profilesData]
+  );
 
   // Avaliações — lidas/escritas via AvaliacoesContext (dado real, mesmo
   // tratamento já aplicado a Carreiras).
@@ -202,7 +245,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   // Renderizar visão do colaborador (AFTER all hooks are declared)
   if (viewMode === 'colaborador') {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           {selectedItem === 'meu-perfil' && <ColaboradorView />}
           {selectedItem === 'minhas-avaliacoes' && <MinhasAvaliacoes />}
@@ -223,24 +266,259 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   // Renderizar página de Componentes
   if (selectedItem === 'components') {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <ComponentShowcase />
       </main>
     );
   }
 
-  // Renderizar template de listagem para algumas páginas
+  // Módulo Perfis
   if (selectedItem === 'perfis') {
+    const perfisFiltrados = profilesData.filter((perfil) => {
+      const matchBusca =
+        buscaPerfil === '' ||
+        perfil.nome.toLowerCase().includes(buscaPerfil.toLowerCase()) ||
+        perfil.cargo.toLowerCase().includes(buscaPerfil.toLowerCase()) ||
+        perfil.gerencia.toLowerCase().includes(buscaPerfil.toLowerCase());
+
+      // perfil.status vem de mockData como 'Ativo'/'Desativado' (masculino),
+      // mas o valor do filtro é 'ativa'/'desativada' — a mesma convenção
+      // interna de string usada por todas as outras listagens (Habilidades,
+      // Competências, Carreiras, Avaliações). Comparação explícita porque
+      // toLowerCase() não bateria ('ativo' !== 'ativa').
+      let matchStatus = true;
+      if (statusFilterPerfis === 'ativa') matchStatus = perfil.status === 'Ativo';
+      else if (statusFilterPerfis === 'desativada') matchStatus = perfil.status === 'Desativado';
+
+      const matchGerencia = gerenciaFilterPerfis === 'todas' || perfil.gerencia === gerenciaFilterPerfis;
+      const matchCargo = cargoFilterPerfis === 'todos' || perfil.cargo === cargoFilterPerfis;
+
+      return matchBusca && matchStatus && matchGerencia && matchCargo;
+    });
+
+    const handlePerfisSort = (column: 'nome' | 'cargo' | 'gerencia' | 'ultimoAcesso' | 'status') => {
+      setPerfisSortConfig(prev =>
+        prev.column === column
+          ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+          : { column, direction: 'asc' }
+      );
+      setCurrentPagePerfis(1);
+    };
+
+    const perfisOrdenados = [...perfisFiltrados].sort((a, b) => {
+      if (!perfisSortConfig.column) return 0;
+      const dir = perfisSortConfig.direction === 'asc' ? 1 : -1;
+      if (perfisSortConfig.column === 'ultimoAcesso') {
+        return (parsePtDate(a.ultimoAcesso) - parsePtDate(b.ultimoAcesso)) * dir;
+      }
+      const aValue = (a[perfisSortConfig.column] as string).toLowerCase();
+      const bValue = (b[perfisSortConfig.column] as string).toLowerCase();
+      if (aValue < bValue) return -1 * dir;
+      if (aValue > bValue) return 1 * dir;
+      return 0;
+    });
+
+    const totalItemsPerfis = perfisOrdenados.length;
+    const startIndexPerfis = (currentPagePerfis - 1) * itemsPerPagePerfis;
+    const endIndexPerfis = startIndexPerfis + itemsPerPagePerfis;
+    const paginatedDataPerfis = perfisOrdenados.slice(startIndexPerfis, endIndexPerfis);
+
+    const handlePageChangePerfis = (page: number) => setCurrentPagePerfis(page);
+    const handleItemsPerPageChangePerfis = (items: number) => {
+      setItemsPerPagePerfis(items);
+      setCurrentPagePerfis(1);
+    };
+
+    const renderPerfisSortHeader = (column: 'nome' | 'cargo' | 'gerencia' | 'ultimoAcesso' | 'status', label: string) => (
+      <button
+        onClick={() => handlePerfisSort(column)}
+        className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
+      >
+        {label}
+        {perfisSortConfig.column === column ? (
+          perfisSortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+        ) : (
+          <ArrowUp className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+        )}
+      </button>
+    );
+
+    const perfisColumns: Column[] = [
+      {
+        key: 'nome',
+        label: 'Nome',
+        width: '26%',
+        renderHeader: () => renderPerfisSortHeader('nome', 'Nome'),
+        // Indicador de sincronização com o RM (não é o Status Ativo/
+        // Desativado do registro) embutido ao lado do nome — nunca uma
+        // coluna própria sem cabeçalho, como era antes da migração.
+        render: (_value, row) => (
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Circle
+                  className={`w-2 h-2 flex-shrink-0 ${
+                    row.atualizacaoDisponivel ? 'fill-red-500 text-red-500' : 'fill-green-500 text-green-500'
+                  }`}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                {row.atualizacaoDisponivel
+                  ? 'Dados desatualizados no RM. Recarregue para sincronizar'
+                  : 'Dados sincronizados com o RM'}
+              </TooltipContent>
+            </Tooltip>
+            {row.nome}
+          </div>
+        ),
+      },
+      {
+        key: 'cargo',
+        label: 'Cargo',
+        width: '20%',
+        renderHeader: () => renderPerfisSortHeader('cargo', 'Cargo'),
+      },
+      {
+        key: 'gerencia',
+        label: 'Gerência',
+        width: '22%',
+        renderHeader: () => renderPerfisSortHeader('gerencia', 'Gerência'),
+      },
+      {
+        key: 'ultimoAcesso',
+        label: 'Último Acesso',
+        width: '18%',
+        renderHeader: () => renderPerfisSortHeader('ultimoAcesso', 'Último Acesso'),
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        width: '14%',
+        renderHeader: () => renderPerfisSortHeader('status', 'Status'),
+        render: (value) => (
+          <span
+            className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+              value === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {value}
+          </span>
+        ),
+      },
+    ];
+
+    const perfisActions: InlineAction[] = [
+      {
+        label: 'Sincronizar',
+        icon: <RefreshCw className="w-4 h-4" />,
+        onClick: (row) => {
+          toast.success(`Perfil de ${row.nome} sincronizado com sucesso!`);
+          setSyncedProfileIds(prev => new Set([...prev, row.id]));
+        },
+      },
+    ];
+
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
-          <Perfis
-            profilesData={profilesData}
-            onUpdateProfiles={(updated) => {
-              const newlySynced = updated.filter(p => !p.atualizacaoDisponivel).map(p => p.id);
-              setSyncedProfileIds(prev => new Set([...prev, ...newlySynced]));
-            }}
-          />
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Perfis</h1>
+            <p className="text-sm text-gray-500 mt-1">Visualize os perfis dos colaboradores sincronizados do sistema RM</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Toolbar manual — mesmo padrão de Habilidades (chips), aqui com
+                3 filtros não-busca em vez de 2, além do botão Sincronizar
+                Todos. ListingPage não tem slot para múltiplos filtros além
+                de busca+status, por isso o mesmo caminho manual. */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="w-80 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome, cargo ou gerência..."
+                    value={buscaPerfil}
+                    onChange={(e) => setBuscaPerfil(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
+                  />
+                </div>
+                <ChipFiltro
+                  label="Status"
+                  value={statusFilterPerfis}
+                  onChange={setStatusFilterPerfis}
+                  options={[
+                    { value: 'todas', label: 'Todas' },
+                    { value: 'ativa', label: 'Ativas' },
+                    { value: 'desativada', label: 'Desativadas' },
+                  ]}
+                />
+                <ChipFiltro
+                  label="Gerência"
+                  value={gerenciaFilterPerfis}
+                  onChange={setGerenciaFilterPerfis}
+                  searchable
+                  searchPlaceholder="Buscar gerência..."
+                  emptyMessage="Nenhuma gerência encontrada"
+                  options={[
+                    { value: 'todas', label: 'Todas as gerências' },
+                    ...gerenciasUnicasPerfis.map((g) => ({ value: g, label: g })),
+                  ]}
+                />
+                <ChipFiltro
+                  label="Cargo"
+                  value={cargoFilterPerfis}
+                  onChange={setCargoFilterPerfis}
+                  searchable
+                  searchPlaceholder="Buscar cargo..."
+                  emptyMessage="Nenhum cargo encontrado"
+                  options={[
+                    { value: 'todos', label: 'Todos os cargos' },
+                    ...cargosUnicosPerfis.map((c) => ({ value: c, label: c })),
+                  ]}
+                />
+                <div className="flex-1" />
+                <button
+                  onClick={() => {
+                    toast.success('Sincronização iniciada com sucesso!');
+                    setSyncedProfileIds(prev => new Set([...prev, ...profilesData.map(p => p.id)]));
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Sincronizar Todos
+                </button>
+              </div>
+            </div>
+
+            {totalItemsPerfis === 0 ? (
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <EmptyState
+                  icon={<Users className="w-8 h-8" />}
+                  title={buscaPerfil ? 'Nenhum resultado encontrado' : 'Nenhum perfil encontrado'}
+                  description={
+                    buscaPerfil
+                      ? `Não encontramos resultados para "${buscaPerfil}". Tente ajustar sua busca.`
+                      : 'Os perfis são sincronizados automaticamente do sistema RM.'
+                  }
+                />
+              </div>
+            ) : (
+              <Table
+                columns={perfisColumns}
+                data={paginatedDataPerfis}
+                actions={perfisActions}
+                onRowClick={(row) => navigate(`/perfis/${row.id}`)}
+                pagination={{
+                  currentPage: currentPagePerfis,
+                  itemsPerPage: itemsPerPagePerfis,
+                  totalItems: totalItemsPerfis,
+                  onPageChange: handlePageChangePerfis,
+                  onItemsPerPageChange: handleItemsPerPageChangePerfis,
+                }}
+              />
+            )}
+          </div>
         </div>
       </main>
     );
@@ -272,11 +550,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'nome',
         label: 'Nome',
-        width: '25%',
+        width: '26%',
         renderHeader: () => (
           <button
             onClick={() => handleCompetenciasSort('nome')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Nome
             {competenciasSortConfig.column === 'nome' ? (
@@ -290,16 +568,16 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'descricao',
         label: 'Descrição',
-        width: '40%',
+        width: '42%',
         render: (value) => {
           const descricao = value as string;
           if (!descricao) {
-            return <span className="text-sm text-gray-500">-</span>;
+            return <span className="text-gray-500">-</span>;
           }
           return (
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                <p className="text-gray-700 line-clamp-2 break-words">
                   {descricao}
                 </p>
               </TooltipTrigger>
@@ -311,11 +589,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'habilidades',
         label: 'Habilidades Vinculadas',
-        width: '15%',
+        width: '16%',
         renderHeader: () => (
           <button
             onClick={() => handleCompetenciasSort('habilidades')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Habilidades Vinculadas
             {competenciasSortConfig.column === 'habilidades' ? (
@@ -326,22 +604,17 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           </button>
         ),
         render: (value) => (
-          <span className="inline-flex items-center gap-1 text-sm text-gray-900">
-            <span className="font-medium">{value}</span>
-            <span className="text-gray-500">
-              {value === 1 ? 'habilidade' : 'habilidades'}
-            </span>
-          </span>
+          <QuantityLabel value={value as number} singular="habilidade" plural="habilidades" />
         ),
       },
       {
         key: 'status',
         label: 'Status',
-        width: '15%',
+        width: '16%',
         renderHeader: () => (
           <button
             onClick={() => handleCompetenciasSort('status')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Status
             {competenciasSortConfig.column === 'status' ? (
@@ -538,6 +811,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               actions={competenciasActions}
               searchPlaceholder="Buscar competência"
               onSearch={setBuscaCompetencia}
+              statusFilterVariant="chip"
               statusFilter={{
                 value: statusFilterCompetencias,
                 onChange: setStatusFilterCompetencias,
@@ -664,12 +938,17 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             label: 'Nome da Habilidade',
             width: '16%',
             render: (value) => (
-              <span className="text-sm text-gray-900">{value}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block text-gray-900 line-clamp-2 break-words">{value}</span>
+                </TooltipTrigger>
+                <TooltipContent>{value}</TooltipContent>
+              </Tooltip>
             ),
             renderHeader: () => (
               <button
                 onClick={() => handleHabilidadesSort('nome')}
-                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
               >
                 Nome da Habilidade
                 {habilidadesSortConfig.column === 'nome' ? (
@@ -683,16 +962,16 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'descricao',
             label: 'Descrição',
-            width: '25%',
+            width: '32%',
             render: (value) => {
               const descricao = value as string;
               if (!descricao) {
-                return <span className="text-gray-400 text-sm">-</span>;
+                return <span className="text-gray-400">-</span>;
               }
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                    <p className="text-gray-700 line-clamp-2 break-words">
                       {descricao}
                     </p>
                   </TooltipTrigger>
@@ -704,11 +983,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'competencia',
             label: 'Competência',
-            width: '15%',
+            width: '19%',
             renderHeader: () => (
               <button
                 onClick={() => handleHabilidadesSort('competencia')}
-                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
               >
                 Competência
                 {habilidadesSortConfig.column === 'competencia' ? (
@@ -718,17 +997,41 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                 )}
               </button>
             ),
+            render: (value) => (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block text-gray-900 line-clamp-2 break-words">{value}</span>
+                </TooltipTrigger>
+                <TooltipContent>{value}</TooltipContent>
+              </Tooltip>
+            ),
           },
           {
             key: 'niveis',
             label: 'Níveis',
-            width: '22%',
+            width: '8%',
+            // Contagem sempre, em qualquer largura — não só quando aperta
+            // (achado da investigação de esmagamento: com todos os 5 nomes
+            // por extenso, "Aprendiz, Iniciante, Intermediário, Avançado,
+            // Especialista" não cabia nem no piso de 1280px). Tooltip mostra
+            // a lista completa, na mesma ordem de progressão do array
+            // `niveis` da habilidade (nunca reordenada aqui).
             render: (value) => {
               const niveis = value as Array<{ nivelId: string; criterio: string }> | undefined;
-              if (!niveis || niveis.length === 0) return <span className="text-gray-400 text-sm">-</span>;
+              if (!niveis || niveis.length === 0) return <span className="text-gray-400">-</span>;
               const niveisMap = Object.fromEntries(niveisDefaultData.map((n) => [n.id, n]));
-              const nomes = niveis.map(({ nivelId }) => niveisMap[nivelId]?.nome).filter(Boolean).join(', ');
-              return <span className="text-sm text-gray-700">{nomes || <span className="text-gray-400">-</span>}</span>;
+              const nomes = niveis.map(({ nivelId }) => niveisMap[nivelId]?.nome).filter(Boolean) as string[];
+              if (nomes.length === 0) return <span className="text-gray-400">-</span>;
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-default">
+                      <QuantityLabel value={nomes.length} singular="nível" plural="níveis" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{nomes.join(', ')}</TooltipContent>
+                </Tooltip>
+              );
             },
           },
           {
@@ -750,11 +1053,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           {
             key: 'status',
             label: 'Status',
-            width: '10%',
+            width: '13%',
             renderHeader: () => (
               <button
                 onClick={() => handleHabilidadesSort('status')}
-                className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
               >
                 Status
                 {habilidadesSortConfig.column === 'status' ? (
@@ -923,111 +1226,12 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         return (
           <>
             <div className="space-y-6 relative">
-              {/* Toolbar unificada */}
+              {/* Toolbar unificada — controles em chip (ui/ChipFiltro). Valores dos
+                  chips batem com os que o filtro já espera ('todas' / id da
+                  competência / 'técnica' / 'comportamental' / 'ativa' /
+                  'desativada'). */}
               <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-4">
-                {/* Mobile: Layout vertical */}
-                <div className="flex flex-col gap-3 md:hidden">
-                  {/* Campo de busca - largura total */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar habilidade"
-                      value={buscaHabilidade}
-                      onChange={(e) => setBuscaHabilidade(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Dropdown de Competência - largura total */}
-                  <Select value={filtroCompetencia} onValueChange={setFiltroCompetencia}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Todas as competências" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todas">Todas as competências</SelectItem>
-                      {competencias.filter(c => c.status === 'Ativa').map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Filtros de Tipo - scroll horizontal */}
-                  <div className="overflow-x-auto -mx-3 px-3">
-                    <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
-                      <button
-                        onClick={() => setFiltroTipo('todas')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroTipo === 'todas'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Todas
-                      </button>
-                      <button
-                        onClick={() => setFiltroTipo('técnica')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroTipo === 'técnica'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Técnica
-                      </button>
-                      <button
-                        onClick={() => setFiltroTipo('comportamental')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroTipo === 'comportamental'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Comportamental
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Filtros de Status - scroll horizontal */}
-                  <div className="overflow-x-auto -mx-3 px-3">
-                    <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
-                      <button
-                        onClick={() => setFiltroStatus('todas')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroStatus === 'todas'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Todas
-                      </button>
-                      <button
-                        onClick={() => setFiltroStatus('ativa')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroStatus === 'ativa'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Ativas
-                      </button>
-                      <button
-                        onClick={() => setFiltroStatus('desativada')}
-                        className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                          filtroStatus === 'desativada'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Desativadas
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Desktop: Layout horizontal original */}
-                <div className="hidden md:flex items-center gap-3">
-                  {/* Campo de busca */}
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="w-80 relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
@@ -1038,92 +1242,41 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
                     />
                   </div>
-
-                  {/* Dropdown de Competência */}
-                  <Select value={filtroCompetencia} onValueChange={setFiltroCompetencia}>
-                    <SelectTrigger className="w-auto">
-                      <SelectValue placeholder="Todas as competências" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todas">Todas as competências</SelectItem>
-                      {competencias.filter(c => c.status === 'Ativa').map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Pills de Tipo */}
-                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                    <button
-                      onClick={() => setFiltroTipo('todas')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroTipo === 'todas'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Todas
-                    </button>
-                    <button
-                      onClick={() => setFiltroTipo('técnica')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroTipo === 'técnica'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Técnica
-                    </button>
-                    <button
-                      onClick={() => setFiltroTipo('comportamental')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroTipo === 'comportamental'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Comportamental
-                    </button>
-                  </div>
-
-                  {/* Pills de Status */}
-                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                    <button
-                      onClick={() => setFiltroStatus('todas')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroStatus === 'todas'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Todas
-                    </button>
-                    <button
-                      onClick={() => setFiltroStatus('ativa')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroStatus === 'ativa'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Ativas
-                    </button>
-                    <button
-                      onClick={() => setFiltroStatus('desativada')}
-                      className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                        filtroStatus === 'desativada'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Desativadas
-                    </button>
-                  </div>
-
-                  {/* Espaçador flexível */}
-                  <div className="flex-1"></div>
-
-                  {/* Botão de ação primária - apenas desktop */}
+                  <ChipFiltro
+                    label="Competência"
+                    value={filtroCompetencia}
+                    onChange={setFiltroCompetencia}
+                    searchable
+                    searchPlaceholder="Buscar competência..."
+                    emptyMessage="Nenhuma competência encontrada"
+                    options={[
+                      { value: 'todas', label: 'Todas as competências' },
+                      ...competencias
+                        .filter((c) => c.status === 'Ativa')
+                        .map((c) => ({ value: c.id, label: c.nome })),
+                    ]}
+                  />
+                  <ChipFiltro
+                    label="Tipo"
+                    value={filtroTipo}
+                    onChange={setFiltroTipo}
+                    options={[
+                      { value: 'todas', label: 'Todas' },
+                      { value: 'técnica', label: 'Técnica' },
+                      { value: 'comportamental', label: 'Comportamental' },
+                    ]}
+                  />
+                  <ChipFiltro
+                    label="Status"
+                    value={filtroStatus}
+                    onChange={setFiltroStatus}
+                    options={[
+                      { value: 'todas', label: 'Todas' },
+                      { value: 'ativa', label: 'Ativas' },
+                      { value: 'desativada', label: 'Desativadas' },
+                    ]}
+                  />
+                  <div className="flex-1" />
                   <button
                     onClick={handleOpenCreateHabilidadeDrawer}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
@@ -1133,9 +1286,12 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                 </div>
               </div>
 
-              {/* Tabela */}
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                {totalItemsHabilidades === 0 ? (
+              {/* Moldura do card (bg-white rounded-lg border overflow-hidden)
+                  já vem de dentro de ui/Table.tsx — só reaplicada aqui para o
+                  EmptyState, que não passa por Table.tsx, para não aninhar
+                  duas bordas quando há dados. */}
+              {totalItemsHabilidades === 0 ? (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                   <EmptyState
                     icon={<Award className="w-8 h-8" />}
                     title={habilidadesData.length === 0 ? 'Nenhuma habilidade cadastrada' : 'Nenhum resultado encontrado'}
@@ -1144,21 +1300,29 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
                       : 'Não encontramos habilidades que correspondam aos filtros selecionados. Tente ajustar os critérios de busca.'
                     }
                   />
-                ) : (
-                  <Table
-                    columns={habilidadesColumns}
-                    data={paginatedDataHabilidades}
-                    actions={habilidadesActions}
-                    pagination={{
-                      currentPage: currentPageHabilidades,
-                      itemsPerPage: itemsPerPageHabilidades,
-                      totalItems: totalItemsHabilidades,
-                      onPageChange: handlePageChangeHabilidades,
-                      onItemsPerPageChange: handleItemsPerPageChangeHabilidades,
-                    }}
-                  />
-                )}
-              </div>
+                </div>
+              ) : (
+                // stickyFirstColumn ligado de verdade (produção): investigação
+                // confirmou que Habilidades esmaga nas larguras de notebook
+                // (1280-1440px) — colunas Tipo/Status na mesma % que a
+                // Status de Avaliações (já esmagava lá), e Níveis pior ainda
+                // (lista de até 5 nomes sem truncamento). Mesmo tratamento de
+                // Avaliações: min-w-[1280px] (Table.tsx) força rolagem em vez
+                // de espremer.
+                <Table
+                  columns={habilidadesColumns}
+                  data={paginatedDataHabilidades}
+                  actions={habilidadesActions}
+                  stickyFirstColumn
+                  pagination={{
+                    currentPage: currentPageHabilidades,
+                    itemsPerPage: itemsPerPageHabilidades,
+                    totalItems: totalItemsHabilidades,
+                    onPageChange: handlePageChangeHabilidades,
+                    onItemsPerPageChange: handleItemsPerPageChangeHabilidades,
+                  }}
+                />
+              )}
             </div>
 
             <HabilidadeFormDrawer
@@ -1217,7 +1381,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     };
 
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           {/* Título da Página */}
           <div className="mb-6">
@@ -1331,11 +1495,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'nome',
         label: 'Nome da Carreira',
-        width: '45%',
+        width: '50%',
         renderHeader: () => (
           <button
             onClick={() => handleCarreirasSort('nome')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Nome da Carreira
             {carreirasSortConfig.column === 'nome' ? (
@@ -1346,17 +1510,17 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           </button>
         ),
         render: (value) => (
-          <span className="text-sm text-gray-900">{value}</span>
+          <span className="text-gray-900">{value}</span>
         ),
       },
       {
         key: 'jornadas',
         label: 'Jornadas',
-        width: '25%',
+        width: '28%',
         renderHeader: () => (
           <button
             onClick={() => handleCarreirasSort('jornadas')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Jornadas
             {carreirasSortConfig.column === 'jornadas' ? (
@@ -1368,22 +1532,18 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         ),
         render: (_value, row) => {
           const total = jornadasDoContexto.filter(j => j.carreiraId === row.id).length;
-          if (total === 0) return <span className="text-sm text-gray-500">Nenhuma jornada</span>;
-          return (
-            <span className="text-sm text-gray-900">
-              {total} {total === 1 ? 'jornada' : 'jornadas'}
-            </span>
-          );
+          if (total === 0) return <span className="text-gray-500">Nenhuma jornada</span>;
+          return <QuantityLabel value={total} singular="jornada" plural="jornadas" />;
         },
       },
       {
         key: 'status',
         label: 'Status',
-        width: '20%',
+        width: '22%',
         renderHeader: () => (
           <button
             onClick={() => handleCarreirasSort('status')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Status
             {carreirasSortConfig.column === 'status' ? (
@@ -1598,7 +1758,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     ) : undefined;
 
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           {/* Título da Página */}
           <div className="mb-6">
@@ -1617,6 +1777,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             actions={carreirasActions}
             searchPlaceholder="Buscar carreira"
             onSearch={setBuscaCarreira}
+            statusFilterVariant="chip"
             statusFilter={{
               value: statusFilterCarreiras,
               onChange: setStatusFilterCarreiras,
@@ -1761,11 +1922,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'nome',
         label: 'Nome da Avaliação',
-        width: '17%',
+        width: '19%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('nome')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Nome da Avaliação
             {avaliacoesSortConfig.column === 'nome' ? (
@@ -1779,11 +1940,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'descricao',
         label: 'Descrição',
-        width: '20%',
+        width: '22%',
         render: (_value, row) => {
           const descricao = (row as Avaliacao).descricao;
           if (!descricao) {
-            return <span className="text-sm text-gray-500">-</span>;
+            return <span className="text-gray-500">-</span>;
           }
           return (
             // break-words (overflow-wrap: break-word) além do line-clamp-2:
@@ -1795,7 +1956,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             // si não souber quebrar.
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-sm text-gray-700 line-clamp-2 break-words">
+                <p className="text-gray-700 line-clamp-2 break-words">
                   {descricao}
                 </p>
               </TooltipTrigger>
@@ -1807,9 +1968,9 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'origem',
         label: 'Origem',
-        width: '9%',
+        width: '10%',
         render: (_value, row) => (
-          <span className="text-sm text-gray-700">
+          <span className="text-gray-700">
             {(row as Avaliacao).origemJornadaId ? 'Jornada' : 'Público'}
           </span>
         ),
@@ -1822,11 +1983,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
         // também não são ordenáveis).
         key: 'periodo',
         label: 'Início',
-        width: '8%',
+        width: '9%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('periodo')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Início
             {avaliacoesSortConfig.column === 'periodo' ? (
@@ -1842,7 +2003,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           // ainda não tem essa data. "-" (hífen simples, nunca travessão/en
           // dash) para "sem valor" — mesmo tratamento das colunas Término e
           // Prazo logo abaixo.
-          if (!inicio) return <span className="text-sm text-gray-500">-</span>;
+          if (!inicio) return <span className="text-gray-500">-</span>;
           // Status calculado 'Pendente' ("Agendada") só ganha o aviso quando
           // a ativação está a 5 dias ou menos — calcularDiasAteVencimento
           // (utils/avaliacoes.tsx) já é a fonte única de "diferença em dias
@@ -1866,7 +2027,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
               ? 'Vai ficar ativa amanhã.'
               : `Vai ficar ativa em ${diasAteAtivar} dias.`;
           return (
-            <span className="text-sm text-gray-700 inline-flex items-center gap-1">
+            <span className="text-gray-700 inline-flex items-center gap-1">
               {formatData(inicio)}
               {agendadaUrgente && (
                 <AvisoAtivacaoAgendada dataISO={inicio} corIcone="text-red-500" texto={textoContador} />
@@ -1878,7 +2039,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'termino',
         label: 'Término',
-        width: '8%',
+        width: '9%',
         render: (_value, row) => {
           const fim = (row as Avaliacao).periodoFim;
           // "-" (hífen simples, nunca travessão/en dash) para "sem valor" —
@@ -1886,35 +2047,35 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
           // pedido explicitamente aqui, substituindo o "Não definido" por
           // extenso usado antes.
           return fim
-            ? <span className="text-sm text-gray-700">{formatData(fim)}</span>
-            : <span className="text-sm text-gray-500">-</span>;
+            ? <span className="text-gray-700">{formatData(fim)}</span>
+            : <span className="text-gray-500">-</span>;
         },
       },
       {
         key: 'prazo',
         label: 'Prazo',
-        width: '7%',
+        width: '8%',
         render: (_value, row) => {
           const dias = (row as Avaliacao).prazoDias;
           return dias != null
-            ? <span className="text-sm text-gray-700">{dias} {dias === 1 ? 'dia' : 'dias'}</span>
-            : <span className="text-sm text-gray-500">-</span>;
+            ? <span className="text-gray-700">{dias} {dias === 1 ? 'dia' : 'dias'}</span>
+            : <span className="text-gray-500">-</span>;
         },
       },
       {
         key: 'participantes',
         label: 'Participantes',
-        width: '12%',
+        width: '13%',
         render: (_value, row) => {
           if (row.status === 'Rascunho') {
-            return <span className="text-sm text-gray-500">-</span>;
+            return <span className="text-gray-500">-</span>;
           }
           const total: number = row.participantes.length;
           const concluidas: number = row.participantes.filter((p: ParticipanteAvaliacao) => p.status === 'Concluída').length;
           const progresso = total > 0 ? Math.round((concluidas / total) * 100) : 0;
           return (
             <div className="space-y-1">
-              <div className="text-sm text-gray-700">{concluidas}/{total}</div>
+              <div className="text-gray-700">{concluidas}/{total}</div>
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
                   className="bg-[var(--brand-600)] h-1.5 rounded-full transition-all"
@@ -1928,11 +2089,11 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
       {
         key: 'status',
         label: 'Status',
-        width: '9%',
+        width: '10%',
         renderHeader: () => (
           <button
             onClick={() => handleAvaliacoesSort('status')}
-            className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
           >
             Status
             {avaliacoesSortConfig.column === 'status' ? (
@@ -2015,7 +2176,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     // Ações da tabela — 4 ações (Visualizar/Editar/Encerrar/Duplicar) ⇒ vira
     // menu de contexto (MoreVertical) na Table.tsx, conforme
     // 02-design-system.md > Tabelas > Menu de ações (exceção documentada à
-    // regra geral de ícones soltos, válida a partir de 4 ações).
+    // regra geral de ícones soltos, válida a partir de 3 ações).
     const avaliacoesActions: InlineAction[] = [
       {
         label: 'Visualizar',
@@ -2077,7 +2238,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
     };
 
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           {/* Título da Página */}
           <div className="mb-6">
@@ -2096,6 +2257,8 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
             actions={avaliacoesActions}
             searchPlaceholder="Buscar avaliação"
             onSearch={setBuscaAvaliacao}
+            statusFilterVariant="chip"
+            stickyFirstColumn
             statusFilter={{
               value: statusFilterAvaliacoes,
               onChange: setStatusFilterAvaliacoes,
@@ -2187,7 +2350,7 @@ export function ContentArea({ selectedItem, viewMode, isSidebarCollapsed }: Cont
   };
 
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
       <div className="p-4 md:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">

@@ -109,7 +109,7 @@ function CriarJornadaPageContent() {
 
   if (!carreira) {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8 max-w-2xl mx-auto mt-16">
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-4" />
@@ -124,7 +124,7 @@ function CriarJornadaPageContent() {
   }
 
   return (
-    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''} h-[calc(100vh-4rem)]`}>
+    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} h-[calc(100vh-4rem)]`}>
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 md:pt-8 pb-8 md:pb-12">
         <button
           onClick={() => navigate(`/carreiras/${carreiraId}`)}

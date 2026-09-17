@@ -67,15 +67,20 @@ export default function Layout() {
       const width = window.innerWidth;
       let currentBreakpoint = '';
       
-      // Desktop (≥1200px): expandida por padrão
-      if (width >= 1200) {
+      // Desktop (≥1440px): expandida por padrão. Limiar subiu de 1200 para
+      // 1440 — entre 1200 e 1439 a sidebar de 256px comia espaço útil de
+      // conteúdo justamente nas larguras de notebook mais comuns
+      // (1280/1366), onde toolbars e tabelas já ficam apertadas. Nessa
+      // faixa a sidebar agora fica recolhida em 80px (o usuário ainda pode
+      // expandir manualmente pelo toggle do Header).
+      if (width >= 1440) {
         currentBreakpoint = 'desktop';
         if (lastBreakpoint !== currentBreakpoint) {
           setIsSidebarCollapsed(false);
           setIsMobileMenuOpen(false);
         }
       }
-      // Tablet (768px-1199px): recolhida por padrão
+      // Tablet / notebook (768px-1439px): recolhida por padrão
       else if (width >= 768) {
         currentBreakpoint = 'tablet';
         if (lastBreakpoint !== currentBreakpoint) {

@@ -7,6 +7,13 @@ interface Vinculo {
   jornadaId: string;
 }
 
+// Texto único do modal de confirmação de exclusão de jornada —
+// compartilhado entre CarreiraDetalhePage.tsx e JornadaDetalhePage.tsx
+// (mesma ação, duas telas) para evitar duas cópias divergentes.
+export const JORNADA_EXCLUSAO_TITULO = 'Excluir jornada?';
+export const JORNADA_EXCLUSAO_MENSAGEM =
+  'Esta ação não pode ser desfeita. Todos os cargos, habilidades configuradas e vínculos de colaboradores dessa jornada serão removidos.';
+
 interface CarreirasContextType {
   carreiras: Carreira[];
   adicionarCarreira: (carreira: Carreira) => void;
@@ -193,6 +200,8 @@ export function CarreirasProvider({ children }: { children: ReactNode }) {
     setHabilidadesCargo((prevHabilidades) =>
       prevHabilidades.filter((h) => !idsCargoRemovidos.includes(h.cargoId))
     );
+    // Desvincular colaboradores da jornada removida — evita vinculo.jornadaId órfão
+    setVinculos((prevVinculos) => prevVinculos.filter((v) => v.jornadaId !== jornadaId));
   };
 
   const adicionarCargo = (novoCargo: Cargo) => {

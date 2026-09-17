@@ -49,15 +49,58 @@ Nunca use hex fixo. Nunca use classes `blue-X` para elementos da marca.
 ## Tipografia
 
 - Título de página: `text-2xl font-semibold text-gray-900`
-- Subtítulo de página: `text-sm text-gray-600`
+- Subtítulo de página: `text-sm text-gray-500 mt-1` — padrão oficial desde
+  2026-09-17 (decisão da Alice). É o que está de fato em produção no bloco
+  de título de 4 das 5 listagens principais (Perfis, Habilidades, Carreiras,
+  Avaliações, em `ContentArea.tsx`). `ListingPage.tsx` ainda tem um caminho
+  interno com `text-sm text-gray-600 mt-2` (usado só quando uma tela passa
+  `title`/`subtitle` como prop pro componente — nenhuma das 5 listagens
+  principais faz isso hoje) — não seguir esse valor em telas novas.
 - Label de campo: `text-xs md:text-sm font-medium text-gray-700`
-- Cabeçalho de tabela: `text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider`
-- Conteúdo de célula: `text-xs md:text-sm text-gray-900`
+- Cabeçalho de tabela: `text-[10px] font-semibold text-gray-500 uppercase tracking-wider` — fixo, sem bump em telas grandes (ver nota abaixo)
+- Conteúdo de célula: `text-xs text-gray-900` — fixo, sem bump em telas grandes (ver nota abaixo)
 - Informação complementar: `text-xs md:text-sm text-gray-500`
 - Link: `text-xs md:text-sm font-medium text-[var(--brand-600)]`
 - Erro de campo: `text-sm text-red-600`
 - `font-bold` reservado apenas para valores numéricos em cards de métricas
-- Regra: sempre usar prefixo `md:` quando tamanho muda entre breakpoints
+- Regra: sempre usar prefixo `md:` quando tamanho muda entre breakpoints — **exceção permanente**: cabeçalho e conteúdo de célula de tabela (linhas acima) não crescem em telas grandes; badges dentro de célula (Status, Tipo) continuam responsivas normalmente, ver "Badges" abaixo — essa decisão nunca incluiu badges
+
+### Tipografia de tabela — decisão 2026-09-15 (era experimento, virou padrão)
+
+Origem: testado nas rotas `/testes/habilidades-chip` e `/testes/avaliacoes-chip`
+antes de virar padrão. Centralizado em `ui/Table.tsx` — automático em toda
+tabela do sistema que usa o componente (`Table`/`ListingPage`), não precisa
+de nenhuma prop pra ligar. Não existe mais variante "tipografia normal" de
+tabela — os valores antigos (`text-[10px] md:text-xs font-medium` no
+cabeçalho, `text-xs md:text-sm` na célula) foram substituídos, não
+coexistem como opção.
+
+### Contagem "número + palavra" — componente `ui/QuantityLabel.tsx`
+
+Padrão para exibir uma contagem seguida da unidade (ex: "2 habilidades",
+"11 habilidades", "5 níveis"): número em destaque, palavra/unidade ao lado
+em peso normal e cor mais fraca.
+
+```
+<QuantityLabel value={n} singular="habilidade" plural="habilidades" />
+```
+
+Renderiza `font-semibold text-gray-900` no número + `font-normal
+text-gray-500` na palavra (singular quando `value === 1`, plural caso
+contrário). Sem tamanho de fonte próprio — herda o da célula/contêiner onde
+for usado.
+
+Decisão — 2026-09-16: antes desse componente, o padrão era escrito à mão em
+cada tela, com variações reais entre elas (pesos/cores diferentes em
+`ContentArea.tsx` "Habilidades Vinculadas" de Competências vs.
+`NiveisProficiencia.tsx`, e a coluna "Níveis" de Habilidades não tinha
+nenhum destaque). `QuantityLabel` centraliza o padrão — **sempre usar esse
+componente para número + unidade, nunca escrever os dois `<span>` à mão de
+novo.**
+
+Exceção: `DashboardPage.tsx` (coluna de GAPs, Seção 2) fica de fora — usa
+`font-semibold` + `text-gray-400` com abreviação ("colab."), arquitetura de
+tabela própria do Dashboard, não migrada.
 
 ### Exceção documentada — rótulo da etapa Revisão (wizard de Avaliações)
 
@@ -153,6 +196,25 @@ Biblioteca: lucide-react v0.487.0 — exclusiva.
 - Em cards de métricas: sempre à **direita**, `w-5 h-5 flex-shrink-0`, sem wrapper
 - Nunca SVG inline não documentado
 
+### Indicador de sincronização (Perfis) — exceção documentada
+
+Único indicador do sistema que não é badge nem ícone de ação — é um ponto
+(`Circle` preenchido, `w-2 h-2`) embutido ao lado do nome, na coluna Nome da
+tabela de Perfis, com `Tooltip` explicando o significado. Representa
+sincronização de dados com o sistema RM — **não é o Status Ativo/Desativado
+do registro**, é um metadado independente (`atualizacaoDisponivel`).
+
+```
+Sincronizado:   fill-green-500 text-green-500
+Desatualizado:  fill-red-500 text-red-500
+```
+
+Verde/vermelho aqui seguem o significado geral já documentado (verde =
+positivo, vermelho = alerta), mas a paleta em si — pontos preenchidos de
+`w-2 h-2`, sem badge, sem fundo — é específica desse indicador. Não reutilizar
+esse padrão (ponto colorido solto) para nenhum outro tipo de status; status de
+registro sempre usa a Badge documentada abaixo.
+
 ## Badges
 
 Classe base responsiva para status:
@@ -245,6 +307,14 @@ Tbody:     divide-y divide-gray-200
 Paginação: border-t border-gray-200 bg-gray-50
 ```
 
+Exceção documentada — padding das 4 tabelas internas do Dashboard (mesmas
+S2/S3/S4/S5 da exceção de cor acima): cabeçalho usa `pb-3` e corpo usa
+`py-3.5`, com espaçamento horizontal só via `pr-*` por coluna (sem `px-*`
+nas duas pontas, sem bump `md:`) — diferente do padrão responsivo
+`px-3 md:px-6 py-3 md:py-4` do resto do sistema. Motivo: são tabelas
+hand-built, sem a anatomia de container/borda de `ui/Table.tsx`, embutidas
+direto no card do Dashboard.
+
 Linha clicável: `hover:bg-[rgba(0,159,194,0.06)] cursor-pointer transition-colors`
 Linha não clicável: `transition-colors` (sem hover, sem cursor-pointer)
 
@@ -254,13 +324,90 @@ Linha não clicável: `transition-colors` (sem hover, sem cursor-pointer)
 - Estado vazio com filtro ativo: mostrar botão "Limpar filtros"
 - Estado vazio sem dados: sem botão de limpar
 
-### Menu de ações (exceção documentada a partir de 4 ações)
+### Cabeçalho ordenável (`renderHeader`) — `text-left` explícito obrigatório
 
-Decisão — 2026-08-24: `MoreVertical` era proibido em qualquer circunstância;
-passou a ser permitido quando uma linha de tabela tem **4 ou mais ações
-configuradas**. Abaixo de 4, ícones soltos continuam sendo o padrão — nunca
-trocar por menu só porque "parece mais limpo"; a troca é definida pela
-contagem, não por gosto.
+O `<th>` do `ui/Table.tsx` já traz `text-left`, mas quando o cabeçalho é
+ordenável ele renderiza um `<button>` dentro do `<th>`, e o `<button>`
+**herda `text-align: center` do user-agent** (o Preflight do Tailwind v4 não
+reseta `text-align` em botões). Enquanto o rótulo cabe em 1 linha isso é
+invisível; quando ele quebra em 2 linhas numa coluna estreita (ex: "Nome da
+Habilidade" a 16%, "Nome da Avaliação" a 17%), as linhas aparecem
+centralizadas — inconsistente com as colunas de texto puro ao lado.
+
+Regra: **todo botão de cabeçalho ordenável leva `text-left` explícito na
+className.** Padrão canônico do botão (atualizado — ver "Tipografia de
+tabela" acima, cabeçalho não tem mais bump em `md:` desde 2026-09-15):
+
+```
+inline-flex items-center gap-1 group text-[10px] font-semibold
+text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors
+```
+
+Aplicado em 2026-09-10 em todas as ocorrências (ContentArea.tsx —
+Habilidades/Competências/Carreiras/Avaliações; Perfis.tsx;
+CarreiraDetalhePage.tsx; AvaliacaoDetalhePage.tsx;
+ParticipanteResultadoPage.tsx); atualizado para `font-semibold` sem `md:`
+em 2026-09-15 junto da mudança de tipografia de tabela. O padrão continua
+copiado por tela (não há `<SortableHeader>` compartilhado ainda) — ao
+copiar de novo, manter o `text-left`.
+
+#### Cabeçalho nunca trunca — decisão 2026-09-16
+
+Cabeçalho de coluna com texto de duas palavras ou mais **quebra em duas
+linhas** quando a tela aperta — **nunca** corta com reticências/`truncate`
+nem força uma linha só com `whitespace-nowrap` (isso faz o texto
+transbordar da coluna em vez de quebrar). Vale só para cabeçalho — dado de
+linha (célula) pode truncar normalmente, ver "Truncamento de texto e
+tooltip" acima; a diferença de tratamento entre os dois é intencional, não
+uma inconsistência a resolver.
+
+Isso já é o comportamento padrão do `<th>`/botão de `renderHeader` (nenhuma
+das duas classes acima), então normalmente não precisa de nada extra — só
+não adicionar `whitespace-nowrap`/`truncate` num cabeçalho novo "pra
+arrumar" uma quebra de linha que pareça estranha; a quebra é o
+comportamento correto. Achado e corrigido em 2026-09-16: a coluna
+"Habilidades Vinculadas" (Competências, `ContentArea.tsx`) tinha
+`whitespace-nowrap` no botão do cabeçalho — o texto transbordava da coluna
+em vez de quebrar. Removido.
+
+**Exceção documentada — cabeçalho de cargo na Matriz de Habilidades**
+(`JornadaDetalhePage.tsx`, aba Matriz): o nome do cargo no `<th>` de cada
+coluna dinâmica usa `truncate` (1 linha) + Tooltip com o nome completo, ao
+invés de quebrar em 2 linhas. Motivo (confirmado por Alice, 2026-09-17):
+não é um cabeçalho de listagem comum — é o cabeçalho de uma matriz com
+número variável de colunas dinâmicas (uma por cargo da jornada), cada uma
+já estreita (`min-w-[160px] max-w-[240px]`) e compartilhando espaço com a
+barra de progresso e o menu de ações do cargo; permitir quebra em 2 linhas
+aqui desalinharia a barra de progresso entre colunas vizinhas. Vale só para
+este cabeçalho específico — não usar como precedente para truncar outro
+cabeçalho de listagem comum.
+
+### Largura de coluna e `table-layout` — exceção documentada
+
+Padrão do sistema: as tabelas definem `width` (em %) em **todas** as colunas,
+então `Table.tsx` liga `table-layout: fixed` — o navegador trava a largura de
+cada coluna e o texto que não cabe quebra para baixo.
+
+Exceção consciente — **`CompetenciaDetalhePage.tsx`** (tabela de habilidades
+por competência do Colaborador): as colunas **não** definem `width`, então a
+tabela roda em `table-layout: auto`. Motivo: são só 5 colunas curtas (nível,
+peso, badge de status) sem nenhum campo de texto corrido longo — nesse caso o
+`auto` deixa a coluna "Habilidade" crescer conforme o conteúdo, evitando o
+esmagamento em várias linhas que as tabelas `table-fixed` sofrem em telas de
+notebook (1280–1440px). Não adicionar `width` nessas colunas para
+"padronizar" — isso religaria o `table-fixed` e traria o esmagamento de
+volta. Vale só para essa tela; qualquer tabela nova com coluna de texto longo
+(Descrição, Critério) continua no padrão `table-fixed` + `line-clamp`.
+
+### Menu de ações (exceção documentada a partir de 3 ações)
+
+Decisão — 2026-08-24, revisada 2026-09-15: `MoreVertical` era proibido em
+qualquer circunstância; passou a ser permitido quando uma linha de tabela
+tem **3 ou mais ações configuradas** (limiar original de 2026-08-24 era 4;
+baixado para 3 em 2026-09-15 — nunca tratar o "4" como referência histórica
+válida, o limiar vigente é 3). Abaixo de 3, ícones soltos continuam sendo o
+padrão — nunca trocar por menu só porque "parece mais limpo"; a troca é
+definida pela contagem, não por gosto.
 
 A decisão de qual modo renderizar é pelo tamanho do array de ações
 **configurado para a tabela** (o total, incluindo as condicionais), nunca
@@ -268,11 +415,11 @@ pela contagem de ações visíveis linha a linha. Uma ação condicional (ex:
 "Encerrar" só em `Ativa`) não muda o modo por linha — isso criaria duas
 linhas da mesma coluna renderizando modos diferentes (uma com ícones, outra
 com menu), inconsistência visual dentro da mesma coluna. Implementado de
-forma genérica em `ui/Table.tsx` (`InlineAction[]`): `actions.length < 4` →
-ícones soltos (comportamento antigo, inalterado); `actions.length >= 4` →
+forma genérica em `ui/Table.tsx` (`InlineAction[]`): `actions.length < 3` →
+ícones soltos (comportamento antigo, inalterado); `actions.length >= 3` →
 menu. Qualquer tabela que já usa `Table.tsx`/`ListingPage.tsx` (padrão do
 projeto — ver 01-verificacao.md) ganha o comportamento automaticamente ao
-crescer para 4 ações, sem precisar reimplementar nada por tela.
+crescer para 3 ações, sem precisar reimplementar nada por tela.
 
 Anatomia (referência: coluna Ações da tabela de Avaliações):
 ```
@@ -307,6 +454,22 @@ Regras:
   Usar sempre cores concretas (`bg-white`, `text-gray-900`, `text-red-600`),
   como em todo o resto do design system
 
+### Mecanismo de menu à parte — Matriz de Habilidades (registrado, não migrar)
+
+A Matriz de Habilidades (`JornadaDetalhePage.tsx`) tem DOIS menus de contexto
+próprios — no cabeçalho de cada coluna de cargo (editar/remover cargo) e na
+coluna fixa de habilidade (remover habilidade) — implementados como `<div>`
+posicionado (`absolute`, `z-[200]`) controlado por estado local
+(`openCargoMenu`/`openHabilidadeMenu`), não pelo Radix `DropdownMenu` nem
+pelo `InlineAction[]`/`actions` do `ui/Table.tsx`. Isso é intencional, não
+um desvio a corrigir: a Matriz é uma tabela hand-built (fora de
+`ui/Table.tsx`) com anatomia própria (coluna fixa `w-[220px]`, cabeçalhos
+dinâmicos por cargo, células de `MatrizCell`), então os dois modos do
+`Table.tsx` (ícones soltos / `DropdownMenu`) não se aplicam da mesma forma
+— o menu por cargo fica dentro do próprio `<th>`, não numa coluna de Ações
+dedicada. Mantém-se como está; só registrado aqui para não ser confundido
+com um mecanismo esquecido a unificar.
+
 ## Truncamento de texto e tooltip
 
 ### Componente único
@@ -338,14 +501,49 @@ feita à mão, nem qualquer outro tooltip — só este componente compartilhado.
 
 - **`NiveisProficiencia.tsx`** — tabela de consulta com 5 linhas fixas; a
   coluna Descrição mostra o texto inteiro (`block max-w-md`), sem
-  `line-clamp` nem Tooltip.
+  `line-clamp` nem Tooltip. Decisão explícita (confirmada por Alice,
+  2026-09-17): os 5 níveis são conteúdo fixo do sistema (não texto variável
+  digitado por usuário como Descrição de Habilidade/Critério), então não há
+  risco de um texto inesperadamente longo — o padrão de clamp+Tooltip existe
+  para proteger contra texto de tamanho imprevisível, o que não se aplica
+  aqui. Padding da célula continua o padrão responsivo (`px-3 md:px-6 py-3
+  md:py-4`) — só o clamp/Tooltip da Descrição fica de fora.
 - **`MatrizCell.tsx`** — o critério do nível na célula da Matriz usa
   `line-clamp-3` sem Tooltip (decisão de produto documentada em
   `04-regras-negocio.md` > "Conteúdo da célula preenchida").
 
 ## Filtros e Pills
 
-### Classes
+### Chip — padrão vigente das listagens principais (decisão 2026-09-16)
+
+As 5 listagens principais do Admin — **Habilidades, Avaliações, Carreiras,
+Competências e Perfis** — usam o filtro de status em **chip**
+(`ui/ChipFiltro.tsx`). Competências, Carreiras e Avaliações via
+`<ListingPage statusFilterVariant="chip">`. **Habilidades e Perfis usam
+toolbar manual dentro de `ContentArea.tsx` (`Table` bruto, sem
+`ListingPage`)** — exceção sancionada, mesmo caminho para as duas: sempre
+que a tela precisa de mais de 1 filtro extra além de busca+status,
+`ListingPage` não tem slot pra isso, então a tela monta a própria toolbar
+com `ChipFiltro`s lado a lado. Habilidades: Competência (searchable) + Tipo
++ Status. Perfis: Status + Gerência (searchable) + Cargo (searchable). Não
+é um desvio acidental do padrão `ListingPage` — é a mesma exceção aplicada
+duas vezes pelo mesmo motivo; qualquer tela nova com 2+ filtros além de
+status segue este caminho, não tenta forçar `ListingPage`.
+
+Substituiu o segmented control (pills) nessas 5 telas depois de testado nas
+rotas `/testes/habilidades-chip` e `/testes/avaliacoes-chip` (removidas —
+produção já faz a mesma coisa).
+
+Botão fechado mostrando "Label: valor atual" + chevron; ao clicar, abre um
+popover com as opções (escolha única). Mesma lógica de filtragem de antes —
+só o controle visual mudou.
+
+**Exceção que continua em pills** — não faz parte da migração:
+- **Pills-no-cartão em telas de detalhe**: `CompetenciaDetalhePage.tsx` e
+  `ParticipanteResultadoPage.tsx` são telas de detalhe, não listagens
+  principais — mantêm o segmented control pills.
+
+### Classes — Pills (ainda vigente nas exceções acima)
 ```
 Container:    flex items-center bg-gray-100 rounded-lg p-1
 Item ativo:   px-3 py-2 text-sm font-normal rounded-md bg-white text-gray-900 shadow-sm whitespace-nowrap
@@ -354,10 +552,10 @@ Campo busca:  pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
               focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent
 ```
 
-### Pills por contexto
+### Opções de filtro por contexto
 - Competências / Habilidades / Carreiras / Jornadas → Todos / Ativas / Desativadas
 - Níveis → (sem filtros — tela somente consulta)
-- Perfis → Todos / Ativos / Desativados
+- Perfis → Todas / Ativas / Desativadas
 - Avaliações Admin → Todas / Ativas / Rascunho / Agendadas / Encerradas
 - Avaliações Colaborador → Todos / Não iniciada / Em andamento / Concluída / Expirada
 

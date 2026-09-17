@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router';
 import { Plus, Edit, Trash2, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, Search } from 'lucide-react';
-import { useCarreiras } from '../context/CarreirasContext';
+import { useCarreiras, JORNADA_EXCLUSAO_TITULO, JORNADA_EXCLUSAO_MENSAGEM } from '../context/CarreirasContext';
 import { gerenciasData } from '../data/mockData';
-import { Table, Column } from '../components/ui/Table';
+import { Table, Column, InlineAction } from '../components/ui/Table';
+import { QuantityLabel } from '../components/ui/QuantityLabel';
+import { ChipFiltro } from '../components/ui/ChipFiltro';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmationModal } from '../components/templates/ConfirmationModal';
 import { FormDrawer, FormField } from '../components/templates/FormDrawer';
@@ -22,8 +24,9 @@ export default function CarreiraDetalhePage() {
   const { carreiras, jornadas, cargos, removerJornada, atualizarJornada } = useCarreiras();
 
   const [buscaJornada, setBuscaJornada] = useState('');
-  const [filtroStatusJornada, setFiltroStatusJornada] = useState<'todas' | 'ativa' | 'inativa'>('ativa');
+  const [filtroStatusJornada, setFiltroStatusJornada] = useState('ativa');
   const [currentPageJornadas, setCurrentPageJornadas] = useState(1);
+  const [jornadasItemsPerPage, setJornadasItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPageJornadas(1);
@@ -48,7 +51,7 @@ export default function CarreiraDetalhePage() {
     const matchStatus =
       filtroStatusJornada === 'todas' ||
       (filtroStatusJornada === 'ativa' && j.status === 'Ativa') ||
-      (filtroStatusJornada === 'inativa' && j.status === 'Desativada');
+      (filtroStatusJornada === 'desativada' && j.status === 'Desativada');
     return matchBusca && matchStatus;
   });
 
@@ -75,7 +78,7 @@ export default function CarreiraDetalhePage() {
 
   if (!carreira) {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           <div className="max-w-2xl mx-auto mt-16">
             <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
@@ -104,8 +107,7 @@ export default function CarreiraDetalhePage() {
   }
 
   // Abrir modal de exclusão
-  const handleExcluirClick = (jornadaId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleExcluirClick = (jornadaId: string) => {
     setJornadaParaExcluir(jornadaId);
   };
 
@@ -120,8 +122,7 @@ export default function CarreiraDetalhePage() {
   };
 
   // Abrir drawer de edição
-  const handleEditarClick = (jornada: any, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEditarClick = (jornada: any) => {
     setJornadaParaEditar(jornada);
     setEditFormData({
       nome: jornada.nome,
@@ -152,8 +153,7 @@ export default function CarreiraDetalhePage() {
   };
 
   // Toggle status
-  const handleToggleStatus = (jornada: any, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggleStatus = (jornada: any) => {
     const novoStatus = jornada.status === 'Ativa' ? 'Desativada' : 'Ativa';
     
     atualizarJornada(jornada.id, {
@@ -164,22 +164,26 @@ export default function CarreiraDetalhePage() {
     toast.success(`Jornada ${novoStatus === 'Ativa' ? 'ativada' : 'desativada'}`);
   };
 
-  const jornadasItemsPerPage = 10;
   const jornadasTotal = jornadasOrdenadas.length;
   const jornadasStart = (currentPageJornadas - 1) * jornadasItemsPerPage;
   const jornadasEnd = jornadasStart + jornadasItemsPerPage;
   const jornadasPaginadas = jornadasOrdenadas.slice(jornadasStart, jornadasEnd);
+
+  const handleJornadasItemsPerPageChange = (items: number) => {
+    setJornadasItemsPerPage(items);
+    setCurrentPageJornadas(1);
+  };
 
   // Colunas da tabela de jornadas
   const jornadasColumns: Column[] = [
     {
       key: 'nome',
       label: 'Nome da Jornada',
-      width: '30%',
+      width: '35%',
       renderHeader: () => (
         <button
           onClick={() => handleJornadasSort('nome')}
-          className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
         >
           Nome da Jornada
           {jornadasSortConfig.column === 'nome' ? (
@@ -190,17 +194,17 @@ export default function CarreiraDetalhePage() {
         </button>
       ),
       render: (value) => (
-        <span className="text-xs md:text-sm text-gray-900">{value}</span>
+        <span className="text-gray-900">{value}</span>
       ),
     },
     {
       key: 'tipo',
       label: 'Tipo',
-      width: '25%',
+      width: '29%',
       renderHeader: () => (
         <button
           onClick={() => handleJornadasSort('tipo')}
-          className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
         >
           Tipo
           {jornadasSortConfig.column === 'tipo' ? (
@@ -211,17 +215,17 @@ export default function CarreiraDetalhePage() {
         </button>
       ),
       render: (value) => (
-        <span className="text-xs md:text-sm text-gray-900">{value}</span>
+        <span className="text-gray-900">{value}</span>
       ),
     },
     {
       key: 'quantidadeCargos',
       label: 'Cargos',
-      width: '15%',
+      width: '18%',
       renderHeader: () => (
         <button
           onClick={() => handleJornadasSort('quantidadeCargos')}
-          className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
         >
           Cargos
           {jornadasSortConfig.column === 'quantidadeCargos' ? (
@@ -233,22 +237,18 @@ export default function CarreiraDetalhePage() {
       ),
       render: (_, row) => {
         const total = cargos.filter(c => c.jornadaId === row.id).length;
-        if (total === 0) return <span className="text-sm text-gray-500">-</span>;
-        return (
-          <span className="text-sm text-gray-900">
-            {total} {total === 1 ? 'cargo' : 'cargos'}
-          </span>
-        );
+        if (total === 0) return <span className="text-gray-500">-</span>;
+        return <QuantityLabel value={total} singular="cargo" plural="cargos" />;
       },
     },
     {
       key: 'status',
       label: 'Status',
-      width: '15%',
+      width: '18%',
       renderHeader: () => (
         <button
           onClick={() => handleJornadasSort('status')}
-          className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
         >
           Status
           {jornadasSortConfig.column === 'status' ? (
@@ -260,7 +260,7 @@ export default function CarreiraDetalhePage() {
       ),
       render: (value) => (
         <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+          className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
             value === 'Ativa'
               ? 'bg-green-100 text-green-800'
               : 'bg-red-100 text-red-700'
@@ -270,38 +270,34 @@ export default function CarreiraDetalhePage() {
         </span>
       ),
     },
+  ];
+
+  // Ações da tabela de jornadas — via prop `actions` do Table.tsx (não mais
+  // coluna manual): herda automaticamente largura, stopPropagation e o
+  // limiar de ícones-soltos/menu do mecanismo comum. 3 ações ⇒ menu
+  // (MoreVertical), conforme 02-design-system.md > Tabelas > Menu de ações.
+  const jornadasActions: InlineAction[] = [
     {
-      key: '_actions',
-      label: 'Ações',
-      width: '15%',
-      render: (_, row) => (
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={(e) => handleToggleStatus(row, e)}
-            className="p-1.5 rounded transition-colors"
-            title={row.status === 'Ativa' ? 'Desativar' : 'Ativar'}
-          >
-            <ToggleSwitch
-              checked={row.status === 'Ativa'}
-              onChange={() => {}}
-            />
-          </button>
-          <button
-            onClick={(e) => handleEditarClick(row, e)}
-            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Editar"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => handleExcluirClick(row.id, e)}
-            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-            title="Excluir"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+      label: (row) => row.status === 'Ativa' ? 'Desativar' : 'Ativar',
+      icon: (row) => (
+        <ToggleSwitch
+          checked={row.status === 'Ativa'}
+          onChange={() => {}}
+        />
       ),
+      variant: 'toggle',
+      onClick: (row) => handleToggleStatus(row),
+    },
+    {
+      label: 'Editar',
+      icon: <Edit className="w-4 h-4" />,
+      onClick: (row) => handleEditarClick(row),
+    },
+    {
+      label: 'Excluir',
+      icon: <Trash2 className="w-4 h-4" />,
+      variant: 'danger',
+      onClick: (row) => handleExcluirClick(row.id),
     },
   ];
 
@@ -331,7 +327,7 @@ export default function CarreiraDetalhePage() {
   ];
 
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
       <div className="p-4 md:p-8">
         <button
           onClick={() => navigate('/carreiras')}
@@ -363,21 +359,16 @@ export default function CarreiraDetalhePage() {
                 className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
               />
             </div>
-            <div className="overflow-x-auto -mx-3 px-3">
-              <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
-                {(['todas', 'ativa', 'inativa'] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setFiltroStatusJornada(v)}
-                    className={`px-3 py-2 text-sm font-normal rounded-md transition-all whitespace-nowrap ${
-                      filtroStatusJornada === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {v === 'todas' ? 'Todas' : v === 'ativa' ? 'Ativas' : 'Desativadas'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ChipFiltro
+              label="Status"
+              value={filtroStatusJornada}
+              onChange={setFiltroStatusJornada}
+              options={[
+                { value: 'todas', label: 'Todas' },
+                { value: 'ativa', label: 'Ativas' },
+                { value: 'desativada', label: 'Desativadas' },
+              ]}
+            />
             <button
               className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
               onClick={() => navigate(`/carreiras/${carreiraId}/jornadas/criar`)}
@@ -399,19 +390,16 @@ export default function CarreiraDetalhePage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent"
               />
             </div>
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              {(['todas', 'ativa', 'inativa'] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setFiltroStatusJornada(v)}
-                  className={`px-3 py-2 text-sm font-normal rounded-md transition-all ${
-                    filtroStatusJornada === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {v === 'todas' ? 'Todas' : v === 'ativa' ? 'Ativas' : 'Desativadas'}
-                </button>
-              ))}
-            </div>
+            <ChipFiltro
+              label="Status"
+              value={filtroStatusJornada}
+              onChange={setFiltroStatusJornada}
+              options={[
+                { value: 'todas', label: 'Todas' },
+                { value: 'ativa', label: 'Ativas' },
+                { value: 'desativada', label: 'Desativadas' },
+              ]}
+            />
             <div className="flex-1" />
             <button
               className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--brand-600)] text-white text-sm font-medium rounded-lg hover:bg-[var(--brand-700)] transition-colors"
@@ -423,9 +411,11 @@ export default function CarreiraDetalhePage() {
           </div>
         </div>
 
-        {/* Tabela de Jornadas */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {jornadasDaCarreira.length === 0 ? (
+        {/* Tabela de Jornadas — moldura do card já vem de dentro de
+            ui/Table.tsx; reaplicada aqui só nos dois estados vazios, que não
+            passam por Table.tsx, para não aninhar duas bordas com dados. */}
+        {jornadasDaCarreira.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-12 text-center">
               <EmptyState
                 icon={<Plus className="w-8 h-8" />}
@@ -433,25 +423,28 @@ export default function CarreiraDetalhePage() {
                 description="Comece criando a primeira jornada para estruturar os cargos e competências."
               />
             </div>
-          ) : jornadasOrdenadas.length === 0 ? (
+          </div>
+        ) : jornadasOrdenadas.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-12 text-center">
               <p className="text-sm text-gray-500">Nenhuma jornada encontrada para os filtros selecionados.</p>
             </div>
-          ) : (
-            <Table
-              columns={jornadasColumns}
-              data={jornadasPaginadas}
-              onRowClick={(row) => navigate(`/carreiras/${carreiraId}/jornadas/${row.id}`)}
-              pagination={{
-                currentPage: currentPageJornadas,
-                itemsPerPage: jornadasItemsPerPage,
-                totalItems: jornadasTotal,
-                onPageChange: setCurrentPageJornadas,
-                onItemsPerPageChange: () => {},
-              }}
-            />
-          )}
-        </div>
+          </div>
+        ) : (
+          <Table
+            columns={jornadasColumns}
+            data={jornadasPaginadas}
+            actions={jornadasActions}
+            onRowClick={(row) => navigate(`/carreiras/${carreiraId}/jornadas/${row.id}`)}
+            pagination={{
+              currentPage: currentPageJornadas,
+              itemsPerPage: jornadasItemsPerPage,
+              totalItems: jornadasTotal,
+              onPageChange: setCurrentPageJornadas,
+              onItemsPerPageChange: handleJornadasItemsPerPageChange,
+            }}
+          />
+        )}
       </div>
 
       {/* Modal de confirmação de exclusão */}
@@ -459,8 +452,8 @@ export default function CarreiraDetalhePage() {
         isOpen={!!jornadaParaExcluir}
         onClose={() => setJornadaParaExcluir(null)}
         onConfirm={handleConfirmarExclusao}
-        title="Excluir jornada?"
-        message="Esta ação não pode ser desfeita. Todos os cargos e configurações associados serão removidos."
+        title={JORNADA_EXCLUSAO_TITULO}
+        message={JORNADA_EXCLUSAO_MENSAGEM}
         confirmLabel="Excluir"
         variant="danger"
       />

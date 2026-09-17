@@ -119,10 +119,10 @@ Renderizada via `ListingPage` (`src/app/components/templates/ListingPage.tsx`).
 
 | # | key | label | width | Ordenável | Conteúdo |
 |---|---|---|---|---|---|
-| 1 | `nome` | "Nome" | 25% | Sim | texto |
-| 2 | `descricao` | "Descrição" | 40% | Não | `p` com `text-sm text-gray-700 line-clamp-2 break-words` dentro de `Tooltip`/`TooltipTrigger asChild`/`TooltipContent` (texto completo). `"-"` (`text-sm text-gray-500`) se vazio |
-| 3 | `habilidades` | "Habilidades Vinculadas" | 15% | Sim (por contagem) | `{N}` em `font-medium` + `"habilidade"`/`"habilidades"` (`text-gray-500`). Calculado, nunca armazenado |
-| 4 | `status` | "Status" | 15% | Sim | badge `inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full`; `Ativa` → `bg-green-100 text-green-800`, senão `bg-red-100 text-red-700` |
+| 1 | `nome` | "Nome" | 26% | Sim | texto |
+| 2 | `descricao` | "Descrição" | 42% | Não | `p` com `text-sm text-gray-700 line-clamp-2 break-words` dentro de `Tooltip`/`TooltipTrigger asChild`/`TooltipContent` (texto completo). `"-"` (`text-sm text-gray-500`) se vazio |
+| 3 | `habilidades` | "Habilidades Vinculadas" | 16% | Sim (por contagem) | `ui/QuantityLabel.tsx` (`{N}` em `font-semibold text-gray-900` + `"habilidade"`/`"habilidades"` em `font-normal text-gray-500`). Calculado, nunca armazenado |
+| 4 | `status` | "Status" | 16% | Sim | badge `inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full`; `Ativa` → `bg-green-100 text-green-800`, senão `bg-red-100 text-red-700` |
 
 Headers ordenáveis: `<button>` com `text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider` + ícone `ArrowUp`/`ArrowDown` `w-3 h-3` (seta fantasma `opacity-0 group-hover:opacity-40` quando não é a coluna ativa). Sort inicial `{ column: 'id', direction: 'desc' }` = ordem do array (novas competências entram no início). Ao criar/filtrar: `setCurrentPage(1)` e sort volta para `id`.
 
@@ -190,7 +190,7 @@ Container `bg-white rounded-lg border border-gray-200 overflow-hidden`; `<table 
 | **"Nome do Nível"** | `w-64` | pill `inline-flex px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap`, `backgroundColor: getCorFromPeso(peso)`, `color: #FFFFFF` |
 | **"Descrição"** | — | `span text-sm text-gray-700 block max-w-md` com o texto completo (sem truncamento — tabela tem 5 linhas fixas). `-` (`text-gray-400`) se vazio |
 | **"Peso do nível"** | `w-36`, `whitespace-nowrap` | `span text-sm text-gray-700` com o número `{peso}` |
-| **"Habilidades Vinculadas"** | `w-40 md:w-48`, `whitespace-nowrap` | `{emUso}` em `font-medium` + `"habilidade"`/`"habilidades"` (`text-gray-500`); `-` (`text-sm text-gray-400`) quando `emUso` é `0`/falsy |
+| **"Habilidades Vinculadas"** | `w-40 md:w-48`, `whitespace-nowrap` | `ui/QuantityLabel.tsx` (`{emUso}` em `font-semibold text-gray-900` + `"habilidade"`/`"habilidades"` em `font-normal text-gray-500`); `-` (`text-sm text-gray-400`) quando `emUso` é `0`/falsy |
 
 > **Mudanças recentes (auditadas — arquivo tem alterações não commitadas):**
 > 1. A coluna hoje chamada **"Peso do nível"** era **"Progressão"** (com `w-24`). Renomeada; conteúdo continua sendo o número do peso.
@@ -221,13 +221,13 @@ Mobile (`flex flex-col gap-3 md:hidden`): busca full-width, dropdown de competê
 | # | key | label | width | Ordenável | Conteúdo |
 |---|---|---|---|---|---|
 | 1 | `nome` | "Nome da Habilidade" | 16% | Sim | `span text-sm text-gray-900` |
-| 2 | `descricao` | **"Descrição"** | 25% | Não | `p text-sm text-gray-700 line-clamp-2 break-words` dentro de `Tooltip` (texto completo no `TooltipContent`). **`-` (`text-gray-400 text-sm`) se vazio** — padronizado com Competências em 2026-08-27 (antes era `—`). Coluna nova — não existia em handoffs anteriores |
-| 3 | `competencia` | "Competência" | 15% | Sim | texto (denormalizado) |
-| 4 | `niveis` | "Níveis" | 22% | Não | nomes dos níveis vinculados, ordenados na ordem do array, `.join(', ')`; resolvidos via `niveisDefaultData`. `—` se nenhum |
+| 2 | `descricao` | **"Descrição"** | 32% | Não | `p text-sm text-gray-700 line-clamp-2 break-words` dentro de `Tooltip` (texto completo no `TooltipContent`). **`-` (`text-gray-400 text-sm`) se vazio** — padronizado com Competências em 2026-08-27 (antes era `—`). Coluna nova — não existia em handoffs anteriores |
+| 3 | `competencia` | "Competência" | 19% | Sim | texto (denormalizado) |
+| 4 | `niveis` | "Níveis" | 8% | Não | `ui/QuantityLabel.tsx` — contagem (`"N níveis"`), não a lista de nomes; Tooltip mostra a lista completa (`.join(', ')`, ordem do array, resolvida via `niveisDefaultData`). `-` se nenhum. Largura reduzida de 22% para 8% em 2026-09-16 — a coluna só mostra a contagem desde a investigação de esmagamento, não precisa mais do espaço que tinha quando mostrava a lista por extenso |
 | 5 | `tipo` | "Tipo" | 12% | Não | badge; `Técnica` → `bg-[var(--brand-100)] text-[var(--brand-800)]`, `Comportamental` → `bg-purple-100 text-purple-800` |
-| 6 | `status` | "Status" | 10% | Sim | badge; `Ativa` → `bg-green-100 text-green-800`, senão `bg-red-100 text-red-700` |
+| 6 | `status` | "Status" | 13% | Sim | badge; `Ativa` → `bg-green-100 text-green-800`, senão `bg-red-100 text-red-700` |
 
-Larguras somam 100%.
+Larguras somam 100%. Redistribuição de 2026-09-16 priorizou Descrição e Competência (texto mais longo e variável) com o espaço liberado de Níveis.
 
 ### Empty state
 

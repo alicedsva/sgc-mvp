@@ -5,6 +5,7 @@ import { colaboradoresData, jornadasData, cargosData, gerenciasData, getPesoFrom
 import { useCarreiras } from '../context/CarreirasContext';
 import { useCompetencias } from '../context/CompetenciasContext';
 import { calcularHabilidadesComGap, calcularCobertura } from '../utils/aderenciaColaborador';
+import { getStatusParticipanteBadgeClass } from '../utils/avaliacoes';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Table, Column } from '../components/ui/Table';
 
@@ -21,6 +22,7 @@ export default function PerfilColaboradorPage() {
   const { competencias } = useCompetencias();
   const [activeTab, setActiveTab] = useState('visao-geral');
   const [currentPageAvaliacoes, setCurrentPageAvaliacoes] = useState(1);
+  const [avaliacoesItemsPerPage, setAvaliacoesItemsPerPage] = useState(10);
 
   const colaborador = colaboradoresData.find(c => c.id === colaboradorId);
 
@@ -30,7 +32,7 @@ export default function PerfilColaboradorPage() {
 
   if (!colaborador) {
     return (
-      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="p-4 md:p-8">
           <EmptyState
             icon={<User className="w-8 h-8" />}
@@ -102,29 +104,33 @@ export default function PerfilColaboradorPage() {
     {
       key: 'nome',
       label: 'Nome da Avaliação',
-      render: (value) => <span className="text-xs md:text-sm font-medium text-gray-900">{value}</span>,
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>,
     },
     {
       key: 'data',
       label: 'Data',
-      render: (value) => <span className="text-xs md:text-sm text-gray-700">{value}</span>,
+      render: (value) => <span className="text-gray-700">{value}</span>,
     },
     {
       key: 'status',
       label: 'Status',
       render: (value) => (
-        <span className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full bg-green-100 text-green-800">
+        <span className={`inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${getStatusParticipanteBadgeClass(value)}`}>
           {value}
         </span>
       ),
     },
   ];
 
-  const avaliacoesItemsPerPage = 10;
   const avaliacoesTotal = historicoAvaliacoes.length;
   const avaliacoesStart = (currentPageAvaliacoes - 1) * avaliacoesItemsPerPage;
   const avaliacoesEnd = avaliacoesStart + avaliacoesItemsPerPage;
   const avaliacoesPaginadas = historicoAvaliacoes.slice(avaliacoesStart, avaliacoesEnd);
+
+  const handleAvaliacoesItemsPerPageChange = (items: number) => {
+    setAvaliacoesItemsPerPage(items);
+    setCurrentPageAvaliacoes(1);
+  };
 
   const tabs = [
     { id: 'visao-geral', label: 'Visão Geral', icon: <TrendingUp className="w-4 h-4" /> },
@@ -145,7 +151,7 @@ export default function PerfilColaboradorPage() {
   );
 
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
       <div className="p-4 md:p-8">
         <button
           onClick={() => navigate('/perfis')}
@@ -444,8 +450,12 @@ export default function PerfilColaboradorPage() {
                 itemsPerPage: avaliacoesItemsPerPage,
                 totalItems: avaliacoesTotal,
                 onPageChange: setCurrentPageAvaliacoes,
-                onItemsPerPageChange: () => {},
+                onItemsPerPageChange: handleAvaliacoesItemsPerPageChange,
               }}
+              // bare: a moldura do card já vem do wrapper externo, que
+              // também segura o título/subtítulo acima da tabela — sem
+              // isso, dobraria a borda/cantos entre o header e a tabela.
+              bare
             />
           </div>
         )}

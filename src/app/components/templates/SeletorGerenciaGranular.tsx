@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Check } from 'lucide-react';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface ColaboradorItem {
   id: string;
@@ -140,15 +141,19 @@ export function SeletorGerenciaGranular({
                     : 'text-gray-700 hover:bg-gray-50 border-transparent'
                 }`}
               >
-                <input
-                  ref={(el) => { checkboxRefs.current[g] = el; }}
-                  type="checkbox"
-                  checked={estado === 'toda'}
-                  onChange={() => toggleGerenciaInteira(g)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
-                  title="Selecionar gerência inteira"
-                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <input
+                      ref={(el) => { checkboxRefs.current[g] = el; }}
+                      type="checkbox"
+                      checked={estado === 'toda'}
+                      onChange={() => toggleGerenciaInteira(g)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 text-[var(--brand-600)] border-gray-300 rounded focus:ring-2 focus:ring-[var(--brand-500)] flex-shrink-0"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>Selecionar gerência inteira</TooltipContent>
+                </Tooltip>
                 <span
                   onClick={() => setGerenciaAtiva(g)}
                   className="flex-1 truncate cursor-pointer"

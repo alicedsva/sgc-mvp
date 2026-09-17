@@ -1041,7 +1041,7 @@ export function FormularioAvaliacao({
 
   return (
     <>
-    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''} h-[calc(100vh-4rem)]`}>
+    <main className={`mt-16 flex flex-col bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} h-[calc(100vh-4rem)]`}>
       <div className="flex-1 min-h-0 flex flex-col px-4 md:px-8 pt-4 md:pt-8 pb-4 md:pb-6">
         <button
           onClick={onCancelar}

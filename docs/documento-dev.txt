@@ -1,0 +1,263 @@
+# Instruções para Claude Code — Protótipo SGC (Alice)
+ 
+> Copie este arquivo como `CLAUDE.md` na raiz do repositório do protótipo.
+> Ele é a mesma lista de regras que o Claude do frontend segue na aplicação
+> real. Enquanto os dois lados lerem o mesmo arquivo, nada sai do padrão.
+ 
+---
+ 
+## 0. Como usar este arquivo
+ 
+Você é o Claude que edita o protótipo do SGC (React 18, Vite 6, Tailwind v4).
+Antes de escrever qualquer tela ou componente:
+ 
+1. Leia este arquivo inteiro.
+2. Verifique a checklist da seção 8.
+3. Se a tarefa exigir sair de qualquer regra daqui, **pare e pergunte**. Não
+   existe "neste caso específico pode". A regra só muda com uma linha
+   explícita da Alice no prompt, no formato `DECISÃO: ...`, e você registra
+   essa linha na seção 9 com a data.
+4. Ao terminar, liste em uma seção "Padrões novos nesta sessão" qualquer
+   componente, token, tamanho ou texto que não estava aqui. A Alice repassa
+   essa lista ao frontend.
+ 
+Ordem de precedência quando duas regras parecerem conflitar: seção 9
+(decisões datadas) vence a seção 1 (design), que vence tudo o mais.
+ 
+---
+ 
+## 1. Design system travado (regras D1 a D7)
+ 
+| # | Regra | Correto | Errado |
+|---|---|---|---|
+| D1 | Peso máximo de fonte em card, header, label | `font-semibold` (600). Exceção: número grande de KPI pode ser maior | `font-bold` |
+| D2 | Texto secundário | `text-gray-500` | `text-slate-*` |
+| D3 | Raio padrão | `rounded-lg` | `rounded-xl` |
+| D4 | Cor de marca | `var(--brand-600)` no botão primário, `var(--brand-500)` em foco e ícone ativo, `var(--brand-700)` em hover | `text-cyan-*`, `bg-teal-*`, hex direto |
+| D5 | Reutilizar componente | `Badge`, `Card`, `DataTable`, `TabsNav`, `TabContent`, `Select`, `Tooltip`, `Alert`, `SegmentedFilter`, `StatusBadge`, `EmptyState` | HTML inline que faça a mesma coisa |
+| D6 | Dark mode | Classes semânticas (`.text-primary`, `.bg-surface`) quando existirem | Só `dark:` hardcoded |
+| D7 | Travessão em texto de interface | Vírgula, dois-pontos, ponto. Campo vazio é hífen simples `-` | Qualquer `—` que o usuário leia |
+ 
+Tipografia e paleta continuam as do `Alice_DesignSpec.md`: DM Sans, base 16px,
+corpo 14px, meta 12px, brand-50 a brand-950. Nada disso muda.
+ 
+Grep que precisa voltar vazio antes de entregar:
+ 
+```bash
+grep -rn "rounded-xl\|font-bold\|cyan-\|text-slate-" src/
+```
+ 
+---
+ 
+## 2. Densidade adaptativa (decisão de 09/2026, já mergeada na aplicação)
+ 
+A maioria dos usuários está em 1366×768. O Chrome maximizado entrega uma
+viewport de cerca de **1350×635**. A interface tem duas densidades:
+**compacta abaixo de 1440px** e **a original acima**. Nenhum valor é
+hardcoded: tudo vem de tokens.
+ 
+### 2.1 Tokens (colar em `theme.css`)
+ 
+```css
+:root {
+  --page-pad:    1rem;     /* padding da área de conteúdo */
+  --section-gap: 1rem;     /* gap vertical entre seções da página */
+  --card-pad:    1rem;     /* padding interno de Card e de KPI */
+  --toolbar-py:  0.75rem;  /* padding vertical da toolbar de listagem */
+  --row-h:       2.5rem;   /* altura da linha de tabela (40px) */
+  --thead-h:     2.25rem;  /* altura do cabeçalho de tabela (36px) */
+  --topbar-h:    3.5rem;   /* altura da topbar (56px) */
+}
+ 
+@media (min-width: 90rem) {   /* 1440px: volta ao spec original */
+  :root {
+    --page-pad:    1.5rem;
+    --section-gap: 1.5rem;
+    --card-pad:    1.25rem;
+    --toolbar-py:  1rem;
+    --row-h:       3rem;
+    --thead-h:     2.5rem;
+    --topbar-h:    4rem;
+  }
+}
+```
+ 
+Breakpoint `wide` (colar no CSS principal, dentro de `@theme`):
+ 
+```css
+@theme {
+  --breakpoint-wide: 90rem;
+}
+```
+ 
+### 2.2 Onde cada token entra
+ 
+| Onde | Usar | Nunca |
+|---|---|---|
+| Área de conteúdo do shell | `p-(--page-pad) pb-8` | `p-6`, `pb-24` |
+| Raiz de página | `space-y-(--section-gap)` | `space-y-6` |
+| `Card` e card de KPI | `p-(--card-pad)` | `p-5`, `p-6` |
+| Toolbar de listagem | `px-4 py-(--toolbar-py)` | `py-4` |
+| Linha de tabela | `h-(--row-h)` | `h-12` |
+| Cabeçalho de tabela | `h-(--thead-h)` | `h-10` |
+| Topbar | `h-(--topbar-h)` | `h-16` |
+| Título de página (h1) | `text-xl font-semibold wide:text-2xl` | `text-2xl` fixo |
+| Subtítulo de página | `hidden wide:block text-sm text-gray-500` | visível em toda largura |
+| Número de KPI | `text-2xl font-semibold wide:text-3xl` | `text-3xl` fixo |
+| Saudação do Meu Perfil | `text-xl wide:text-3xl`, card `p-(--card-pad) wide:p-8` | `text-3xl`, `p-8` |
+ 
+### 2.3 Sidebar
+ 
+- Largura expandida: **224px** (`w-56`), marca "SGC" alinhada à **esquerda**,
+  ícone na mesma coluna dos ícones do menu.
+- Abaixo de 1440px abre como **rail de 64px** (`w-16`). A preferência do
+  usuário (botão de recolher ou expandir) é salva e prevalece em qualquer
+  largura.
+- No rail, ao passar o mouse ou focar via teclado um item, o rótulo sai como
+  **aba colada ao ícone**: `absolute left-full top-0 h-full`, `rounded-r-lg`,
+  `shadow-md`, mesma cor de fundo do estado (hover cinza, ativo brand-50 com
+  texto brand-700). O item perde o arredondamento à direita durante o hover.
+  **O ícone não escala.**
+- `aside` tem `shrink-0` e `z-40`; `main` tem `min-w-0`. Sem isso uma tabela
+  larga esmaga a sidebar em vez de rolar dentro do card.
+ 
+### 2.4 Toolbar de listagem
+ 
+Uma linha quando cabe, quebra intencional quando não cabe. Nunca truncar.
+ 
+- Container: `flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between`
+- Grupo de filtros: `flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center`
+- Busca: `lg:min-w-[220px] lg:max-w-md lg:flex-1` (é o único elemento elástico)
+- Filtro segmentado: container `shrink-0`, botões `whitespace-nowrap px-3 py-2 text-sm font-medium`
+- Select: rótulo trunca com reticências, nunca quebra em duas linhas
+- Botão primário: `shrink-0 whitespace-nowrap`, alinhado ao topo quando a toolbar quebra
+ 
+### 2.5 Tabelas
+ 
+- Cabeçalho de coluna: `whitespace-nowrap`, `text-xs font-medium uppercase tracking-wider text-gray-500`
+- Célula: `text-sm`, uma linha; texto longo trunca com tooltip
+- Lista de níveis numa célula: mostrar **contagem** ("5 níveis") com a lista
+  completa em tooltip, nunca os nomes por extenso
+- Descrição: no máximo duas linhas (`line-clamp-2`) com tooltip
+- Tabela de Avaliações: `minWidth` de 1000px; abaixo disso rola dentro do card
+ 
+### 2.6 Dashboard
+ 
+- KPIs: quatro cards em linha, número em `text-2xl wide:text-3xl`
+- **Cobertura por competência e Cobertura por gerência ficam um abaixo do
+  outro, em largura total** (decisão da Alice)
+- Ranking de GAPs em largura total (seis colunas)
+- Avaliações ativas e Colaboradores com GAPs lado a lado a partir de `lg`
+- Barra de filtros: `px-4 py-2`, não `p-4`
+ 
+### 2.7 Drawer e modal
+ 
+- Texto de ajuda dentro de drawer usa `Alert` com `collapsible`: abre só com o
+  título, expande ao clicar
+- Drawer: 35% da largura, mínimo 400px, máximo 576px
+ 
+---
+ 
+## 3. Acessibilidade (regras A5 a A9)
+ 
+| # | Regra | Como |
+|---|---|---|
+| A5 | Tudo que clica funciona pelo teclado | Elemento não focável com `onClick` (linha de tabela, card clicável) recebe `tabIndex={0}` e `onKeyDown` para Enter e Espaço, com `preventDefault` no Espaço |
+| A6 | Foco sempre visível | Nunca `focus:outline-none` sem substituto. Em `<button>`: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]`. Em `<tr>`: `focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--brand-600)]` |
+| A7 | Página atual anunciada | Item ativo do menu leva `aria-current="page"` |
+| A8 | Estado nunca só por cor | Indicador de status precisa de segunda pista (forma, ícone ou texto) e do nome em `sr-only`. Exemplo: ponto cheio para sincronizado, anel vazado para desatualizado |
+| A9 | Painel e modal são diálogos | `role="dialog"`, `aria-modal="true"`, `aria-labelledby` apontando para o próprio título, Escape fecha, scroll da página travado, foco levado para dentro. O fundo escurecido é `aria-hidden`, não um segundo botão "Fechar" |
+ 
+Coluna de tabela sem cabeçalho visível usa `<span className="sr-only">Nome</span>`,
+nunca cabeçalho vazio.
+ 
+---
+ 
+## 4. Texto e dados (regras T1 a T3)
+ 
+| # | Regra |
+|---|---|
+| T1 | **Data**: `DD/MM/AAAA` em célula e texto corrido. Por extenso ("2 de maio de 2026") só quando a data é o assunto da tela. Linha de tempo usa "Mai 2026". Campo vazio é `-`. Uma única função de formatação no projeto; nunca formatar inline |
+| T2 | **Capitalização**: sentence case em botão, título de diálogo e de drawer, título de card, rótulo de campo e cabeçalho de coluna. "Nova habilidade", "Desativar competência", "Limpar filtros", "Salvar alterações", "Nome da habilidade". **Exceção**: nome de seção do menu mantém as iniciais (Dashboard, Perfis, Habilidades, Carreiras, Avaliações, Meu Perfil, Minhas Avaliações, Minha Carreira) |
+| T3 | **Ordenação**: toda coluna cujo valor é escalar ordena. Ficam de fora coluna de ação, descrição longa e tabela com ordem semântica (níveis por peso, cargos por posição) |
+ 
+Outros padrões de texto já decididos:
+ 
+- Voltar de uma tela de detalhe: seta mais o nome do destino ("Avaliações",
+  "Carreiras", "Minha Carreira"). Nunca "Voltar" sozinho.
+- A mesma ação tem sempre o mesmo rótulo em todas as telas.
+- Empty state sempre com uma ação ("Limpar filtros" ou "Criar ...").
+ 
+---
+ 
+## 5. Componentes que já existem (não recriar)
+ 
+Accordion, ActionMenu, Alert (com `collapsible`), Badge, Button, Card,
+ConfirmDialog, DataTable, EmptyState, ErrorState, FormField, Input, Loading,
+Modal, MultiSelect, PageHeader, Pagination, RightDrawer, SearchInput,
+SearchableSelect, SegmentedFilter, Select, SidebarNav, Skeleton,
+SkillLevelBadge, StatusBadge, TabContent, TabsNav, Toast, ToggleSwitch,
+Tooltip, Topbar.
+ 
+Se a tela precisa de algo que não está nesta lista, **avise antes de criar**
+e descreva o que o novo componente faz que nenhum destes faz.
+ 
+---
+ 
+## 6. O que medir antes de entregar uma tela
+ 
+Abrir a tela numa janela de **1350×635** (Chrome maximizado num 14") e
+conferir:
+ 
+- A sidebar tem 64px (rail) e não foi esmagada
+- A toolbar cabe numa linha ou quebrou de forma intencional, sem texto cortado
+- A primeira linha de dados aparece antes de 240px do topo
+- Nada rola horizontalmente na página; tabela larga rola dentro do card
+- Tab percorre todos os controles com foco visível
+- Acima de 1440px a tela volta ao layout original, com sidebar de 224px
+ 
+---
+ 
+## 7. Decisões que ainda estão em aberto (não decidir sozinho)
+ 
+- Dois componentes de confirmação para a mesma ação: `ConfirmDialog` e
+  `ConfirmModal`. Unificar muda a aparência em três telas.
+- Comportamento da busca: hoje há três (Enter com mínimo de três caracteres,
+  filtro ao digitar, envio por formulário).
+- Colunas Descrição, Prazo e Término na tabela de Avaliações.
+- Sino de notificações com badge fixo e paginação em página única.
+- Rótulo da aba "Níveis de Habilidades" (Title Case) frente à regra T2.
+ 
+Se uma tarefa tocar num destes pontos, pergunte qual decisão vale.
+ 
+---
+ 
+## 8. Checklist obrigatória antes de escrever UI
+ 
+- [ ] Li este arquivo nesta sessão?
+- [ ] Todos os componentes de que preciso estão na seção 5?
+- [ ] Todos os espaçamentos e alturas vêm dos tokens da seção 2?
+- [ ] Título em `text-xl wide:text-2xl`, subtítulo `hidden wide:block`?
+- [ ] Toolbar com quebra intencional e busca como único elemento elástico?
+- [ ] Nenhuma regra D1 a D7, A5 a A9, T1 a T3 violada?
+- [ ] Toquei em algo da seção 7? Se sim, perguntei?
+- [ ] Vou medir em 1350×635 antes de entregar?
+ 
+Qualquer "não" bloqueia a entrega.
+ 
+---
+ 
+## 9. Registro de decisões
+ 
+Toda mudança de regra entra aqui, com data e quem decidiu. Uma linha por
+decisão. Nada muda sem uma linha nova.
+ 
+| Data | Decisão | Quem |
+|---|---|---|
+| 10/09/2026 | Duas densidades: compacta abaixo de 1440px, original acima, por tokens | Kleython, validado pela Alice ao mergear |
+| 10/09/2026 | Sidebar expandida com 224px e marca à esquerda | Alice |
+| 10/09/2026 | Cobertura por competência e por gerência empilhados no dashboard | Alice |
+| 10/09/2026 | Rail de 64px por padrão abaixo de 1440px com rótulo em flyout | Kleython |
+| 11/09/2026 | Data sempre `DD/MM/AAAA` por função única | Kleython |
+| 11/09/2026 | Sentence case em botão, diálogo, card, rótulo e cabeçalho | Kleython |
+| 11/09/2026 | Mínimos de acessibilidade A5 a A9 | Kleython |

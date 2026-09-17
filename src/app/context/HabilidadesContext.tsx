@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { habilidadesData } from '../data/mockData';
+import { StatusHabilidade } from '../../data/schema';
 
 export interface HabilidadeNivel {
   nivelId: string;
@@ -13,7 +14,7 @@ export interface Habilidade {
   competencia: string;
   competenciaId: string;
   tipo: 'Técnica' | 'Comportamental';
-  status: 'Ativa' | 'Desativada';
+  status: StatusHabilidade;
   niveis: HabilidadeNivel[];
 }
 

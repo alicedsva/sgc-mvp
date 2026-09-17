@@ -53,7 +53,7 @@ export default function HabilidadeDetalhePage() {
   };
 
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
     <div className="p-4 md:p-8">
       <button
         onClick={() => navigate('/habilidades', { state: { tab: 'habilidades-list' } })}

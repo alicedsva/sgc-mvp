@@ -77,7 +77,10 @@ Texto apenas — sem fundo, sem badge:
 
 Conteúdo da célula preenchida:
 - Nome do nível: `text-xs font-semibold`
-- Critério: `text-xs text-gray-500 line-clamp-3`
+- Critério: `text-xs text-gray-500` (`leading-snug`) — sem `line-clamp`,
+  decisão da Alice (2026-09-17): texto completo, sem corte. Versão anterior
+  desta regra pedia `line-clamp-3`; `MatrizCell.tsx` nunca implementou o
+  corte, e a decisão foi manter o comportamento real em vez de truncar.
 - "Progressão N": `text-[10px] text-gray-400`
 
 ### Distinção obrigatória

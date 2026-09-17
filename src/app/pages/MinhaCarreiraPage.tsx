@@ -363,7 +363,7 @@ export default function MinhaCarreiraPage() {
   }, [habilidadesCargoAtualGauge]);
 
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
       {/* space-y-10 — separação entre os GRUPOS de topo da página: Header,
           bloco "Jornada + gráficos" (Evolução profissional + Aderência ao
           cargo/Contexto na empresa, agrupados à parte com seu próprio
@@ -437,6 +437,14 @@ export default function MinhaCarreiraPage() {
             const totalWidth = (historicoCargos.length + 1) * COL_WIDTH; // +1 coluna extra p/ degradê
             const ultimoPontoX = DOT_RADIUS + solidWidth; // centro do ponto do cargo atual — início do trecho em degradê
 
+            // COL_WIDTH (220px) é FIXO de propósito: cada cargo precisa de
+            // largura constante para o nome longo + badge "Atual" e para o
+            // trilho/pontos ficarem alinhados a passo regular. Consequência
+            // esperada e ACEITA: em telas de notebook (1280-1440px) a
+            // timeline não cabe inteira e ganha scroll horizontal INTERNO,
+            // contido neste `overflow-x-auto` — nunca empurra a largura da
+            // página. Isso é comportamento desejado, não um bug de layout a
+            // "corrigir" tornando as colunas fluidas.
             return (
               <div className="overflow-x-auto scrollbar-thin">
                 <div style={{ width: totalWidth }}>
@@ -708,11 +716,18 @@ export default function MinhaCarreiraPage() {
             )
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 2 colunas em lg (1024px) e só 4 a partir de xl (1280px) — a
+                  1024-1279px cada card de 4 colunas ficava com ~200px, sem
+                  espaço para o conteúdo (barra de níveis + chip de texto).
+                  Antes era lg:grid-cols-4 direto, sem passo intermediário. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                 {oportunidades.map(op => (
                   <div key={op.habilidadeId} className="bg-white border border-gray-200 rounded-lg p-4 md:p-5">
-                    <p className="text-sm font-semibold text-gray-900">{op.nome}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{op.competenciaNome}</p>
+                    {/* Nome curto → truncate em 1 linha (02-design-system.md >
+                        Truncamento). Antes quebrava em 2-3 linhas nos cards
+                        estreitos. */}
+                    <p className="text-sm font-semibold text-gray-900 truncate">{op.nome}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{op.competenciaNome}</p>
                     <div className="mt-5">
                       {/* op.nivelAtual nunca é null aqui: status 'abaixo' só é
                           atribuído por getStatus quando existe nivelAtual (ver

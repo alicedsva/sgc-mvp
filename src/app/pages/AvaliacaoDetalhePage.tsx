@@ -59,8 +59,8 @@ export default function AvaliacaoDetalhePage() {
 
   const avaliacao = avaliacoes.find((a) => a.id === id);
 
-  const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${
-    !isSidebarCollapsed ? 'lg:ml-64' : ''
+  const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${
+    isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
   }`;
 
   if (!avaliacao) {
@@ -138,6 +138,8 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
   const [abaAtiva, setAbaAtiva] = useState<'habilidades' | 'colaboradores'>('habilidades');
   const [currentPageHabilidades, setCurrentPageHabilidades] = useState(1);
   const [currentPageParticipantes, setCurrentPageParticipantes] = useState(1);
+  const [habilidadesItemsPerPage, setHabilidadesItemsPerPage] = useState(10);
+  const [participantesItemsPerPage, setParticipantesItemsPerPage] = useState(10);
   const [participantesSortConfig, setParticipantesSortConfig] = useState<{
     column: 'nome' | 'cargo' | 'id';
     direction: 'asc' | 'desc';
@@ -197,24 +199,32 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
     return a[participantesSortConfig.column].localeCompare(b[participantesSortConfig.column]) * dir;
   });
 
-  const participantesItemsPerPage = 10;
   const participantesStart = (currentPageParticipantes - 1) * participantesItemsPerPage;
   const participantesPaginados = participantesOrdenados.slice(
     participantesStart,
     participantesStart + participantesItemsPerPage
   );
 
-  const habilidadesItemsPerPage = 10;
+  const handleParticipantesItemsPerPageChange = (items: number) => {
+    setParticipantesItemsPerPage(items);
+    setCurrentPageParticipantes(1);
+  };
+
   const habilidadesStart = (currentPageHabilidades - 1) * habilidadesItemsPerPage;
   const habilidadesPaginadas = habilidadesDisplay.slice(
     habilidadesStart,
     habilidadesStart + habilidadesItemsPerPage
   );
 
+  const handleHabilidadesItemsPerPageChange = (items: number) => {
+    setHabilidadesItemsPerPage(items);
+    setCurrentPageHabilidades(1);
+  };
+
   const sortHeader = (label: string, column: 'nome' | 'cargo') => (
     <button
       onClick={() => handleParticipantesSort(column)}
-      className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+      className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
     >
       {label}
       {participantesSortConfig.column === column ? (
@@ -330,47 +340,51 @@ function AvaliacaoRascunhoView({ avaliacao }: { avaliacao: Avaliacao }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {abaAtiva === 'habilidades' ? (
-          totalHabilidades === 0 ? (
+      {/* Moldura do card já vem de dentro de ui/Table.tsx; reaplicada aqui
+          só nos EmptyState, que não passam por Table.tsx. */}
+      {abaAtiva === 'habilidades' ? (
+        totalHabilidades === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <EmptyState
               icon={<ListChecks className="w-8 h-8" />}
               title="Nenhuma habilidade selecionada"
               description="Esta avaliação ainda está em rascunho e não tem habilidades definidas. Edite o rascunho para escolher as habilidades na etapa Habilidades."
             />
-          ) : (
-            <Table
-              columns={habilidadesColumns}
-              data={habilidadesPaginadas}
-              pagination={{
-                currentPage: currentPageHabilidades,
-                itemsPerPage: habilidadesItemsPerPage,
-                totalItems: totalHabilidades,
-                onPageChange: setCurrentPageHabilidades,
-                onItemsPerPageChange: () => {},
-              }}
-            />
-          )
-        ) : total === 0 ? (
+          </div>
+        ) : (
+          <Table
+            columns={habilidadesColumns}
+            data={habilidadesPaginadas}
+            pagination={{
+              currentPage: currentPageHabilidades,
+              itemsPerPage: habilidadesItemsPerPage,
+              totalItems: totalHabilidades,
+              onPageChange: setCurrentPageHabilidades,
+              onItemsPerPageChange: handleHabilidadesItemsPerPageChange,
+            }}
+          />
+        )
+      ) : total === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <EmptyState
             icon={<Users className="w-8 h-8" />}
             title="Nenhum colaborador selecionado"
             description="Esta avaliação ainda está em rascunho e não tem participantes definidos. Edite o rascunho para escolher o público-alvo na etapa Colaboradores."
           />
-        ) : (
-          <Table
-            columns={participantesColumns}
-            data={participantesPaginados}
-            pagination={{
-              currentPage: currentPageParticipantes,
-              itemsPerPage: participantesItemsPerPage,
-              totalItems: total,
-              onPageChange: setCurrentPageParticipantes,
-              onItemsPerPageChange: () => {},
-            }}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <Table
+          columns={participantesColumns}
+          data={participantesPaginados}
+          pagination={{
+            currentPage: currentPageParticipantes,
+            itemsPerPage: participantesItemsPerPage,
+            totalItems: total,
+            onPageChange: setCurrentPageParticipantes,
+            onItemsPerPageChange: handleParticipantesItemsPerPageChange,
+          }}
+        />
+      )}
     </>
   );
 }
@@ -388,6 +402,8 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   const [abaAtiva, setAbaAtiva] = useState<'habilidades' | 'colaboradores'>('colaboradores');
   const [currentPageHabilidades, setCurrentPageHabilidades] = useState(1);
   const [currentPageParticipantes, setCurrentPageParticipantes] = useState(1);
+  const [habilidadesItemsPerPage, setHabilidadesItemsPerPage] = useState(10);
+  const [participantesItemsPerPage, setParticipantesItemsPerPage] = useState(10);
   const [participantesSortConfig, setParticipantesSortConfig] = useState<{
     column: 'nome' | 'cargo' | 'gerencia' | 'id';
     direction: 'asc' | 'desc';
@@ -430,12 +446,16 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
     return a[participantesSortConfig.column].localeCompare(b[participantesSortConfig.column]) * dir;
   });
 
-  const participantesItemsPerPage = 10;
   const participantesStart = (currentPageParticipantes - 1) * participantesItemsPerPage;
   const participantesPaginados = participantesOrdenados.slice(
     participantesStart,
     participantesStart + participantesItemsPerPage
   );
+
+  const handleParticipantesItemsPerPageChange = (items: number) => {
+    setParticipantesItemsPerPage(items);
+    setCurrentPageParticipantes(1);
+  };
 
   // Habilidades da avaliação — .competencia lido direto (denormalizado, já é
   // o padrão da listagem oficial de Habilidades em ContentArea.tsx). Mesma
@@ -448,12 +468,16 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   }, [avaliacao]);
 
   const totalHabilidades = habilidadesDisplay.length;
-  const habilidadesItemsPerPage = 10;
   const habilidadesStart = (currentPageHabilidades - 1) * habilidadesItemsPerPage;
   const habilidadesPaginadas = habilidadesDisplay.slice(
     habilidadesStart,
     habilidadesStart + habilidadesItemsPerPage
   );
+
+  const handleHabilidadesItemsPerPageChange = (items: number) => {
+    setHabilidadesItemsPerPage(items);
+    setCurrentPageHabilidades(1);
+  };
 
   const habilidadesColumns: Column[] = [
     {
@@ -471,7 +495,7 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
   const sortHeader = (label: string, column: 'nome' | 'cargo' | 'gerencia') => (
     <button
       onClick={() => handleParticipantesSort(column)}
-      className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+      className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
     >
       {label}
       {participantesSortConfig.column === column ? (
@@ -636,42 +660,44 @@ function AvaliacaoDetalheView({ avaliacao }: { avaliacao: Avaliacao }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {abaAtiva === 'habilidades' ? (
-          totalHabilidades === 0 ? (
+      {/* Moldura do card já vem de dentro de ui/Table.tsx; reaplicada aqui
+          só para o EmptyState, que não passa por Table.tsx. */}
+      {abaAtiva === 'habilidades' ? (
+        totalHabilidades === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <EmptyState
               icon={<ListChecks className="w-8 h-8" />}
               title="Nenhuma habilidade selecionada"
               description="Esta avaliação não tem habilidades vinculadas."
             />
-          ) : (
-            <Table
-              columns={habilidadesColumns}
-              data={habilidadesPaginadas}
-              pagination={{
-                currentPage: currentPageHabilidades,
-                itemsPerPage: habilidadesItemsPerPage,
-                totalItems: totalHabilidades,
-                onPageChange: setCurrentPageHabilidades,
-                onItemsPerPageChange: () => {},
-              }}
-            />
-          )
+          </div>
         ) : (
           <Table
-            columns={participantesColumns}
-            data={participantesPaginados}
-            actions={participantesActions}
+            columns={habilidadesColumns}
+            data={habilidadesPaginadas}
             pagination={{
-              currentPage: currentPageParticipantes,
-              itemsPerPage: participantesItemsPerPage,
-              totalItems: total,
-              onPageChange: setCurrentPageParticipantes,
-              onItemsPerPageChange: () => {},
+              currentPage: currentPageHabilidades,
+              itemsPerPage: habilidadesItemsPerPage,
+              totalItems: totalHabilidades,
+              onPageChange: setCurrentPageHabilidades,
+              onItemsPerPageChange: handleHabilidadesItemsPerPageChange,
             }}
           />
-        )}
-      </div>
+        )
+      ) : (
+        <Table
+          columns={participantesColumns}
+          data={participantesPaginados}
+          actions={participantesActions}
+          pagination={{
+            currentPage: currentPageParticipantes,
+            itemsPerPage: participantesItemsPerPage,
+            totalItems: total,
+            onPageChange: setCurrentPageParticipantes,
+            onItemsPerPageChange: handleParticipantesItemsPerPageChange,
+          }}
+        />
+      )}
 
       {previewAberto && (
         <QuestionarioPreview

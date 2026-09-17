@@ -337,16 +337,16 @@ O campo "Tipo"/"Autoavaliação" **não** aparece nesta etapa (removido numa rod
 
 | # | key | label | width | Ordenável | Conteúdo |
 |---|---|---|---|---|---|
-| 1 | `nome` | "Nome da Avaliação" | 17% | Sim | Nome |
-| 2 | `descricao` | "Descrição" | 20% | Não | `line-clamp-2 break-words`, tooltip via `title` nativo (nunca a bolha `HelpCircle`/`group` — cortaria por `overflow-hidden` da tabela); `"-"` se vazio |
-| 3 | `origem` | "Origem" | 9% | Não | `"Jornada"` se `origemJornadaId` presente, senão `"Público"` |
-| 4 | `periodo` (rótulo "Início") | "Início" | 8% | Sim (compara `periodoInicio`) | Data formatada ou `"-"`; ícone de urgência (ver abaixo) |
-| 5 | `termino` | "Término" | 8% | Não | Data formatada ou `"-"` |
-| 6 | `prazo` | "Prazo" | 7% | Não | `"{N} dia(s)"` ou `"-"` |
-| 7 | `participantes` | "Participantes" | 12% | Não | `"-"` se Rascunho; senão `"{concluídas}/{total}"` + barra de progresso |
-| 8 | `status` | "Status" | 9% | Sim | Badge com `getStatusAvaliacaoLabel(calcularStatusEfetivo(...))` |
+| 1 | `nome` | "Nome da Avaliação" | 19% | Sim | Nome |
+| 2 | `descricao` | "Descrição" | 22% | Não | `line-clamp-2 break-words`, tooltip via `title` nativo (nunca a bolha `HelpCircle`/`group` — cortaria por `overflow-hidden` da tabela); `"-"` se vazio |
+| 3 | `origem` | "Origem" | 10% | Não | `"Jornada"` se `origemJornadaId` presente, senão `"Público"` |
+| 4 | `periodo` (rótulo "Início") | "Início" | 9% | Sim (compara `periodoInicio`) | Data formatada ou `"-"`; ícone de urgência (ver abaixo) |
+| 5 | `termino` | "Término" | 9% | Não | Data formatada ou `"-"` |
+| 6 | `prazo` | "Prazo" | 8% | Não | `"{N} dia(s)"` ou `"-"` |
+| 7 | `participantes` | "Participantes" | 13% | Não | `"-"` se Rascunho; senão `"{concluídas}/{total}"` + barra de progresso |
+| 8 | `status` | "Status" | 10% | Sim | Badge com `getStatusAvaliacaoLabel(calcularStatusEfetivo(...))` |
 
-Larguras somam 90% (não 100%) — `table-layout: fixed` se aplica de qualquer forma, porque a condição em `Table.tsx` é `columns.length > 0 && columns.every(column => !!column.width)` — **todas** as 8 colunas definem `width`, então o modo fixo é ativado independente da soma.
+Larguras somam 100%. Corrigido em 2026-09-11 — antes disso a soma ficava em 90% (17/20/9/8/8/7/12/9), resíduo deixado pelo split da antiga coluna "Período" em Início/Término/Prazo sem recalcular as demais; o `table-layout: fixed` se aplicava mesmo assim (a condição em `Table.tsx` é só `columns.every(column => !!column.width)`, não exige soma 100%), mas a coluna Ações herdava esse resíduo como espaço extra não previsto. Os novos valores foram obtidos escalando os antigos proporcionalmente por 100/90 e arredondando pelo método dos maiores restos — nenhuma coluna teve seu peso relativo alterado.
 
 ### Ícone de urgência de ativação agendada
 

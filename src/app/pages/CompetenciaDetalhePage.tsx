@@ -15,11 +15,6 @@ import {
 
 type OutletContext = { isSidebarCollapsed: boolean; viewMode: 'admin' | 'colaborador' };
 
-// Mesmo tamanho de página já padronizado no sistema (ver JornadaDetalhePage,
-// aba Colaboradores: COLABS_PER_PAGE = 10 — 05-telas-admin.md documenta
-// "10 itens/página").
-const ITEMS_PER_PAGE = 10;
-
 // Badge por status — EXCEÇÃO documentada só nesta página: o resto da tela
 // "Mapeamento de competências" usa texto simples (sem badge) para status de
 // habilidade; aqui é badge mesmo (confirmado com Alice). Reaproveita classes
@@ -54,6 +49,9 @@ export default function CompetenciaDetalhePage() {
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<FiltroTab>('todas');
   const [paginaAtual, setPaginaAtual] = useState(1);
+  // Mesmo tamanho de página já padronizado no sistema (ver JornadaDetalhePage,
+  // aba Colaboradores — 05-telas-admin.md documenta "10 itens/página").
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // A SPA não reseta o scroll ao navegar entre rotas — quem entra aqui vindo
   // do fim de "Minha Carreira" (Mapeamento de competências fica no rodapé de
@@ -112,12 +110,17 @@ export default function CompetenciaDetalhePage() {
   }, [filtro]);
 
   const habilidadesPaginadas = useMemo(
-    () => habilidadesFiltradas.slice((paginaAtual - 1) * ITEMS_PER_PAGE, paginaAtual * ITEMS_PER_PAGE),
-    [habilidadesFiltradas, paginaAtual]
+    () => habilidadesFiltradas.slice((paginaAtual - 1) * itemsPerPage, paginaAtual * itemsPerPage),
+    [habilidadesFiltradas, paginaAtual, itemsPerPage]
   );
 
+  const handleItemsPerPageChange = (items: number) => {
+    setItemsPerPage(items);
+    setPaginaAtual(1);
+  };
+
   return (
-    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${!isSidebarCollapsed ? 'lg:ml-64' : ''}`}>
+    <main className={`mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
       <div className="p-4 md:p-8 space-y-6">
         {/* State.scrollTarget é lido em MinhaCarreiraPage para reabrir a
             página já rolada até a seção "Mapeamento de competências", em vez
@@ -170,6 +173,18 @@ export default function CompetenciaDetalhePage() {
                 </div>
               </div>
 
+              {/* EXCEÇÃO DOCUMENTADA (ver 02-design-system.md > Tabelas):
+                  estas colunas NÃO definem `width`, de propósito. Sem width
+                  em todas as colunas, o Table.tsx mantém table-layout: auto
+                  (não table-fixed). Aqui isso é desejado: são só 5 colunas
+                  curtas (nível, peso, badge) sem nenhum campo de texto
+                  corrido longo (não há "Descrição"), então o `auto` deixa a
+                  coluna "Habilidade" respirar conforme o conteúdo em vez de
+                  espremer o texto em várias linhas — que é o que acontece
+                  nas tabelas table-fixed do resto do sistema em telas de
+                  notebook (1280-1440px). NÃO adicionar `width` nestas
+                  colunas para "padronizar": isso ligaria o table-fixed e
+                  traria de volta o esmagamento. */}
               <Table
                 columns={[
                   { key: 'nome', label: 'Habilidade' },
@@ -216,11 +231,15 @@ export default function CompetenciaDetalhePage() {
                 data={habilidadesPaginadas.map(h => ({ ...h, id: h.habilidadeId }))}
                 pagination={{
                   currentPage: paginaAtual,
-                  itemsPerPage: ITEMS_PER_PAGE,
+                  itemsPerPage,
                   totalItems: habilidadesFiltradas.length,
                   onPageChange: setPaginaAtual,
-                  onItemsPerPageChange: () => {},
+                  onItemsPerPageChange: handleItemsPerPageChange,
                 }}
+                // bare: a moldura do card já vem do wrapper externo (que
+                // também segura a toolbar de pills acima da tabela) — sem
+                // isso, dobraria a borda/cantos entre toolbar e tabela.
+                bare
               />
             </div>
           </>

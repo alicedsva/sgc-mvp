@@ -116,7 +116,7 @@ export interface HabilidadeCargo {
 
 // ─── Colaborador ────────────────────────────────────────────────────────────
 
-export type StatusColaborador = 'Ativo';
+export type StatusColaborador = 'Ativo' | 'Desativado';
 
 export interface Colaborador {
   id: string;
@@ -268,7 +268,7 @@ export interface Competencia {
 // ─── Habilidade ─────────────────────────────────────────────────────────────
 
 export type TipoHabilidade = 'Técnica' | 'Comportamental';
-export type StatusHabilidade = 'Ativa';
+export type StatusHabilidade = 'Ativa' | 'Desativada';
 
 export interface CriterioNivelHabilidade {
   /** FK -> Nivel.id */

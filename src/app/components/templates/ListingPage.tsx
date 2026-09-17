@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Table, Column, InlineAction, PaginationConfig } from '../ui/Table';
 import { EmptyState } from '../ui/EmptyState';
+import { ChipFiltro } from '../ui/ChipFiltro';
 
 export interface FilterOption {
   key: string;
@@ -35,6 +36,21 @@ interface ListingPageProps {
   onSearch?: (query: string) => void;
   pagination?: PaginationConfig;
   onRowClick?: (row: any) => void;
+  /**
+   * 'chip' troca o controle segmentado de status por um ui/ChipFiltro (mesma
+   * lógica de filtragem, só o visual do controle muda). Padrão vigente das
+   * 4 listagens principais (Habilidades, Avaliações, Carreiras,
+   * Competências) desde 2026-09-16 — ver 02-design-system.md > "Filtros e
+   * Pills". Default 'pills' só por retrocompatibilidade do prop; toda
+   * listagem principal nova deve passar 'chip' explicitamente.
+   */
+  statusFilterVariant?: 'pills' | 'chip';
+  /**
+   * Repassado direto pra Table.tsx — fixa a 1ª coluna de dados e a coluna de
+   * Ações com piso de largura mínima, forçando rolagem em vez de espremer
+   * colunas. Já é produção (ver Table.tsx). Default false.
+   */
+  stickyFirstColumn?: boolean;
 }
 
 export function ListingPage({
@@ -50,6 +66,8 @@ export function ListingPage({
   onSearch,
   pagination,
   onRowClick,
+  statusFilterVariant = 'pills',
+  stickyFirstColumn = false,
 }: ListingPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,7 +106,15 @@ export function ListingPage({
           </div>
 
           {/* Filtros de status - scroll horizontal */}
-          {statusFilter && (
+          {statusFilter && statusFilterVariant === 'chip' && (
+            <ChipFiltro
+              label="Status"
+              value={statusFilter.value}
+              options={statusFilter.options}
+              onChange={statusFilter.onChange}
+            />
+          )}
+          {statusFilter && statusFilterVariant !== 'chip' && (
             <div className="overflow-x-auto -mx-3 px-3">
               <div className="flex items-center bg-gray-100 rounded-lg p-1 min-w-max">
                 {statusFilter.options.map((option) => (
@@ -123,8 +149,16 @@ export function ListingPage({
             />
           </div>
 
-          {/* Controle Segmentado de Status */}
-          {statusFilter && (
+          {/* Controle de Status: chip (padrão) ou segmentado (statusFilterVariant='pills') */}
+          {statusFilter && statusFilterVariant === 'chip' && (
+            <ChipFiltro
+              label="Status"
+              value={statusFilter.value}
+              options={statusFilter.options}
+              onChange={statusFilter.onChange}
+            />
+          )}
+          {statusFilter && statusFilterVariant !== 'chip' && (
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
               {statusFilter.options.map((option) => (
                 <button
@@ -169,9 +203,12 @@ export function ListingPage({
         </button>
       )}
 
-      {/* Table or Empty State */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {!hasData && emptyState && (
+      {/* Table or Empty State — a moldura do card (bg-white rounded-lg
+          border overflow-hidden) já vem de dentro de ui/Table.tsx; aqui só
+          aplicamos a moldura quando ELA NÃO estiver vindo de lá (EmptyState,
+          que não passa por Table.tsx), para não aninhar duas bordas. */}
+      {!hasData && emptyState && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <EmptyState
             icon={emptyState.icon}
             title={
@@ -193,10 +230,19 @@ export function ListingPage({
                 : undefined
             }
           />
-        )}
+        </div>
+      )}
 
-        {hasData && <Table columns={columns} data={data} actions={actions} pagination={pagination} onRowClick={onRowClick} />}
-      </div>
+      {hasData && (
+        <Table
+          columns={columns}
+          data={data}
+          actions={actions}
+          pagination={pagination}
+          onRowClick={onRowClick}
+          stickyFirstColumn={stickyFirstColumn}
+        />
+      )}
     </div>
   );
 }

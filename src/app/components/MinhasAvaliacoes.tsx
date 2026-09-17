@@ -221,7 +221,13 @@ export function MinhasAvaliacoes() {
 
   const historicoFiltrado = historicoRows.filter(row => {
     const matchBusca = row.nome.toLowerCase().includes(buscaHistorico.toLowerCase());
-    const matchStatus = statusFilterHistorico === 'todas' || row.status.toLowerCase() === statusFilterHistorico.toLowerCase();
+    // Mapeamento explícito valor do filtro → status: os valores do filtro não
+    // têm acento (convenção do sistema) e os status têm, então comparar por
+    // toLowerCase() não casaria 'concluida' com 'Concluída'.
+    const matchStatus =
+      statusFilterHistorico === 'todas' ||
+      (statusFilterHistorico === 'concluida' && row.status === 'Concluída') ||
+      (statusFilterHistorico === 'expirada' && row.status === 'Expirada');
     return matchBusca && matchStatus;
   });
   const historicoPaginado = historicoFiltrado.slice(
@@ -461,12 +467,17 @@ export function MinhasAvaliacoes() {
             actions={historicoActions}
             searchPlaceholder="Buscar avaliação"
             onSearch={setBuscaHistorico}
+            statusFilterVariant="chip"
             statusFilter={{
               value: statusFilterHistorico,
               onChange: setStatusFilterHistorico,
               options: [
                 { value: 'todas', label: 'Todas' },
-                { value: 'concluída', label: 'Concluída' },
+                // Rótulos no singular de propósito: refletem o status
+                // individual de participação (o mesmo texto da badge da
+                // linha), não um agregado plural como "Ativas"/"Desativadas"
+                // das listagens de registro.
+                { value: 'concluida', label: 'Concluída' },
                 { value: 'expirada', label: 'Expirada' },
               ],
             }}

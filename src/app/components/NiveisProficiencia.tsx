@@ -1,6 +1,7 @@
 import { Info } from 'lucide-react';
 import { getCorFromPeso } from '../data/mockData';
 import type { Nivel } from '../../data/schema';
+import { QuantityLabel } from './ui/QuantityLabel';
 
 interface NiveisProficienciaProps {
   niveisData: Nivel[];
@@ -24,16 +25,16 @@ export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-64">
                 Nome do Nível
               </th>
-              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                 Descrição
               </th>
-              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-36">
+              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-36">
                 Peso do nível
               </th>
-              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-40 md:w-48">
+              <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-40 md:w-48">
                 Habilidades Vinculadas
               </th>
             </tr>
@@ -42,38 +43,35 @@ export function NiveisProficiencia({ niveisData }: NiveisProficienciaProps) {
             {niveisOrdenados.map((nivel) => (
               <tr key={nivel.id}>
                 {/* Nome do nível */}
-                <td className="px-6 py-4 align-middle">
+                <td className="px-3 md:px-6 py-3 md:py-4 align-middle">
                   <div
-                    className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                    className="inline-flex px-1.5 md:px-2 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full"
                     style={{ backgroundColor: getCorFromPeso(nivel.peso), color: '#FFFFFF' }}
                   >
                     {nivel.nome}
                   </div>
                 </td>
 
-                {/* Descrição — texto completo, sem truncamento (tabela curta, 5 linhas fixas) */}
-                <td className="px-6 py-4 align-middle">
-                  <span className="text-sm text-gray-700 block max-w-md">
+                {/* Descrição — exceção documentada em 02-design-system.md > "Truncamento de texto e tooltip" (texto completo, sem clamp nem Tooltip) */}
+                <td className="px-3 md:px-6 py-3 md:py-4 align-middle">
+                  <span className="text-xs text-gray-700 block max-w-md">
                     {nivel.descricao || <span className="text-gray-400">-</span>}
                   </span>
                 </td>
 
                 {/* Progressão */}
-                <td className="px-6 py-4 align-middle">
-                  <span className="text-sm text-gray-700">{nivel.peso}</span>
+                <td className="px-3 md:px-6 py-3 md:py-4 align-middle">
+                  <span className="text-xs font-semibold text-gray-700">{nivel.peso}</span>
                 </td>
 
                 {/* Habilidades vinculadas */}
-                <td className="px-6 py-4 align-middle">
+                <td className="px-3 md:px-6 py-3 md:py-4 align-middle">
                   {nivel.emUso && nivel.emUso > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-sm text-gray-700">
-                      <span className="font-medium">{nivel.emUso}</span>
-                      <span className="text-gray-500">
-                        {nivel.emUso === 1 ? 'habilidade' : 'habilidades'}
-                      </span>
+                    <span className="text-xs">
+                      <QuantityLabel value={nivel.emUso} singular="habilidade" plural="habilidades" />
                     </span>
                   ) : (
-                    <span className="text-sm text-gray-400">-</span>
+                    <span className="text-xs text-gray-400">-</span>
                   )}
                 </td>
               </tr>

@@ -204,10 +204,10 @@ Na **edição**, e quando a gerência selecionada já tem Carreira Ativa,
   progressão de uma área funcional"*.
 - Renderizada via `ListingPage`. `onRowClick` → `navigate('/carreiras/<id>')`
   (linha clicável — destino editável).
-- **Colunas** (`carreirasColumns`): `Nome da Carreira` (45%, ordenável, nome
-  resolvido via Gerência), `Jornadas` (25%, ordenável por contagem — mostra
+- **Colunas** (`carreirasColumns`): `Nome da Carreira` (50%, ordenável, nome
+  resolvido via Gerência), `Jornadas` (28%, ordenável por contagem — mostra
   `"N jornada(s)"` ou `"Nenhuma jornada"`, sempre `jornadasDoContexto.filter`),
-  `Status` (20%, ordenável, badge `Ativa` verde / `Desativada` vermelho).
+  `Status` (22%, ordenável, badge `Ativa` verde / `Desativada` vermelho).
 - **Pills** (`statusFilterCarreiras`): Todas / **Ativas** (default) / Desativadas.
   Busca por `nome`. `useEffect` reseta página 1 ao mudar busca/filtro.
   Paginação 10/página.

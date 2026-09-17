@@ -11,6 +11,7 @@ import {
   UserCircle,
   TrendingUp,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 interface SidebarProps {
   selectedItem: string;
@@ -124,14 +125,18 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
 
           {/* Botão de recolher - INTERNO quando expandido */}
           {!isCollapsed && (
-            <button
-              onClick={() => onToggleCollapse(true)}
-              className="hidden md:flex items-center justify-center w-8 h-8 bg-white text-gray-600 hover:text-[var(--brand-600)] rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex-shrink-0"
-              title="Recolher menu"
-              aria-label="Recolher menu"
-            >
-              <ArrowLeftToLine className="w-4 h-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onToggleCollapse(true)}
+                  className="hidden md:flex items-center justify-center w-8 h-8 bg-white text-gray-600 hover:text-[var(--brand-600)] rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex-shrink-0"
+                  aria-label="Recolher menu"
+                >
+                  <ArrowLeftToLine className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Recolher menu</TooltipContent>
+            </Tooltip>
           )}
         </div>
 
@@ -174,19 +179,23 @@ export function Sidebar({ selectedItem, onSelectItem, viewMode, isCollapsed, onT
 
       {/* Botão de expandir - EXTERNO à sidebar, apenas quando colapsado */}
       {isCollapsed && (
-        <button
-          onClick={() => onToggleCollapse(false)}
-          className="hidden md:flex items-center justify-center w-8 h-8 bg-white text-gray-600 hover:text-[var(--brand-600)] transition-all duration-300 fixed z-[60] rounded-lg border border-gray-200 hover:bg-gray-50"
-          style={{
-            left: '68px',
-            top: '32px',
-            transform: 'translateY(-50%)',
-          }}
-          title="Expandir menu"
-          aria-label="Expandir menu"
-        >
-          <ArrowRightToLine className="w-4 h-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onToggleCollapse(false)}
+              className="hidden md:flex items-center justify-center w-8 h-8 bg-white text-gray-600 hover:text-[var(--brand-600)] transition-all duration-300 fixed z-[60] rounded-lg border border-gray-200 hover:bg-gray-50"
+              style={{
+                left: '68px',
+                top: '32px',
+                transform: 'translateY(-50%)',
+              }}
+              aria-label="Expandir menu"
+            >
+              <ArrowRightToLine className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Expandir menu</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Tooltip flutuante - renderizada fora da sidebar como overlay */}

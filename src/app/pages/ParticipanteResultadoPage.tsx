@@ -16,9 +16,6 @@ import { LinhaMeta } from '../components/avaliacoes/LinhaMeta';
 
 type OutletContext = { isSidebarCollapsed: boolean; viewMode: 'admin' | 'colaborador' };
 
-// Mesmo tamanho de página já padronizado no sistema — ver CompetenciaDetalhePage.tsx.
-const ITEMS_PER_PAGE = 10;
-
 // Mesma paleta já documentada em 02-design-system.md/04-regras-negocio.md e
 // reaproveitada tal qual em CompetenciaDetalhePage.tsx (verde para acima E no
 // esperado, vermelho para abaixo, cinza para "sem" comparação possível).
@@ -59,6 +56,8 @@ export default function ParticipanteResultadoPage() {
 
   const [filtro, setFiltro] = useState<FiltroTab>('todas');
   const [paginaAtual, setPaginaAtual] = useState(1);
+  // Mesmo tamanho de página já padronizado no sistema — ver CompetenciaDetalhePage.tsx.
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   // Ordenação manual — mesmo padrão já usado 4x em ContentArea.tsx.
   // Respondido/Esperado/Peso/Status não são ordenáveis (valores calculados,
   // ordenar por eles não agrega tanto quanto por nome/competência).
@@ -83,7 +82,7 @@ export default function ParticipanteResultadoPage() {
   const sortHeader = (label: string, column: 'habilidadeNome' | 'competenciaNome') => (
     <button
       onClick={() => handleSort(column)}
-      className="inline-flex items-center gap-1 group text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+      className="inline-flex items-center gap-1 group text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-left hover:text-gray-700 transition-colors"
     >
       {label}
       {sortConfig.column === column ? (
@@ -94,8 +93,8 @@ export default function ParticipanteResultadoPage() {
     </button>
   );
 
-  const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 md:ml-20 ${
-    !isSidebarCollapsed ? 'lg:ml-64' : ''
+  const mainClass = `mt-16 min-h-screen bg-gray-50 transition-all duration-300 ml-0 ${
+    isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
   }`;
 
   const avaliacao = avaliacoes.find(a => a.id === id);
@@ -198,7 +197,12 @@ export default function ParticipanteResultadoPage() {
     const dir = sortConfig.direction === 'asc' ? 1 : -1;
     return a[sortConfig.column].localeCompare(b[sortConfig.column]) * dir;
   });
-  const linhasPaginadas = linhasOrdenadas.slice((paginaAtual - 1) * ITEMS_PER_PAGE, paginaAtual * ITEMS_PER_PAGE);
+  const linhasPaginadas = linhasOrdenadas.slice((paginaAtual - 1) * itemsPerPage, paginaAtual * itemsPerPage);
+
+  const handleItemsPerPageChange = (items: number) => {
+    setItemsPerPage(items);
+    setPaginaAtual(1);
+  };
 
   return (
     <main className={mainClass}>
@@ -354,11 +358,15 @@ export default function ParticipanteResultadoPage() {
                 data={linhasPaginadas.map(l => ({ ...l, id: l.habilidadeId }))}
                 pagination={{
                   currentPage: paginaAtual,
-                  itemsPerPage: ITEMS_PER_PAGE,
+                  itemsPerPage,
                   totalItems: linhasFiltradas.length,
                   onPageChange: setPaginaAtual,
-                  onItemsPerPageChange: () => {},
+                  onItemsPerPageChange: handleItemsPerPageChange,
                 }}
+                // bare: a moldura do card já vem do wrapper externo (que
+                // também segura a toolbar de pills acima da tabela) — sem
+                // isso, dobraria a borda/cantos entre toolbar e tabela.
+                bare
               />
             )}
           </div>

@@ -40,8 +40,24 @@ Toolbar:
   Decisão: ação principal isolada em toolbar pode ser primária mesmo com
   filtros/toggles ao lado — filtros não são ações de mesma hierarquia.
 
-Tabela da matriz:
+Tabela da matriz (hand-built, fora de `ui/Table.tsx`):
 - Coluna fixa de habilidades: sticky left-0 z-10 w-[220px]
+- Padding de célula (cabeçalho e corpo, exceto linha de competência e
+  estados vazios): px-3 md:px-6 py-3 md:py-4 — mesmo padrão responsivo de
+  `ui/Table.tsx` (corrigido em 2026-09-17; antes usava px-4 py-3/py-2 fixo,
+  sem `md:`)
+- Sombra da coluna fixa ao rolar: mesmo mecanismo condicional `isScrolled`
+  (com histerese) de `ui/Table.tsx` — liga `border-r`/`shadow` só depois que
+  o usuário rola horizontalmente, nunca visível por padrão. Substituiu, em
+  2026-09-17, um gradiente estático sempre visível (`bg-gradient-to-l`) que
+  coexistia como um segundo comportamento de sombra diferente do resto do
+  sistema — removido.
+- Cabeçalho de cargo: nome trunca em 1 linha (`truncate` + Tooltip) —
+  exceção documentada em 02-design-system.md > Tabelas > Cabeçalho ordenável
+  > "Exceção — cabeçalho de cargo na Matriz"
+- Menu de ações por cargo/habilidade: mecanismo próprio (não é
+  `DropdownMenu`/`InlineAction` de `ui/Table.tsx`) — ver 02-design-system.md
+  > Tabelas > "Mecanismo de menu à parte — Matriz de Habilidades"
 - Ícone MoreVertical na coluna fixa:
   opacity-0 por padrão → opacity-100 no hover da linha
 - Linha de competência:
@@ -126,13 +142,27 @@ Seções na ordem correta:
 
 ## Perfis
 
-Filtros disponíveis:
-- Pills: Ativos / Desativados / Todos
-- Dropdown: Gerência
-- Dropdown: Cargo
+Reconstruída em 2026-09-16: era o único componente separado (`Perfis.tsx`)
+das 5 listagens principais — migrada para dentro de `ContentArea.tsx` como
+branch inline, no mesmo padrão de Habilidades/Competências/Carreiras/
+Avaliações. `ui/Table.tsx` (colunas/ações/paginação nativas), toolbar manual
+(mesmo caminho de Habilidades — `ListingPage` não tem slot para múltiplos
+filtros além de busca+status).
+
+Filtros disponíveis (todos `ChipFiltro`, na ordem: busca, Status, Gerência,
+Cargo):
+- Status: Todas / Ativas / Desativadas (chip)
+- Gerência: chip searchable
+- Cargo: chip searchable
+
+Coluna Nome: embute o indicador de sincronização com o RM (ponto verde/
+vermelho + Tooltip — ver `02-design-system.md` > Ícones > "Indicador de
+sincronização"). Não é uma coluna própria nem o Status Ativo/Desativado do
+registro.
 
 Ações por linha:
-- RefreshCw: sincronização individual
+- RefreshCw: sincronização individual (`InlineAction`, ícone solto — só 1
+  ação, nunca vira menu)
 - Sem menu de contexto
 
 Botão fixo: "Sincronizar Todos"

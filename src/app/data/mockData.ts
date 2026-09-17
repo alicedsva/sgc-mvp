@@ -3368,10 +3368,9 @@ export const competenciasData: Competencia[] = [
 ];
 
 // `competencias` é opcional e cai para o array estático do módulo por
-// default — só existe pra permitir ConfigurarHabilidadesCargo.tsx (código
-// morto, fora de rota) continuar chamando sem passar nada. Todo chamador
-// real deve passar a lista vinda de useCompetencias() (CompetenciasContext),
-// senão não reflete competências criadas em runtime — ver CompetenciasContext.tsx.
+// default. Todo chamador real deve passar a lista vinda de
+// useCompetencias() (CompetenciasContext), senão não reflete competências
+// criadas em runtime — ver CompetenciasContext.tsx.
 export function getCompetenciaPorId(id: string, competencias: Competencia[] = competenciasData): Competencia | undefined {
   return competencias.find(c => c.id === id);
 }
